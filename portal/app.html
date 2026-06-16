@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Documental | Carpetas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://hheyihgktcswvxiscvdm.supabase.co" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Krub:wght@400;500;600;700&family=Lora:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/portal.css?v=15">
+</head>
+<body>
+    <header class="pt-encabezado">
+        <div class="pt-marca">
+            <h1>Portal Documental</h1>
+            <small>Fundación de insolvencia y conciliaciones · Entorno de práctica</small>
+        </div>
+        <div class="pt-usuario-chip">
+            <span id="chip-usuario"></span>
+            <button class="pt-boton pt-boton--mini" data-accion="salir-sitio">Sitio principal</button>
+            <button class="pt-boton pt-boton--mini" data-accion="salir">Cerrar sesión</button>
+        </div>
+    </header>
+
+    <nav class="pt-pestanas">
+        <button id="pestana-carpetas" class="activa" data-accion="ver-carpetas">Carpetas</button>
+        <button id="pestana-usuarios" data-accion="ver-usuarios" hidden>Usuarios</button>
+        <button id="pestana-notificaciones" data-accion="ver-notificaciones" hidden>Notificaciones</button>
+    </nav>
+
+    <main class="pt-contenido">
+
+        <!-- ===== VISTA: LISTA DE CARPETAS ===== -->
+        <section id="vista-carpetas">
+            <div class="pt-barra-seccion">
+                <h2>Carpetas de procesos</h2>
+                <button id="boton-nueva-carpeta" class="pt-boton pt-boton--primario" data-accion="nueva-carpeta" hidden>+ Nueva carpeta</button>
+            </div>
+            <div id="lista-carpetas" class="pt-grid-carpetas"></div>
+            <div id="carpetas-vacio" class="pt-vacio" hidden></div>
+        </section>
+
+        <!-- ===== VISTA: DETALLE DE UNA CARPETA ===== -->
+        <section id="vista-carpeta" hidden>
+            <div class="pt-barra-seccion">
+                <button class="pt-boton pt-boton--fantasma" data-accion="ver-carpetas">&larr; Volver a carpetas</button>
+                <button id="boton-descargar-zip" class="pt-boton pt-boton--primario" data-accion="descargar-zip"><span data-icono="paquete" data-icono-tam="17"></span> Descargar carpeta (ZIP)</button>
+            </div>
+            <div class="pt-detalle-cabecera">
+                <h2 id="detalle-nombre"></h2>
+                <span id="detalle-estado"></span>
+                <div class="pt-estado-tramite">
+                    <p id="detalle-descripcion" class="pt-nota"></p>
+                    <button id="boton-editar-descripcion" class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="editar-descripcion" hidden><span data-icono="editar" data-icono-tam="15"></span> Actualizar estado del trámite</button>
+                </div>
+                <form id="form-descripcion" hidden>
+                    <label class="pt-campo">
+                        <span>Estado del trámite / descripción (lo verán los asignados a la carpeta)</span>
+                        <textarea id="descripcion-nueva" rows="2" maxlength="300"
+                                  placeholder="Ej.: Audiencia de conciliación programada para el 25 de junio."></textarea>
+                    </label>
+                    <div class="pt-celda-acciones">
+                        <button type="submit" class="pt-boton pt-boton--primario pt-boton--mini">Guardar estado</button>
+                        <button type="button" class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="cancelar-descripcion">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="zona-subida" class="pt-zona-subida" hidden>
+                <p><span data-icono="adjunto" data-icono-tam="20"></span> Arrastra archivos aquí, o</p>
+                <label class="pt-boton pt-boton--primario">
+                    Seleccionar archivos
+                    <input type="file" id="entrada-archivos" multiple hidden
+                           accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.mp3,.mp4">
+                </label>
+                <p class="pt-nota">Permitidos: PDF, Word, Excel, PNG, JPG, MP3, MP4 · máximo 50 MB por archivo</p>
+            </div>
+
+            <div class="pt-tabla-envoltura">
+                <table class="pt-tabla">
+                    <thead>
+                        <tr>
+                            <th>Archivo</th>
+                            <th>Tamaño</th>
+                            <th>Subido por</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista-archivos"></tbody>
+                </table>
+                <div id="archivos-vacio" class="pt-vacio" hidden style="border: none;">Esta carpeta aún no tiene documentos.</div>
+            </div>
+        </section>
+
+        <!-- ===== VISTA: USUARIOS (solo administrador) ===== -->
+        <section id="vista-usuarios" hidden>
+            <div class="pt-barra-seccion">
+                <h2>Usuarios del portal</h2>
+            </div>
+            <form id="form-usuario" class="pt-form-usuario">
+                <label class="pt-campo">
+                    <span>Usuario</span>
+                    <input type="text" id="nuevo-usuario" required maxlength="30" pattern="[a-z0-9._-]+"
+                           title="Solo minúsculas, números, punto, guion y guion bajo">
+                </label>
+                <label class="pt-campo">
+                    <span>Nombre completo</span>
+                    <input type="text" id="nuevo-nombre" required maxlength="80">
+                </label>
+                <label class="pt-campo">
+                    <span>Contraseña</span>
+                    <input type="text" id="nueva-clave" required minlength="8" maxlength="50">
+                </label>
+                <label class="pt-campo">
+                    <span>Rol</span>
+                    <select id="nuevo-rol">
+                        <option value="cliente">Cliente</option>
+                        <option value="acreedor">Acreedor</option>
+                        <option value="operador">Operador</option>
+                        <option value="administrador">Administrador</option>
+                    </select>
+                </label>
+                <button type="submit" class="pt-boton pt-boton--primario">Crear usuario</button>
+            </form>
+            <div class="pt-tabla-envoltura">
+                <table class="pt-tabla">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Nombre</th>
+                            <th>Rol</th>
+                            <th>Estado</th>
+                            <th>Creado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista-usuarios"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ===== VISTA: CENTRO DE NOTIFICACIONES (solo administrador) ===== -->
+        <section id="vista-notificaciones" hidden>
+            <div class="pt-barra-seccion">
+                <h2>Centro de notificaciones</h2>
+                <button class="pt-boton pt-boton--fantasma" data-accion="refrescar-notificaciones"><span data-icono="refrescar" data-icono-tam="15"></span> Actualizar</button>
+            </div>
+            <p class="pt-nota" style="margin-bottom:1.6rem;">Registro de ingresos y de toda acción sobre carpetas y archivos. Elige la categoría:</p>
+            <div id="sub-pestanas-notif" class="pt-sub-pestanas">
+                <button class="activa" data-accion="notif-rol" data-rol="cliente"><span data-icono="usuario" data-icono-tam="17"></span> Clientes</button>
+                <button data-accion="notif-rol" data-rol="acreedor"><span data-icono="banco" data-icono-tam="17"></span> Acreedores</button>
+                <button data-accion="notif-rol" data-rol="operador"><span data-icono="maletin" data-icono-tam="17"></span> Operadores</button>
+            </div>
+            <div id="lista-notificaciones" class="pt-notif-lista"></div>
+            <div id="notificaciones-vacio" class="pt-vacio" hidden></div>
+        </section>
+    </main>
+
+    <!-- ===== MODAL: CREAR / EDITAR CARPETA ===== -->
+    <div id="modal-carpeta" class="pt-modal" hidden>
+        <div class="pt-modal__caja">
+            <h3 id="modal-carpeta-titulo">Nueva carpeta</h3>
+            <form id="form-carpeta">
+                <label class="pt-campo">
+                    <span>Nombre de la carpeta *</span>
+                    <input type="text" id="carpeta-nombre" required maxlength="120"
+                           placeholder="Ej.: Insolvencia — Nombre del cliente (Exp. 003-2026)">
+                </label>
+                <label class="pt-campo">
+                    <span>Descripción</span>
+                    <textarea id="carpeta-descripcion" rows="2" maxlength="300"></textarea>
+                </label>
+                <fieldset class="pt-campo">
+                    <legend>Operador(es) responsable(s) del proceso</legend>
+                    <div id="carpeta-operadores" class="pt-lista-chequeo"></div>
+                </fieldset>
+                <fieldset class="pt-campo">
+                    <legend>Visible para (clientes y acreedores)</legend>
+                    <div id="carpeta-asignados" class="pt-lista-chequeo"></div>
+                </fieldset>
+                <label class="pt-interruptor">
+                    <input type="checkbox" id="carpeta-activa" checked>
+                    <span>Carpeta activa (los asignados pueden verla)</span>
+                </label>
+                <div class="pt-modal__acciones">
+                    <button type="button" class="pt-boton pt-boton--fantasma" data-accion="cerrar-modal">Cancelar</button>
+                    <button type="submit" class="pt-boton pt-boton--primario">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast" class="pt-toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.1"></script>
+    <script src="js/db.js?v=13"></script>
+    <script src="js/auth.js?v=13"></script>
+    <script src="js/config.js?v=13"></script>
+    <script src="js/iconos.js?v=13"></script>
+    <script src="js/nube.js?v=13"></script>
+    <script src="js/app.js?v=15"></script>
+</body>
+</html>
