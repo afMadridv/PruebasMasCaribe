@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sitio-estatico",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ".claude\\serve.ps1", "-Puerto", "8421"],
+      "port": 8421
+    },
+    {
+      "name": "mascaribe",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8422", "--directory", "C:\\Users\\ANDRE\\OneDrive\\Documentos\\Mascaribe"],
+      "port": 8422
+    },
+    {
+      "name": "portal-next",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "portal-next", "run", "dev", "--", "--port", "3300"],
+      "port": 3300
+    }
+  ]
+}

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fundación de Insolvencia | Inicio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Krub:wght@400;500;600;700&family=Lora:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ============ INDEX 2.0 — Portal de Insolvencia ============
+           Página de inicio simplificada (estilo notaría): navegación
+           "Inicio" / "Portal" y diagnóstico de insolvencia económica.
+           Usa la misma paleta del Portal Documental. */
+        :root{
+            --tinta: #17262E;
+            --gris: #536068;
+            --navy-900: #0C3A4E;
+            --navy-800: #0F4861;
+            --navy-700: #13607F;
+            --azul: #159C95;
+            --azul-600: #12867F;
+            --fondo: #F3F7F8;
+            --blanco: #fff;
+            --superficie: #fff;
+            --superficie-2: #EDF4F4;
+            --borde: #E2EAEC;
+            --verde: #157039;
+            --verde-suave: #DDF3E4;
+            --ambar: #8A4B08;
+            --ambar-suave: #FCEFD3;
+            --sombra: 0 4px 10px rgba(15,42,68,.10), 0 14px 30px rgba(15,42,68,.14);
+        }
+        *{ box-sizing: border-box; margin: 0; padding: 0; }
+        html{ font-size: 62.5%; }
+        body{
+            font-family: 'Krub', Arial, sans-serif;
+            font-size: 1.6rem; line-height: 1.6;
+            color: var(--tinta); background: var(--fondo);
+        }
+        h1, h2, h3{ font-family: 'Lora', Georgia, serif; color: var(--navy-800); }
+
+        /* ---- Encabezado y navegación principal: Inicio / Portal ---- */
+        .encabezado{
+            background: var(--navy-700); color: var(--blanco);
+            padding: 1.6rem 2.4rem;
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 1.6rem; flex-wrap: wrap;
+        }
+        .encabezado h1{ color: var(--blanco); font-size: 2.2rem; }
+        .encabezado small{ display: block; opacity: .85; font-family: 'Krub', sans-serif; font-size: 1.3rem; }
+        .navegacion{ display: flex; gap: .8rem; }
+        .navegacion a{
+            color: var(--blanco); text-decoration: none; font-weight: 600;
+            padding: .8rem 1.6rem; border-radius: .8rem;
+            border: 1px solid transparent; transition: background .18s ease;
+        }
+        .navegacion a:hover{ background: var(--navy-800); }
+        .navegacion a.activo{ background: var(--navy-900); border-color: rgba(255,255,255,.25); }
+
+        .contenedor{ max-width: 86rem; margin: 0 auto; padding: 3.2rem 2rem 6rem; }
+
+        /* ---- Portada ---- */
+        .portada{
+            background: var(--superficie); border: 1px solid var(--borde);
+            border-radius: 1.4rem; box-shadow: var(--sombra);
+            padding: 3.2rem 2.8rem; margin-bottom: 2.4rem; text-align: center;
+        }
+        .portada h2{ font-size: 2.8rem; margin-bottom: .8rem; }
+        .portada p{ color: var(--gris); max-width: 60rem; margin: 0 auto 1.6rem; }
+
+        .boton{
+            display: inline-block; font: inherit; font-weight: 700;
+            border: none; border-radius: .9rem; cursor: pointer;
+            padding: 1.1rem 2.2rem; text-decoration: none;
+            transition: transform .15s ease, background .18s ease;
+        }
+        .boton:hover{ transform: translateY(-1px); }
+        .boton--primario{ background: var(--navy-700); color: var(--blanco); }
+        .boton--primario:hover{ background: var(--navy-800); }
+        .boton--acento{ background: var(--azul); color: var(--blanco); }
+        .boton--acento:hover{ background: var(--azul-600); }
+        .boton--fantasma{
+            background: transparent; color: var(--navy-700);
+            border: 1px solid var(--borde);
+        }
+
+        /* ---- Diagnóstico ---- */
+        .diagnostico{
+            background: var(--superficie); border: 1px solid var(--borde);
+            border-radius: 1.4rem; box-shadow: var(--sombra);
+            padding: 2.8rem;
+        }
+        .diagnostico h3{ font-size: 2.2rem; margin-bottom: .4rem; }
+        .diagnostico > p{ color: var(--gris); margin-bottom: 2rem; }
+        .pregunta{
+            border: 1px solid var(--borde); border-radius: 1rem;
+            padding: 1.4rem 1.6rem; margin-bottom: 1.2rem;
+            background: var(--superficie-2);
+        }
+        .pregunta p{ font-weight: 600; margin-bottom: .8rem; }
+        .pregunta label{
+            margin-right: 2rem; cursor: pointer; font-weight: 500;
+        }
+        .pregunta input{ margin-right: .5rem; accent-color: var(--navy-700); }
+
+        /* ---- Resultado ---- */
+        .resultado{ margin-top: 2rem; border-radius: 1rem; padding: 2rem; }
+        .resultado[hidden]{ display: none; }
+        .resultado--aplica{ background: var(--verde-suave); border: 1px solid var(--verde); }
+        .resultado--empresa{ background: var(--ambar-suave); border: 1px solid var(--ambar); }
+        .resultado--no{ background: var(--superficie-2); border: 1px solid var(--borde); }
+        .resultado h4{ font-family: 'Lora', serif; font-size: 1.9rem; margin-bottom: .6rem; }
+        .resultado p{ margin-bottom: 1.4rem; }
+        .resultado .acciones{ display: flex; gap: 1.2rem; flex-wrap: wrap; }
+
+        .nota{ font-size: 1.3rem; color: var(--gris); margin-top: 1.6rem; }
+        .pie{
+            text-align: center; padding: 2rem; color: var(--gris);
+            font-size: 1.3rem; border-top: 1px solid var(--borde);
+        }
+        @media (max-width: 600px){
+            .contenedor{ padding: 2rem 1.4rem 4rem; }
+            .portada, .diagnostico{ padding: 2rem 1.6rem; }
+        }
+    </style>
+</head>
+<body>
+    <header class="encabezado">
+        <div>
+            <h1>Fundación de Insolvencia y Conciliaciones</h1>
+            <small>Acompañamiento en procesos de insolvencia económica</small>
+        </div>
+        <nav class="navegacion" aria-label="Navegación principal">
+            <a href="index2.html" class="activo">Inicio</a>
+            <a href="portal/index.html">Portal</a>
+        </nav>
+    </header>
+
+    <main class="contenedor">
+        <section class="portada">
+            <h2>¿Sus deudas superan su capacidad de pago?</h2>
+            <p>La ley colombiana le permite negociar sus deudas con acompañamiento
+               legal y proteger su patrimonio. Responda el siguiente diagnóstico para
+               saber si usted puede acogerse a un proceso de insolvencia económica.</p>
+            <a class="boton boton--fantasma" href="#diagnostico">Hacer el diagnóstico ↓</a>
+        </section>
+
+        <section id="diagnostico" class="diagnostico">
+            <h3>Diagnóstico de insolvencia económica</h3>
+            <p>Hoja de trabajo sencilla: marque la respuesta que describa su situación.
+               No es una asesoría legal; es una orientación inicial.</p>
+
+            <form id="form-diagnostico">
+                <!-- Las preguntas definitivas de la hoja de trabajo se ajustarán
+                     cuando la fundación entregue el contenido final. -->
+                <div class="pregunta">
+                    <p>1. ¿Usted actúa como persona natural (no como empresa) y su actividad principal NO es el comercio?</p>
+                    <label><input type="radio" name="p1" value="si" required> Sí</label>
+                    <label><input type="radio" name="p1" value="no"> No, soy comerciante o represento una empresa</label>
+                </div>
+                <div class="pregunta">
+                    <p>2. ¿Tiene deudas con dos (2) o más acreedores distintos (bancos, particulares, impuestos, etc.)?</p>
+                    <label><input type="radio" name="p2" value="si" required> Sí</label>
+                    <label><input type="radio" name="p2" value="no"> No</label>
+                </div>
+                <div class="pregunta">
+                    <p>3. ¿Está en mora (incumplimiento) de dos o más obligaciones desde hace más de 90 días, o tiene demandas de cobro en su contra?</p>
+                    <label><input type="radio" name="p3" value="si" required> Sí</label>
+                    <label><input type="radio" name="p3" value="no"> No</label>
+                </div>
+                <div class="pregunta">
+                    <p>4. ¿Las deudas atrasadas representan una parte importante (alrededor del 30% o más) del total de lo que debe?</p>
+                    <label><input type="radio" name="p4" value="si" required> Sí</label>
+                    <label><input type="radio" name="p4" value="no"> No / No lo sé</label>
+                </div>
+                <div class="pregunta">
+                    <p>5. ¿Sus ingresos mensuales ya no alcanzan para cubrir las cuotas de sus deudas y sus gastos básicos?</p>
+                    <label><input type="radio" name="p5" value="si" required> Sí</label>
+                    <label><input type="radio" name="p5" value="no"> No</label>
+                </div>
+                <button type="submit" class="boton boton--primario">Ver mi resultado</button>
+            </form>
+
+            <!-- Resultado: aplica a insolvencia de persona natural -->
+            <div id="resultado-aplica" class="resultado resultado--aplica" hidden>
+                <h4>✔ Usted podría acogerse a un proceso de insolvencia económica</h4>
+                <p>Según sus respuestas, su situación se ajusta a los supuestos de la
+                   insolvencia de persona natural no comerciante (Ley 1564 de 2012 y
+                   Ley 2445 de 2025). La fundación puede acompañarlo en la negociación
+                   de deudas con sus acreedores.</p>
+                <div class="acciones">
+                    <a class="boton boton--primario" href="portal/index.html">Ingresar al portal principal</a>
+                    <a class="boton boton--acento" id="contacto-aplica" href="#">Contáctenos</a>
+                </div>
+            </div>
+
+            <!-- Resultado: comerciante/empresa → otros procesos de insolvencia -->
+            <div id="resultado-empresa" class="resultado resultado--empresa" hidden>
+                <h4>Su caso corresponde a otro proceso de insolvencia</h4>
+                <p>Los comerciantes y las empresas se rigen por el régimen de insolvencia
+                   empresarial (Ley 1116 de 2006 y normas complementarias). La fundación
+                   puede orientarlo sobre el proceso que corresponde a su situación.</p>
+                <div class="acciones">
+                    <a class="boton boton--primario" href="portal/index.html">Ingresar al portal principal</a>
+                    <a class="boton boton--acento" id="contacto-empresa" href="#">Contáctenos</a>
+                </div>
+            </div>
+
+            <!-- Resultado: no parece aplicar todavía -->
+            <div id="resultado-no" class="resultado resultado--no" hidden>
+                <h4>Por ahora su situación no parece requerir un proceso de insolvencia</h4>
+                <p>Según sus respuestas, no se cumplen aún los supuestos legales de la
+                   insolvencia económica. Si su situación cambia, o si quiere una revisión
+                   personalizada, comuníquese con nosotros.</p>
+                <div class="acciones">
+                    <a class="boton boton--acento" id="contacto-no" href="#">Contáctenos</a>
+                </div>
+            </div>
+
+            <p class="nota">Este diagnóstico es orientativo y no reemplaza la asesoría de la
+               fundación ni el registro oficial del caso en SICAAC.</p>
+        </section>
+    </main>
+
+    <footer class="pie">
+        <p>Fundación de insolvencia y conciliaciones &copy; 2026</p>
+    </footer>
+
+    <script>
+        /* Diagnóstico: reglas simples (se ajustarán con la hoja de trabajo
+           definitiva de la fundación).
+           - Comerciante/empresa → otros procesos (Ley 1116).
+           - Persona natural con 2+ acreedores Y (mora >90 días, deudas ~30%+
+             o incapacidad de pago) → aplica a insolvencia económica.
+           - En caso contrario → todavía no aplica. */
+        (function () {
+            // Correo de contacto de la fundación (ajustar cuando se defina)
+            const CORREO_CONTACTO = 'contacto@fundacion.example';
+            const ASUNTO = 'Solicitud de información — diagnóstico de insolvencia';
+
+            function enlaceContacto(resumen) {
+                const cuerpo = 'Buenos días,\n\nHice el diagnóstico de insolvencia en la página ' +
+                    'de la fundación y quiero recibir orientación.\n\nResultado del diagnóstico: ' +
+                    resumen + '\n\nQuedo atento(a) a su respuesta.\n';
+                return 'mailto:' + CORREO_CONTACTO +
+                    '?subject=' + encodeURIComponent(ASUNTO) +
+                    '&body=' + encodeURIComponent(cuerpo);
+            }
+            document.getElementById('contacto-aplica').href = enlaceContacto('podría aplicar a insolvencia económica');
+            document.getElementById('contacto-empresa').href = enlaceContacto('caso de comerciante/empresa (otro proceso de insolvencia)');
+            document.getElementById('contacto-no').href = enlaceContacto('por ahora no aplica, pide revisión personalizada');
+
+            document.getElementById('form-diagnostico').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const v = (n) => (document.querySelector('input[name="' + n + '"]:checked') || {}).value;
+                const esNatural = v('p1') === 'si';
+                const dosAcreedores = v('p2') === 'si';
+                const mora = v('p3') === 'si';
+                const treinta = v('p4') === 'si';
+                const sinCapacidad = v('p5') === 'si';
+
+                let mostrar = 'resultado-no';
+                if (!esNatural) {
+                    mostrar = 'resultado-empresa';
+                } else if (dosAcreedores && (mora || treinta || sinCapacidad)) {
+                    mostrar = 'resultado-aplica';
+                }
+                for (const id of ['resultado-aplica', 'resultado-empresa', 'resultado-no']) {
+                    document.getElementById(id).hidden = (id !== mostrar);
+                }
+                document.getElementById(mostrar).scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>¿Qué es MASCaribe? — Presentación del Portal Documental</title>
+<style>
+  :root{
+    --tinta:#17262E; --gris:#536068; --navy:#0C3A4E; --teal:#12867F;
+    --borde:#E2EAEC; --verde:#157039; --rojo:#B3261E; --ambar:#8A4B08; --fondo:#F3F7F8;
+  }
+  *{ box-sizing:border-box; }
+  body{ font-family:'Segoe UI', Arial, sans-serif; color:var(--tinta); line-height:1.55;
+        margin:0; padding:0 2.4rem; background:#fff; font-size:13px; }
+  header.portada{ text-align:center; padding:3rem 0 2rem; border-bottom:4px solid var(--teal); margin-bottom:1.6rem; }
+  header.portada h1{ font-size:26px; margin:0 0 .4rem; color:var(--navy); }
+  header.portada .sub{ color:var(--gris); font-size:14px; }
+  header.portada .meta{ color:var(--gris); font-size:11px; margin-top:1rem; }
+  h2{ color:#fff; background:var(--navy); padding:.5rem 1rem; border-radius:6px; font-size:16px; margin:1.8rem 0 .8rem; }
+  h3{ color:var(--teal); font-size:14px; margin:1.1rem 0 .3rem; border-bottom:1px solid var(--borde); padding-bottom:.2rem; }
+  ul{ margin:.3rem 0 .6rem; padding-left:1.3rem; }
+  li{ margin:.25rem 0; }
+  table{ border-collapse:collapse; width:100%; margin:.5rem 0 1rem; font-size:12px; }
+  th,td{ border:1px solid var(--borde); padding:.45rem .6rem; text-align:left; vertical-align:top; }
+  th{ background:var(--fondo); color:var(--navy); }
+  code{ background:var(--fondo); padding:.05rem .3rem; border-radius:3px; font-size:11px; }
+  .nota{ background:var(--fondo); border-left:3px solid var(--teal); padding:.6rem 1rem;
+         border-radius:0 6px 6px 0; margin:.8rem 0; font-size:12px; }
+  .sem{ display:inline-block; width:10px; height:10px; border-radius:50%; vertical-align:middle; margin-right:.2rem; }
+  footer{ margin-top:2.4rem; border-top:1px solid var(--borde); padding-top:.8rem; color:var(--gris); font-size:11px; text-align:center; }
+  .noprint{ text-align:center; background:#FFF7E6; border:1px solid var(--ambar); padding:.6rem;
+            border-radius:6px; margin:1rem 0; font-size:12px; color:var(--ambar); }
+  @media print{
+    body{ padding:0 .4rem; font-size:11.5px; }
+    h2,h3{ break-after:avoid; } section{ break-inside:avoid; } .noprint{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="noprint">Para guardar como PDF: <strong>Ctrl+P</strong> → Destino <strong>“Guardar como PDF”</strong> → Guardar.</div>
+
+<header class="portada">
+  <h1>¿Qué es MASCaribe?</h1>
+  <div class="sub">Presentación del Portal Documental de la Fundación de insolvencia y conciliaciones</div>
+  <div class="meta">Documento generado el 14 de julio de 2026</div>
+</header>
+
+<h2>1 · ¿Qué es MASCaribe?</h2>
+<p><strong>MASCaribe</strong> es una fundación colombiana dedicada a los <strong>procesos de insolvencia y
+conciliación de persona natural</strong>: acompaña a deudores que no pueden cumplir sus obligaciones para
+negociar acuerdos de pago con sus acreedores ante un operador habilitado, dentro del marco legal
+colombiano (Ley 1564 de 2012 — Código General del Proceso — y la reforma de la
+<strong>Ley 2445 de 2025</strong> al régimen de insolvencia de persona natural, entre otras normas).</p>
+<p>En estos trámites participan siempre las mismas figuras: el <strong>deudor</strong> (cliente de la fundación),
+sus <strong>acreedores</strong> (bancos, empresas o personas a las que debe), el <strong>operador</strong> del
+proceso (quien conduce la negociación) y la <strong>administración</strong> de la fundación. La ley además
+impone plazos estrictos contados en <strong>días hábiles</strong>: un trámite dispone de 60 días hábiles,
+ampliables a 90 con una prórroga.</p>
+
+<h2>2 · ¿De qué se trata el software del portal?</h2>
+<p>El <strong>Portal Documental MASCaribe</strong> es una aplicación web que digitaliza toda la operación de
+esos trámites en un solo lugar. Cada proceso de insolvencia vive en una <strong>carpeta</strong> que reúne
+sus documentos, sus plazos, su calendario, sus conversaciones y su historial — y cada participante entra
+con su propio usuario y ve únicamente lo que su rol le permite.</p>
+<p>La idea central: <strong>la seguridad y las reglas del negocio viven en el servidor, no en el
+navegador</strong>. Cada consulta a la base de datos se filtra automáticamente según quién pregunta
+(Row Level Security), de modo que un acreedor jamás puede ver la información privada del deudor, un
+operador solo trabaja sus propios casos y nadie puede saltarse los plazos legales aunque manipule la
+página.</p>
+
+<h2>3 · ¿Quién entra y qué puede hacer? (roles)</h2>
+<table>
+  <tr><th>Rol</th><th>Qué puede hacer dentro del portal</th></tr>
+  <tr><td><strong>Administrador</strong></td><td>Control total: crea carpetas y usuarios, asigna operadores y partes, sube/elimina documentos, inicia el conteo legal, aplica la prórroga, pausa/reactiva, da <strong>fin al trámite</strong> (exclusivo), corrige plazos y semáforos (con registro de quién y cuándo), atiende el chat de soporte, es el único que <strong>inicia llamadas de voz</strong>, revisa la bitácora completa y los consentimientos de datos.</td></tr>
+  <tr><td><strong>Monitor</strong></td><td>Supervisión en solo lectura: ve todas las carpetas, estados, calendarios, chats y notificaciones — sin poder crear, editar ni eliminar nada, y sin acceso a la gestión de usuarios.</td></tr>
+  <tr><td><strong>Operador</strong></td><td>Gestiona SUS trámites asignados: sube y organiza documentos, genera el expediente unificado en PDF, crea y completa los procesos con semáforo, inicia el conteo y aplica prórrogas, pausa/reactiva, marca audiencias en el calendario y las notifica por correo, lleva recordatorios privados, chatea con el deudor y con cada acreedor, pide soporte a la administración y descarga constancias de la actividad de los acreedores.</td></tr>
+  <tr><td><strong>Cliente (deudor)</strong></td><td>Consulta y descarga los documentos de su trámite, ve en qué estado va (semáforo), revisa el calendario de audiencias, conversa con su operador por el chat y recibe notificaciones (documento nuevo, mensaje nuevo). En su primer ingreso debe aceptar la autorización de manejo de datos (Ley 1581 de 2012).</td></tr>
+  <tr><td><strong>Acreedor</strong></td><td>Igual que el cliente pero en su propio carril: ve los documentos y audiencias del trámite, conversa con el operador en un hilo individual (nunca ve los mensajes de otros acreedores) y jamás accede a la información personal del deudor.</td></tr>
+</table>
+
+<h2>4 · ¿Qué se puede hacer dentro del portal? (módulos)</h2>
+
+<h3>Carpetas de procesos</h3>
+<ul>
+  <li>Una carpeta por trámite con sus documentos (PDF, Word, Excel, imágenes, audio y video, hasta 50 MB c/u), quién subió cada archivo y cuándo, orden manual de documentos, descarga completa en ZIP y <strong>expediente unificado en PDF</strong>.</li>
+  <li>Asignación por pestañas de operadores, clientes y acreedores; carpetas activas/desactivadas; peso total en MB visible para la administración; notas internas del operador que las partes no ven.</li>
+  <li>Biblioteca lateral con las <strong>leyes de insolvencia colombianas</strong> (enlaces al texto oficial), visible para todos.</li>
+</ul>
+
+<h3>Estados: semáforos por días hábiles colombianos</h3>
+<ul>
+  <li>Cada trámite se divide en procesos con plazo en días hábiles (ej.: “Aceptación, 3 días”). El sistema descuenta sábados, domingos y <strong>festivos oficiales de Colombia</strong> y calcula el vencimiento automáticamente.</li>
+  <li>Semáforo calculado en el servidor: <span class="sem" style="background:#22c55e"></span>verde al día · <span class="sem" style="background:#f59e0b"></span>naranja por vencer (0–1 día hábil) · <span class="sem" style="background:#ef4444"></span>rojo vencido · <span class="sem" style="background:#8b8b8b"></span>gris pausado.</li>
+  <li>Conteo legal del trámite completo: <strong>60 días hábiles, 90 con prórroga</strong>; pausa que congela el reloj y reactivación que lo reanuda exacto; el operador no puede completar un proceso vencido (solo la administración); “Fin de trámite” exclusivo del administrador.</li>
+  <li>Tabla global para administración y monitor (con buscador, pestañas activos/desactivados y refresco automático) y tarjetas de gestión para el operador.</li>
+</ul>
+
+<h3>Calendarios</h3>
+<ul>
+  <li><strong>De la carpeta</strong>: audiencias marcadas por el operador (con hora, enlace de reunión y detalles) y notificación por correo a las partes; el personal ve además el rango de fechas de cada estado.</li>
+  <li><strong>De vencimientos</strong>: vista mensual con festivos y fines de semana en gris, resumen de vencidos / por vencer / completados, filtros por operador y por trámite, y acceso directo a la carpeta desde un estado vencido.</li>
+</ul>
+
+<h3>Comunicación</h3>
+<ul>
+  <li><strong>Chat del trámite</strong> anclado en la esquina: canal deudor↔operador y canal por acreedor, con adjuntos, leído/no-leído y tiempo real (sonido y aviso visual).</li>
+  <li><strong>Chat de soporte</strong> flotante entre administración y operadores, disponible en todo el portal.</li>
+  <li><strong>Llamadas de voz</strong> (iniciadas solo por la administración) con silenciar micrófono/altavoz y posibilidad de seguir navegando por el portal durante la llamada.</li>
+</ul>
+
+<h3>Notificaciones y auditoría</h3>
+<ul>
+  <li>Campana personal con contador, marcado automático de leídas y clic que lleva al origen (la carpeta, el estado, el soporte).</li>
+  <li>Avisos automáticos: documento nuevo y mensaje nuevo para las partes; soporte solicitado, cambios de estado, vencimientos, pausas, prórrogas y fin de trámite para la administración.</li>
+  <li>Bitácora completa de actividad (quién entró, vio, descargó, subió, cambió qué y cuándo) con filtro por carpeta; <strong>constancias descargables en PDF</strong> de la actividad de los acreedores y del consentimiento de datos de cada usuario.</li>
+</ul>
+
+<h3>Usuarios y seguridad</h3>
+<ul>
+  <li>Gestión de usuarios con generador de credenciales, estado <strong>En línea/Desconectado</strong> en tiempo real, última conexión y restablecimiento seguro de contraseñas (nunca se pueden ver, solo cambiar).</li>
+  <li>Consentimiento de manejo de datos obligatorio en el primer ingreso de clientes y acreedores, con registro auditable.</li>
+  <li>Tema claro/oscuro y modo de práctica sin internet (datos locales de demostración).</li>
+</ul>
+
+<h2>5 · Tecnologías utilizadas</h2>
+<table>
+  <tr><th>Capa</th><th>Tecnología</th><th>Para qué se usa</th></tr>
+  <tr><td>Interfaz (frontend)</td><td>HTML5, CSS3 y JavaScript puro (sin frameworks)</td><td>Toda la aplicación de una sola página: vistas, modales, tema claro/oscuro, iconos SVG propios. Se sirve como sitio estático.</td></tr>
+  <tr><td>Backend como servicio</td><td><strong>Supabase</strong></td><td>La plataforma que reemplaza al servidor propio; incluye lo siguiente:</td></tr>
+  <tr><td>· Base de datos</td><td>PostgreSQL 17</td><td>Tablas del negocio (perfiles, carpetas, archivos, procesos, mensajes, notificaciones, consentimientos, festivos…), funciones PL/pgSQL con las reglas legales (días hábiles, semáforo, 60/90 días) y triggers de auditoría y avisos.</td></tr>
+  <tr><td>· Seguridad</td><td>Row Level Security (RLS) + Supabase Auth</td><td>Autenticación de usuarios y filtrado de CADA consulta según el rol, directamente en la base de datos.</td></tr>
+  <tr><td>· Archivos</td><td>Supabase Storage</td><td>Bucket privado para los documentos y adjuntos de chat, con las mismas reglas de acceso por carpeta.</td></tr>
+  <tr><td>· Tiempo real</td><td>Supabase Realtime (WebSockets)</td><td>Mensajes instantáneos, campana de notificaciones, presencia En línea/Desconectado y señalización de llamadas.</td></tr>
+  <tr><td>· Funciones de servidor</td><td>Edge Functions (Deno/TypeScript)</td><td>Operaciones privilegiadas como restablecer contraseñas, sin exponer claves en el navegador.</td></tr>
+  <tr><td>Llamadas de voz</td><td>WebRTC (getUserMedia + RTCPeerConnection)</td><td>Audio directo entre navegadores, con servidor STUN público para atravesar la red.</td></tr>
+  <tr><td>Documentos generados</td><td>pdf-lib y JSZip (desde CDN)</td><td>Expediente unificado en PDF, constancias descargables y descarga de carpetas en ZIP — todo generado en el navegador.</td></tr>
+  <tr><td>Tipografía</td><td>Google Fonts (Krub y Lora)</td><td>Identidad visual del portal.</td></tr>
+</table>
+<div class="nota">La clave que viaja en el navegador es la <em>publishable</em> (pública por diseño): sin un usuario
+autenticado no da acceso a nada, porque todas las reglas reales están en el servidor (RLS y funciones
+<code>security definer</code>). La clave privilegiada <code>service_role</code> solo existe dentro de las Edge Functions.</div>
+
+<h2>6 · Comparación de las tres carpetas del proyecto</h2>
+<table>
+  <tr><th></th><th>E:\Mascaribe</th><th>E:\2026\Smessence_v2</th><th>E:\PruebasMascaribe</th></tr>
+  <tr><td><strong>Qué es</strong></td>
+      <td>La versión más antigua del portal (generación 1).</td>
+      <td>Proyecto doble: el sitio de perfumes Smessence + el portal (generación 2). Incluye además <code>portal-next/</code>, una reescritura en Next.js que quedó a medias.</td>
+      <td>Copia de trabajo ACTUAL del portal (generación 3): la más completa y la que está conectada activamente a la base de datos.</td></tr>
+  <tr><td><strong>Estructura del código</strong></td>
+      <td><code>portal/src/</code> con carpetas models / views / controllers (app.controller.js, 1.319 líneas; esquema de 644 líneas).</td>
+      <td><code>portal/js/</code> plano (app.js 2.711 líneas; esquema de 1.174 líneas).</td>
+      <td>Misma estructura que Smessence_v2 pero muy ampliada (app.js 3.901 líneas; esquema de 2.035 líneas).</td></tr>
+  <tr><td><strong>Estado del trámite</strong></td>
+      <td>Timeline fijo de 9 etapas (Ley 2445) dentro de la carpeta.</td>
+      <td>Semáforos por días hábiles + rol monitor + conteo 60/90 + pestañas Estados y Calendario (primera versión).</td>
+      <td>Semáforo centralizado en el servidor, fin de trámite, prórroga para operadores, filtros, buscadores y deep links.</td></tr>
+  <tr><td><strong>Comunicación</strong></td>
+      <td>Chat por carpeta con adjuntos (embebido al final de la página).</td>
+      <td>Igual que Mascaribe.</td>
+      <td>Chats flotantes anclados, hilo individual por acreedor, chat de soporte admin↔operadores, llamadas de voz, leído/no-leído y tiempo real.</td></tr>
+  <tr><td><strong>Notificaciones</strong></td>
+      <td>Solo bitácora del administrador.</td>
+      <td>Solo bitácora del administrador (+ notificaciones por carpeta para el operador).</td>
+      <td>Campana por usuario con avisos automáticos, deep linking, filtro por carpeta y constancias en PDF.</td></tr>
+  <tr><td><strong>Extras exclusivos</strong></td>
+      <td>Pestaña “Información del deudor” aún activa.</td>
+      <td>Punto de partida de: monitor, leyes junto a las carpetas, días hábiles, festivos 2024-2027.</td>
+      <td>Consentimientos de datos, presencia En línea, última conexión, generador de credenciales, barra fija unificada, iconos SVG (sin emojis), peso por carpeta, modales propios y código muerto ya marcado para limpieza.</td></tr>
+  <tr><td><strong>Base de datos</strong></td>
+      <td colspan="3">Las tres apuntan al MISMO proyecto de Supabase (hheyihgktcswvxiscvdm). La base de datos real va al ritmo de PruebasMascaribe; los esquemas de las otras dos carpetas quedaron atrás.</td></tr>
+</table>
+<div class="nota"><strong>En una frase:</strong> Mascaribe es el pasado, Smessence_v2 es el punto intermedio (y el hogar del
+sitio de perfumes), y PruebasMascaribe es el presente: ahí se trabaja, ahí está todo lo nuevo y ahí se
+marcó el código por limpiar. Ojo: como las tres comparten la base de datos, abrir un portal viejo contra
+la base actual puede dar errores — conviene tratar Mascaribe y el portal de Smessence_v2 como archivo histórico.</div>
+
+<footer>Portal Documental MASCaribe · Documento de presentación · 14 de julio de 2026</footer>
+
+</body>
+</html>

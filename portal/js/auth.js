@@ -6,6 +6,7 @@ const DURACION_SESION = 8 * 60 * 60 * 1000; // 8 horas
 
 const ETIQUETAS_ROL = {
     administrador: 'Administrador',
+    monitor:       'Monitor',
     operador:      'Operador',
     cliente:       'Cliente',
     acreedor:      'Acreedor'

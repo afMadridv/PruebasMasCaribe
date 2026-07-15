@@ -3,17 +3,20 @@
    (no depende del CSS del sitio principal)
    ============================================ */
 :root{
-    /* Color — misma paleta que la página (azul Caribe + teal) */
+    /* Color — paleta de marca: cian #00A1B8 (estructura) + naranja #FA9B02 (acento) */
     --pt-tinta: #17262E;          /* texto principal */
     --pt-gris: #536068;           /* texto secundario (sobre blanco) */
-    --pt-navy-900: #0C3A4E;       /* azul profundo (estructura) */
-    --pt-navy-800: #0F4861;
-    --pt-navy-700: #13607F;       /* color base de encabezado/pestañas/botón */
-    --pt-azul: #159C95;           /* acento teal (hover, enlaces, foco) */
-    --pt-azul-600: #12867F;       /* teal oscuro */
-    --pt-azul-claro: #9FD6D2;     /* teal claro */
-    --pt-fondo: #F3F7F8;
-    --pt-blanco: #fff;
+    --pt-marca-cian: #00A1B8;      /* color de marca 1 */
+    --pt-marca-naranja: #FA9B02;   /* color de marca 2 */
+    --pt-navy-900: #006B7A;       /* cian profundo (estructura) */
+    --pt-navy-800: #00889C;
+    --pt-navy-700: #00A1B8;       /* cian base de encabezado/pestañas/botón */
+    --pt-azul: #FA9B02;           /* acento naranja (hover, enlaces, foco) */
+    --pt-azul-600: #D98500;       /* naranja oscuro */
+    --pt-azul-claro: #A8E4EE;     /* cian claro (texto sobre el chrome) */
+    --pt-fondo: #F2F8F9;
+    --pt-blanco: #fff;             /* blanco real: texto sobre el chrome oscuro */
+    --pt-superficie: #fff;         /* fondo de tarjetas/inputs (cambia en tema oscuro) */
     --pt-superficie-2: #EDF4F4;
     --pt-borde: #E2EAEC;
     --pt-verde: #157039;
@@ -41,6 +44,74 @@
     --pt-fuente-titulos: 'Lora', Georgia, serif;
     --pt-fuente-texto: 'Krub', Arial, sans-serif;
 }
+
+/* ============ TEMA OSCURO ============
+   Se activa con html[data-tema="oscuro"] (lo fija tema.js y un script en el
+   <head> para evitar parpadeo). Solo redefine tokens: el resto del CSS, que
+   ya usa variables, hereda el cambio. --pt-blanco se queda blanco a propósito
+   (es el texto sobre el chrome azul); las superficies usan --pt-superficie. */
+html[data-tema="oscuro"]{
+    --pt-tinta: #EAF1F4;
+    --pt-gris: #AEC0C8;          /* secundario más claro: legible, sin camuflarse */
+    --pt-navy-900: #05343B;
+    --pt-navy-800: #0A4A54;
+    --pt-navy-700: #0E7F91;      /* chrome (cabecera/botones): cian apagado */
+    --pt-azul: #FBAE33;          /* acento naranja (más claro para leer en oscuro) */
+    --pt-azul-600: #E79A1A;
+    --pt-azul-claro: #8FCAD6;
+    --pt-fondo: #0D171C;
+    --pt-superficie: #18272F;
+    --pt-superficie-2: #213440;
+    --pt-borde: #38505C;         /* bordes visibles para separar componentes */
+    --pt-verde-suave: #14361F;
+    --pt-rojo-suave: #3A1714;
+    --pt-ambar-suave: #3A2A0C;
+    --pt-sombra-1: 0 1px 2px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
+    --pt-sombra-2: 0 4px 10px rgba(0,0,0,.4), 0 14px 30px rgba(0,0,0,.45);
+    --pt-sombra-3: 0 10px 24px rgba(0,0,0,.5), 0 24px 60px rgba(0,0,0,.55);
+    color-scheme: dark;
+}
+/* Títulos: en claro son azul marino; en oscuro deben aclararse para leerse.
+   Los títulos sobre el chrome ya usan color:var(--pt-blanco) y siguen blancos. */
+html[data-tema="oscuro"] h1,
+html[data-tema="oscuro"] h2,
+html[data-tema="oscuro"] h3,
+html[data-tema="oscuro"] .pt-chats__cab h3,
+html[data-tema="oscuro"] .pt-leyes > h3{
+    color: #DCE7EB;
+}
+/* Textos que en claro son azul marino y quedarían ilegibles sobre superficie
+   oscura: etiquetas de formulario, botones fantasma, leyes e insignias. */
+html[data-tema="oscuro"] .pt-campo > span,
+html[data-tema="oscuro"] .pt-campo > legend{ color: #D4E0E6; }
+html[data-tema="oscuro"] .pt-ley__txt strong,
+html[data-tema="oscuro"] .pt-ley__ic,
+html[data-tema="oscuro"] .pt-notif__objetivo{ color: #C9DAE3; }
+/* Insignias: tonos apagados (nada de neón), legibles sobre su fondo */
+html[data-tema="oscuro"] .pt-insignia--activa{ color: #A7D2B6; }
+html[data-tema="oscuro"] .pt-insignia--inactiva{ color: #E2C492; }
+
+/* Inputs: fondo más oscuro que la tarjeta + borde claro → se ven como campos,
+   no se camuflan con la superficie. */
+html[data-tema="oscuro"] .pt-campo input,
+html[data-tema="oscuro"] .pt-campo select,
+html[data-tema="oscuro"] .pt-campo textarea,
+html[data-tema="oscuro"] .pt-chat-entrada textarea{
+    background-color: #0E1A20;
+    border-color: #3C545F;
+}
+/* Botón fantasma: fondo y borde sutiles para que se lea como botón */
+html[data-tema="oscuro"] .pt-boton--fantasma{
+    color: #E0EAEE;
+    background-color: rgba(255, 255, 255, .05);
+    border-color: #415965;
+}
+html[data-tema="oscuro"] .pt-boton--fantasma:hover{
+    background-color: rgba(255, 255, 255, .12);
+    border-color: var(--pt-azul);
+}
+/* Ojo de "ver contraseña": claro y nítido */
+html[data-tema="oscuro"] .pt-ver-clave{ color: #C9DAE3; opacity: 1; }
 
 html{
     box-sizing: border-box;
@@ -189,7 +260,7 @@ button{
 .pt-tarjeta-login{
     width: 100%;
     max-width: 42rem;
-    background-color: var(--pt-blanco);
+    background-color: var(--pt-superficie);
     border-radius: 1.6rem;
     padding: 3.2rem;
     box-shadow: var(--pt-sombra-3);
@@ -264,7 +335,7 @@ button{
     border-radius: 1rem;
     font-family: inherit;
     font-size: 1.5rem;
-    background-color: var(--pt-blanco);
+    background-color: var(--pt-superficie);
     color: var(--pt-tinta);
     transition: border-color var(--pt-rapido), box-shadow var(--pt-rapido);
 }
@@ -278,7 +349,7 @@ button{
 .pt-campo textarea:focus{
     outline: none;
     border-color: var(--pt-azul);
-    box-shadow: 0 0 0 4px rgba(21,156,149,.18);
+    box-shadow: none;
 }
 fieldset.pt-campo{
     border: 1px solid var(--pt-borde);
@@ -322,11 +393,10 @@ fieldset.pt-campo{
     background-color: var(--pt-fondo);
 }
 
-/* ============ ENCABEZADO DE LA APLICACIÓN ============ */
+/* ============ ENCABEZADO DE LA APLICACIÓN ============
+   (el anclaje al hacer scroll vive en .pt-topbar, que une el
+    encabezado y las pestañas en UN solo bloque fijo) */
 .pt-encabezado{
-    position: sticky;
-    top: 0;
-    z-index: var(--pt-z-encabezado);
     background: linear-gradient(120deg, var(--pt-navy-900), var(--pt-navy-700) 70%);
     color: var(--pt-blanco);
     padding: 1.2rem 2.4rem;
@@ -390,7 +460,7 @@ fieldset.pt-campo{
     bottom: 0;
     height: .35rem;
     border-radius: 99rem 99rem 0 0;
-    background-color: var(--pt-blanco);
+    background-color: var(--pt-superficie);
     transform: scaleX(0);
     transform-origin: center;
     transition: transform .28s var(--pt-curva);
@@ -435,7 +505,7 @@ fieldset.pt-campo{
     padding: 5rem 2rem;
     border: 2px dashed var(--pt-borde);
     border-radius: 1.4rem;
-    background-color: var(--pt-blanco);
+    background-color: var(--pt-superficie);
 }
 
 /* ============ TARJETAS DE CARPETA ============ */
@@ -445,7 +515,7 @@ fieldset.pt-campo{
     gap: 1.8rem;
 }
 .pt-carpeta{
-    background-color: var(--pt-blanco);
+    background-color: var(--pt-superficie);
     border-radius: 1.4rem;
     padding: 2rem;
     display: flex;
@@ -465,9 +535,11 @@ fieldset.pt-campo{
     transform: translateY(-3px);
     box-shadow: var(--pt-sombra-2);
 }
+/* Desactivada: se distingue por COLOR (ámbar), no por opacidad/lavado, para
+   que el texto se siga leyendo bien también en modo oscuro. */
 .pt-carpeta--inactiva{
-    background-color: #F3F6FA;
-    opacity: .85;
+    background-color: var(--pt-ambar-suave);
+    border: 1px solid var(--pt-ambar);
 }
 .pt-carpeta__nombre{
     font-size: 1.7rem;
@@ -476,6 +548,21 @@ fieldset.pt-campo{
     margin: 0;
     word-break: break-word;
 }
+/* Etapa del trámite mostrada en la propia tarjeta (para todos los roles) */
+.pt-carpeta__etapa{
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--pt-tinta);
+    background-color: var(--pt-superficie-2);
+    border: 1px solid var(--pt-borde);
+    border-radius: .8rem;
+    padding: .5rem .8rem;
+}
+.pt-carpeta__etapa .pt-svg{ color: var(--pt-azul-600); flex-shrink: 0; }
+.pt-carpeta__etapa strong{ color: var(--pt-tinta); font-weight: 700; }
 .pt-carpeta__descripcion{
     font-size: 1.35rem;
     color: var(--pt-gris);
@@ -523,7 +610,7 @@ fieldset.pt-campo{
 .pt-zona-subida{
     border: 2px dashed var(--pt-azul-claro);
     border-radius: 1.4rem;
-    background-color: var(--pt-blanco);
+    background-color: var(--pt-superficie);
     text-align: center;
     padding: 2.8rem 2rem;
     margin-bottom: 2.6rem;
@@ -545,7 +632,7 @@ fieldset.pt-campo{
 
 /* ============ TABLAS ============ */
 .pt-tabla-envoltura{
-    background-color: var(--pt-blanco);
+    background-color: var(--pt-superficie);
     border-radius: 1.4rem;
     overflow-x: auto;
     box-shadow: var(--pt-sombra-1);
@@ -568,7 +655,7 @@ fieldset.pt-campo{
 }
 .pt-tabla td{
     padding: 1.2rem 1.6rem;
-    border-bottom: 1px solid #EAF0F6;
+    border-bottom: 1px solid var(--pt-borde);
     vertical-align: middle;
     transition: background-color var(--pt-rapido);
 }
@@ -596,7 +683,7 @@ fieldset.pt-campo{
 
 /* ============ DETALLE DE CARPETA ============ */
 .pt-detalle-cabecera{
-    background-color: var(--pt-blanco);
+    background-color: var(--pt-superficie);
     border-radius: 1.4rem;
     padding: 2rem 2.2rem;
     margin-bottom: 2.2rem;
@@ -623,6 +710,148 @@ fieldset.pt-campo{
     animation: pt-aparecer .25s var(--pt-curva) backwards;
 }
 
+/* ============ ESTADO FORMAL DEL PROCESO (Ley 2445/2025) ============
+   Dropdown para cambiar la etapa (solo personal) + timeline de 9 pasos. */
+.pt-proceso{
+    margin-top: 1.6rem;
+    padding-top: 1.6rem;
+    border-top: 1px dashed var(--pt-borde);
+}
+/* ============================================================
+   >>> SIN USO — REVISAR Y ELIMINAR MANUALMENTE <<<
+   Estilos del timeline de 9 etapas y su barra de dropdown: esa
+   interfaz se reemplazó por los procesos con semáforo. Ninguna
+   clase .pt-proceso__barra ni .pt-timeline* se genera ya en el
+   HTML. (.pt-proceso a secas SÍ se usa: no borrarla.)
+   Bloque muerto: desde aquí hasta el marcador de cierre.
+   ============================================================ */
+.pt-proceso__barra{
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: 1.8rem;
+}
+.pt-proceso__barra .pt-campo{
+    margin: 0;
+    flex: 1 1 30rem;
+    min-width: 24rem;
+}
+.pt-proceso__barra .pt-boton{ flex: 0 0 auto; }
+
+.pt-timeline{
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-width: 60rem;
+}
+.pt-timeline__paso{
+    position: relative;
+    display: grid;
+    grid-template-columns: 2.8rem 1fr;
+    gap: 1.2rem;
+    padding-bottom: 1.4rem;
+    color: var(--pt-gris);
+}
+/* riel vertical que une las marcas dentro de la columna */
+.pt-timeline__paso::before{
+    content: '';
+    position: absolute;
+    left: 1.4rem;
+    top: 2.8rem;
+    bottom: 0;
+    width: 2px;
+    background: var(--pt-borde);
+    transform: translateX(-1px);
+}
+/* en una sola columna (móvil) el último paso no lleva riel */
+.pt-timeline__paso:last-child{ padding-bottom: 0; }
+.pt-timeline__paso:last-child::before{ display: none; }
+.pt-timeline__marca{
+    width: 2.8rem;
+    height: 2.8rem;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--pt-superficie);
+    border: 2px solid var(--pt-borde);
+    color: var(--pt-gris);
+    font-weight: 700;
+    font-size: 1.3rem;
+}
+.pt-timeline__texto{
+    padding-top: .35rem;
+    font-size: 1.5rem;
+    line-height: 1.3;
+}
+.pt-timeline__num{
+    display: block;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--pt-gris);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+/* etapas ya cumplidas */
+.pt-timeline__paso--hecho .pt-timeline__marca{
+    background: var(--pt-verde-suave);
+    border-color: var(--pt-verde);
+    color: var(--pt-verde);
+}
+.pt-timeline__paso--hecho::before{ background: var(--pt-verde); }
+.pt-timeline__paso--hecho .pt-timeline__texto{ color: var(--pt-tinta); }
+/* etapa actual */
+.pt-timeline__paso--actual .pt-timeline__marca{
+    background: var(--pt-navy-700);
+    border-color: var(--pt-navy-700);
+    color: var(--pt-blanco);
+    box-shadow: none;
+}
+.pt-timeline__paso--actual .pt-timeline__texto{
+    color: var(--pt-navy-800);
+    font-weight: 700;
+}
+html[data-tema="oscuro"] .pt-timeline__paso--actual .pt-timeline__texto{
+    color: #DCE7EB;
+}
+
+/* En pantallas anchas, las 9 etapas se reparten en 3 columnas (3 por columna),
+   llenando columna por columna (1-2-3, 4-5-6, 7-8-9). El riel verde vertical se
+   conserva dentro de cada columna y se oculta al pie de cada una (cada 3ª fila). */
+@media (min-width: 760px){
+    .pt-timeline{
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(3, auto);
+        grid-auto-flow: column;
+        column-gap: 2.8rem;
+        max-width: none;
+    }
+    .pt-timeline__paso:last-child::before{ display: block; }   /* reactiva el riel… */
+    .pt-timeline__paso:nth-child(3n)::before{ display: none; } /* …salvo al pie de columna */
+    .pt-timeline__paso:nth-child(3n){ padding-bottom: 0; }
+}
+
+/* Estilos de la pestaña "Deudor", eliminada de la interfaz: ninguna
+   clase .pt-deudor* se genera ya en el HTML. */
+.pt-deudor{ animation: pt-aparecer .25s var(--pt-curva) backwards; }
+.pt-deudor__titulo{
+    font-size: 1.55rem;
+    color: var(--pt-navy-800);
+    margin: 0 0 1.2rem;
+    padding-bottom: .6rem;
+    border-bottom: 1px solid var(--pt-borde);
+}
+.pt-deudor__titulo:not(:first-child){ margin-top: 2.4rem; }
+.pt-deudor__rejilla{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
+    gap: 1.2rem 1.6rem;
+}
+/* ============================================================
+   >>> FIN DEL BLOQUE SIN USO (timeline + deudor) <<<
+   ============================================================ */
+
 /* ============ MODAL ============ */
 .pt-modal{
     position: fixed;
@@ -636,7 +865,7 @@ fieldset.pt-campo{
     animation: pt-aparecer .2s var(--pt-curva) backwards;
 }
 .pt-modal__caja{
-    background-color: var(--pt-blanco);
+    background-color: var(--pt-superficie);
     border-radius: 1.6rem;
     padding: 2.6rem;
     width: 100%;
@@ -697,7 +926,7 @@ fieldset.pt-campo{
 
 /* ============ FORMULARIO DE USUARIOS ============ */
 .pt-form-usuario{
-    background-color: var(--pt-blanco);
+    background-color: var(--pt-superficie);
     border-radius: 1.4rem;
     padding: 2rem;
     margin-bottom: 2.6rem;
@@ -727,7 +956,7 @@ fieldset.pt-campo{
     display: inline-flex;
     align-items: center;
     gap: .55rem;
-    background-color: var(--pt-blanco);
+    background-color: var(--pt-superficie);
     border: 1px solid var(--pt-borde);
     color: var(--pt-gris);
     font-size: 1.45rem;
@@ -747,7 +976,7 @@ fieldset.pt-campo{
     color: var(--pt-blanco);
 }
 .pt-notif-lista{
-    background-color: var(--pt-blanco);
+    background-color: var(--pt-superficie);
     border-radius: 1.4rem;
     box-shadow: var(--pt-sombra-1);
     overflow: hidden;
@@ -806,6 +1035,101 @@ fieldset.pt-campo{
     margin-top: .2rem !important;
 }
 
+/* ============ ASISTENTE IA / CHAT ============ */
+.pt-chat{
+    margin-top: 2.4rem;
+    background-color: var(--pt-superficie);
+    border-radius: 1.4rem;
+    box-shadow: var(--pt-sombra-1);
+    overflow: hidden;
+}
+.pt-chat__cab{
+    display: flex;
+    align-items: flex-start;
+    gap: 1.2rem;
+    padding: 1.8rem 2rem;
+    background: linear-gradient(120deg, var(--pt-navy-900), var(--pt-navy-700) 75%);
+    color: var(--pt-blanco);
+}
+.pt-chat__cab h3{ color: var(--pt-blanco); font-size: 1.9rem; margin: 0 0 .3rem; }
+.pt-chat__cab .pt-nota{ color: var(--pt-azul-claro); font-size: 1.3rem; }
+.pt-chat__cab .pt-nota strong{ color: var(--pt-blanco); }
+.pt-chat__ic{
+    flex-shrink: 0;
+    width: 4rem; height: 4rem; border-radius: 1rem;
+    background-color: rgba(255,255,255,.15); color: var(--pt-blanco);
+    display: flex; align-items: center; justify-content: center;
+}
+.pt-chat__mensajes{
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    padding: 2rem;
+    max-height: 42rem;
+    overflow-y: auto;
+}
+.pt-chat-vacio{
+    text-align: center; color: var(--pt-gris); font-size: 1.4rem; padding: 2rem 1rem;
+}
+.pt-msg{
+    max-width: 80%;
+    padding: 1.1rem 1.4rem;
+    border-radius: 1.2rem;
+    font-size: 1.45rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    animation: pt-aparecer .2s var(--pt-curva) backwards;
+}
+.pt-msg__autor{ font-size: 1.2rem; font-weight: 700; margin-bottom: .35rem; opacity: .85; }
+.pt-msg__hora{ font-size: 1.15rem; margin-top: .4rem; opacity: .6; }
+/* Pregunta del usuario (derecha) */
+.pt-msg--usuario{
+    align-self: flex-end;
+    background-color: var(--pt-navy-700);
+    color: var(--pt-blanco);
+    border-bottom-right-radius: .4rem;
+}
+/* Respuesta del asistente (izquierda) */
+.pt-msg--ia{
+    align-self: flex-start;
+    background-color: var(--pt-superficie-2);
+    color: var(--pt-tinta);
+    border-bottom-left-radius: .4rem;
+    border: 1px solid var(--pt-borde);
+}
+/* Respuesta de rechazo / fuera de scope */
+.pt-msg--rechazo{
+    align-self: flex-start;
+    background-color: var(--pt-ambar-suave);
+    color: var(--pt-ambar);
+    border-bottom-left-radius: .4rem;
+}
+.pt-msg--ia .pt-msg__ley{
+    display: inline-block; margin-top: .6rem; font-size: 1.2rem; font-weight: 700;
+    color: var(--pt-navy-700); background-color: #E2EBF4; border-radius: .5rem; padding: .2rem .7rem;
+}
+.pt-chat__entrada{ border-top: 1px solid var(--pt-borde); padding: 1.4rem 2rem 1.8rem; }
+.pt-chat__ayuda{ font-size: 1.25rem; color: var(--pt-gris); margin: 0 0 .9rem; }
+.pt-chat__fila{ display: flex; gap: 1rem; align-items: flex-end; }
+.pt-chat__entrada textarea{
+    flex: 1;
+    padding: 1.1rem 1.2rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: 1rem;
+    font-family: inherit;
+    font-size: 1.5rem;
+    resize: vertical;
+    color: var(--pt-tinta);
+    background-color: var(--pt-superficie);
+}
+.pt-chat__entrada textarea:focus{
+    outline: none; border-color: var(--pt-azul);
+    box-shadow: none;
+}
+.pt-chat__entrada button{ white-space: nowrap; }
+.pt-chat__pensando{ align-self: flex-start; color: var(--pt-gris); font-size: 1.4rem; font-style: italic; }
+
 /* ============ TOAST ============ */
 .pt-toast{
     position: fixed;
@@ -832,6 +1156,329 @@ fieldset.pt-campo{
     background-color: var(--pt-rojo);
 }
 
+/* ============ DETALLE DE CARPETA + MENÚ LATERAL DE LEYES ============ */
+/* El detalle de carpeta aprovecha los costados: contenedor más ancho
+   (lo activa el controlador solo en esa vista). */
+.pt-contenido--ancha{ max-width: 152rem; }
+
+/* Tres columnas: leyes (izquierda) · contenido (centro) · calendario (derecha).
+   Si la columna derecha no existe (cliente/acreedor), el centro usa su espacio. */
+.pt-carpeta-cuerpo{
+    display: flex;
+    gap: 1.8rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+.pt-carpeta-principal{
+    flex: 1 1 460px;
+    min-width: 0;
+    order: 2;
+}
+.pt-leyes{
+    flex: 0 0 280px;
+    order: 1;
+    background-color: var(--pt-superficie);
+    border-radius: 1.4rem;
+    box-shadow: var(--pt-sombra-1);
+    padding: 1.8rem;
+    position: sticky;
+    top: 1.6rem;
+}
+/* Columna derecha: calendario de audiencias (solo personal de la carpeta) */
+.pt-lateral-cal{
+    flex: 0 0 310px;
+    order: 3;
+    position: sticky;
+    top: 1.6rem;
+    background-color: var(--pt-superficie);
+    border-radius: 1.4rem;
+    box-shadow: var(--pt-sombra-1);
+    padding: 1.8rem;
+}
+.pt-lateral-cal > h3{
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    margin: 0 0 .4rem;
+    font-family: var(--pt-fuente-titulos);
+    color: var(--pt-navy-700);
+    font-size: 1.7rem;
+}
+.pt-lateral-cal .pt-calendario{
+    margin-top: 1.2rem;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+}
+html[data-tema="oscuro"] .pt-lateral-cal > h3{ color: #DCE7EB; }
+/* En pantallas medianas el calendario baja a lo ancho, debajo del contenido */
+@media (max-width: 1250px){
+    .pt-lateral-cal{
+        flex-basis: 100%;
+        position: static;
+    }
+    .pt-lateral-cal .pt-calendario{ max-width: 36rem; }
+}
+.pt-leyes > h3{
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    margin: 0 0 .4rem;
+    font-family: var(--pt-fuente-titulos);
+    color: var(--pt-navy-700);
+    font-size: 1.7rem;
+}
+.pt-leyes__lista{
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+    margin-top: 1.4rem;
+}
+.pt-ley{
+    display: flex;
+    align-items: flex-start;
+    gap: .8rem;
+    padding: .9rem 1rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: 1rem;
+    text-decoration: none;
+    color: var(--pt-tinta);
+    background-color: var(--pt-superficie);
+    transition: border-color var(--pt-rapido), background-color var(--pt-rapido), transform var(--pt-rapido), box-shadow var(--pt-rapido);
+}
+.pt-ley:hover{
+    border-color: var(--pt-azul-claro);
+    background-color: var(--pt-superficie-2);
+    transform: translateY(-1px);
+    box-shadow: var(--pt-sombra-1);
+}
+.pt-ley__ic{
+    color: var(--pt-navy-700);
+    flex-shrink: 0;
+    margin-top: .1rem;
+}
+.pt-ley__txt{
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+}
+.pt-ley__txt strong{
+    color: var(--pt-navy-700);
+    font-size: 1.42rem;
+}
+.pt-ley__txt span{
+    color: var(--pt-gris);
+    font-size: 1.25rem;
+}
+@media (max-width: 820px){
+    .pt-leyes{
+        flex-basis: 100%;
+        position: static;
+        order: 4;   /* en el celular las leyes van al final, después del contenido */
+    }
+}
+
+/* ============ CHATS DEL TRÁMITE ============ */
+.pt-chats{
+    background-color: var(--pt-superficie);
+    border-radius: 1.4rem;
+    box-shadow: var(--pt-sombra-1);
+    padding: 1.8rem;
+    margin-top: 2.2rem;
+}
+.pt-chats__cab{
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 1.2rem;
+}
+.pt-chats__ic{
+    color: var(--pt-navy-700);
+    flex-shrink: 0;
+}
+.pt-chats__cab h3{
+    margin: 0;
+    font-family: var(--pt-fuente-titulos);
+    color: var(--pt-navy-700);
+    font-size: 1.8rem;
+}
+.pt-chat-historial{
+    display: flex;
+    flex-direction: column;
+    gap: .9rem;
+    max-height: 380px;
+    overflow-y: auto;
+    padding: 1.2rem;
+    background-color: var(--pt-superficie-2);
+    border-radius: 1rem;
+    margin-bottom: 1.2rem;
+}
+.pt-chat-msg{
+    max-width: 78%;
+    align-self: flex-start;
+    background-color: var(--pt-superficie);
+    border: 1px solid var(--pt-borde);
+    border-radius: 1rem;
+    padding: .8rem 1.1rem;
+    animation: pt-aparecer .2s var(--pt-curva) backwards;
+}
+.pt-chat-msg--mio{
+    align-self: flex-end;
+    background-color: var(--pt-navy-700);
+    border-color: var(--pt-navy-700);
+    color: var(--pt-blanco);
+}
+.pt-chat-msg__meta{
+    font-size: 1.15rem;
+    color: var(--pt-gris);
+    margin-bottom: .25rem;
+}
+.pt-chat-msg--mio .pt-chat-msg__meta{
+    color: rgba(255, 255, 255, .82);
+}
+.pt-chat-msg__meta .pt-insignia{
+    font-size: 1rem;
+}
+.pt-chat-msg__texto{
+    font-size: 1.45rem;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.pt-chat-entrada{
+    display: flex;
+    gap: .8rem;
+    align-items: flex-end;
+}
+.pt-chat-entrada textarea{
+    flex: 1;
+    resize: vertical;
+    font: inherit;
+    padding: .9rem 1.1rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: .9rem;
+    background-color: var(--pt-superficie);
+    color: var(--pt-tinta);
+}
+.pt-chat-entrada textarea:focus{
+    outline: none;
+    border-color: var(--pt-azul);
+}
+.pt-chat-vacio{
+    color: var(--pt-gris);
+    text-align: center;
+    padding: 1.6rem;
+}
+
+/* ---- Adjuntos en el chat ---- */
+.pt-chat-clip{
+    align-self: flex-end;
+    padding: .9rem 1.1rem;
+    line-height: 0;
+    cursor: pointer;
+}
+.pt-chat-clip .pt-svg{ margin: 0; vertical-align: middle; }
+.pt-chat-adjunto{
+    display: inline-flex;
+    align-items: center;
+    gap: .7rem;
+    margin-bottom: .8rem;
+    padding: .5rem .6rem .5rem 1rem;
+    background-color: var(--pt-superficie-2);
+    border: 1px dashed var(--pt-borde);
+    border-radius: .9rem;
+    font-size: 1.3rem;
+    color: var(--pt-tinta);
+    animation: pt-aparecer .2s var(--pt-curva) backwards;
+}
+.pt-chat-adjunto .pt-svg{ color: var(--pt-azul-600); }
+.pt-chat-msg__adjunto{
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    margin-top: .6rem;
+    padding: .6rem .8rem;
+    background-color: var(--pt-superficie-2);
+    border: 1px solid var(--pt-borde);
+    border-radius: .8rem;
+    font-size: 1.3rem;
+}
+.pt-chat-msg--mio .pt-chat-msg__adjunto{
+    background-color: rgba(255,255,255,.12);
+    border-color: rgba(255,255,255,.25);
+    color: var(--pt-blanco);
+}
+.pt-chat-msg--mio .pt-chat-msg__adjunto .pt-boton--fantasma{
+    color: var(--pt-blanco);
+    border-color: rgba(255,255,255,.4);
+    background: none;
+}
+.pt-chat-msg__adjunto-info{
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+    min-width: 0;
+    word-break: break-word;
+}
+.pt-chat-msg__adjunto-info small{
+    color: var(--pt-gris);
+    font-size: 1.1rem;
+}
+.pt-chat-msg--mio .pt-chat-msg__adjunto-info small{ color: rgba(255,255,255,.75); }
+
+/* ============ CONMUTADOR DE TEMA (claro / oscuro) ============ */
+/* En el portal va dentro del chip de usuario; solo icono, cuadrado. */
+.pt-boton--tema{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: .7rem;
+    line-height: 0;
+}
+.pt-boton--tema .pt-svg{ margin: 0; vertical-align: middle; }
+/* En el login flota arriba a la derecha, sobre el degradado. */
+.pt-tema-flotante{
+    position: fixed;
+    top: 1.6rem;
+    right: 1.6rem;
+    z-index: var(--pt-z-encabezado);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 4.4rem;
+    height: 4.4rem;
+    border: 1px solid rgba(255,255,255,.35);
+    border-radius: 50%;
+    background-color: rgba(255,255,255,.14);
+    color: var(--pt-blanco);
+    cursor: pointer;
+    line-height: 0;
+    transition: background-color var(--pt-rapido), transform var(--pt-rapido);
+}
+.pt-tema-flotante:hover{
+    background-color: rgba(255,255,255,.28);
+    transform: translateY(-1px);
+}
+.pt-tema-flotante .pt-svg{ vertical-align: middle; }
+
+/* ============ RESPONSIVE (móvil) ============ */
+@media (max-width: 640px){
+    .pt-encabezado{ padding: 1rem 1.3rem; }
+    .pt-encabezado h1{ font-size: 1.9rem; }
+    .pt-usuario-chip{ gap: .6rem; font-size: 1.25rem; flex-wrap: wrap; justify-content: flex-end; }
+    .pt-pestanas{ padding: 0 1rem; overflow-x: auto; }
+    .pt-pestanas button{ padding: 1.1rem 1.2rem; white-space: nowrap; }
+    .pt-contenido{ padding: 2rem 1.2rem 5rem; }
+    .pt-barra-seccion h2{ font-size: 2rem; }
+    .pt-detalle-cabecera{ padding: 1.6rem 1.4rem; }
+    .pt-detalle-cabecera h2{ font-size: 2rem; }
+    .pt-tarjeta-login{ padding: 2.2rem 1.6rem; }
+    .pt-tarjeta-login h1{ font-size: 2.8rem; }
+    .pt-proceso__barra .pt-campo{ min-width: 0; flex: 1 1 100%; }
+    .pt-modal__caja{ padding: 1.8rem 1.6rem; }
+    .pt-tema-flotante{ width: 4rem; height: 4rem; top: 1.2rem; right: 1.2rem; }
+}
+
 /* ============ MOVIMIENTO REDUCIDO ============ */
 @media (prefers-reduced-motion: reduce){
     *, *::before, *::after{
@@ -840,3 +1487,775 @@ fieldset.pt-campo{
         transition-duration: .01ms !important;
     }
 }
+
+/* ============ AUDIENCIAS: CALENDARIO Y LISTA ============ */
+.pt-audiencias-cab{
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap; margin: 1.2rem 0 .4rem;
+}
+.pt-audiencias-cab h3{
+    display: flex; align-items: center; gap: .6rem; margin: 0;
+    font-size: 1.7rem;
+}
+.pt-calendario{
+    background: var(--pt-superficie); border: 1px solid var(--pt-borde);
+    border-radius: 1rem; padding: 1.2rem; box-shadow: var(--pt-sombra-1);
+}
+.pt-cal__barra{
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: .8rem;
+}
+.pt-cal__semana, .pt-cal__rejilla{
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: .2rem;
+    text-align: center;
+}
+.pt-cal__semana span{
+    font-size: 1.1rem; font-weight: 600; color: var(--pt-gris);
+    padding: .3rem 0;
+}
+.pt-cal__dia{
+    border: 1px solid transparent; background: transparent;
+    border-radius: .6rem; padding: .55rem 0; font: inherit; font-size: 1.3rem;
+    color: var(--pt-tinta); cursor: pointer; transition: background var(--pt-rapido);
+}
+.pt-cal__dia:hover:not(.pt-cal__dia--vacio){ background: var(--pt-superficie-2); }
+.pt-cal__dia--vacio{ cursor: default; }
+.pt-cal__dia--hoy{ border-color: var(--pt-azul); font-weight: 700; }
+.pt-cal__dia--audiencia{
+    background: var(--pt-navy-700); color: var(--pt-blanco); font-weight: 700;
+}
+.pt-cal__dia--audiencia:hover{ background: var(--pt-navy-800); }
+.pt-cal__pie{ margin-top: .8rem; display: flex; align-items: center; gap: .5rem; }
+.pt-cal__punto{
+    width: 1.1rem; height: 1.1rem; border-radius: .35rem;
+    background: var(--pt-navy-700); display: inline-block; flex: none;
+}
+/* Día en solo lectura (deudor/acreedor): sin cursor de acción ni hover */
+.pt-cal__dia--solo{ cursor: default; }
+.pt-cal__dia--solo:hover:not(.pt-cal__dia--vacio){ background: transparent; }
+.pt-cal__dia--audiencia.pt-cal__dia--solo:hover{ background: var(--pt-navy-700); }
+
+/* Próximas audiencias bajo el calendario */
+.pt-cal-prox{ margin-top: 1.2rem; border-top: 1px solid var(--pt-borde); padding-top: 1rem; }
+.pt-cal-prox h4{
+    margin: 0 0 .6rem; font-family: var(--pt-fuente-titulos);
+    color: var(--pt-navy-700); font-size: 1.45rem;
+}
+html[data-tema="oscuro"] .pt-cal-prox h4{ color: #DCE7EB; }
+.pt-cal-prox__item{
+    display: flex; flex-direction: column; gap: .1rem;
+    padding: .5rem 0; font-size: 1.3rem;
+}
+.pt-cal-prox__item + .pt-cal-prox__item{ border-top: 1px dashed var(--pt-borde); }
+.pt-cal-prox__item span{ color: var(--pt-gris); }
+.pt-cal-prox__item a{ color: var(--pt-azul); word-break: break-all; }
+
+.pt-audiencias-lista{ display: flex; flex-direction: column; gap: .8rem; margin-top: 1.2rem; }
+.pt-audiencia{
+    display: flex; align-items: center; gap: 1rem;
+    background: var(--pt-superficie); border: 1px solid var(--pt-borde);
+    border-radius: 1rem; padding: 1rem 1.2rem;
+}
+.pt-audiencia__ic{ color: var(--pt-navy-700); flex: none; }
+.pt-audiencia__txt{ flex: 1; display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+.pt-audiencia__txt span{ color: var(--pt-gris); font-size: 1.3rem; }
+.pt-audiencia__txt a{ font-size: 1.3rem; color: var(--pt-azul); word-break: break-all; }
+.pt-audiencia-fecha-hora{ display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+/* ============ RECORDATORIOS ============ */
+.pt-recordatorio{
+    display: flex; align-items: center; gap: 1rem;
+    background: var(--pt-superficie); border: 1px solid var(--pt-borde);
+    border-radius: 1rem; padding: 1rem 1.2rem; margin-bottom: .8rem;
+}
+.pt-recordatorio--vigente{ border-left: .4rem solid var(--pt-azul); }
+.pt-recordatorio__ic{ color: var(--pt-navy-700); flex: none; }
+.pt-recordatorio__txt{ flex: 1; min-width: 0; }
+.pt-recordatorio__txt p{ margin: 0 0 .2rem; }
+
+/* Ventana emergente de recordatorios (esquina inferior derecha) */
+.pt-popup-recordatorios{
+    position: fixed; right: 1.6rem; bottom: 1.6rem; z-index: var(--pt-z-toast);
+    width: min(34rem, calc(100vw - 3.2rem)); max-height: 60vh; overflow: auto;
+    background: var(--pt-superficie); border: 1px solid var(--pt-borde);
+    border-radius: 1.2rem; box-shadow: var(--pt-sombra-3); padding: 1.2rem 1.4rem;
+}
+.pt-popup-recordatorios__cab{
+    display: flex; align-items: center; gap: .6rem; margin-bottom: .8rem;
+    color: var(--pt-navy-700);
+}
+.pt-popup-recordatorios__cab strong{ flex: 1; color: var(--pt-tinta); }
+.pt-popup-recordatorios__item{
+    border-top: 1px solid var(--pt-borde); padding: .8rem 0;
+}
+.pt-popup-recordatorios__item p{ margin: 0 0 .2rem; }
+
+/* ============ EDITAR DOCUMENTOS (orden manual) ============ */
+.pt-barra-editar-docs{
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: .8rem; flex-wrap: wrap; margin: .8rem 0;
+}
+.pt-fila-arrastrable{ cursor: grab; }
+.pt-fila-arrastrable.arrastrando{ opacity: .5; }
+.pt-asa-arrastre{
+    display: inline-block; margin-right: .6rem; color: var(--pt-gris);
+    cursor: grab; user-select: none;
+}
+
+/* ============ GENERAR EXPEDIENTE ============ */
+.pt-modal__caja--ancha{ max-width: 64rem; }
+.pt-expediente-lista{
+    display: flex; flex-direction: column; gap: .4rem;
+    max-height: 44vh; overflow: auto; margin: 1rem 0;
+    border: 1px solid var(--pt-borde); border-radius: .8rem; padding: .6rem;
+}
+.pt-expediente-item{
+    display: flex; align-items: center; gap: .8rem;
+    padding: .6rem .8rem; border-radius: .6rem; cursor: pointer;
+    transition: background var(--pt-rapido);
+}
+.pt-expediente-item:hover{ background: var(--pt-superficie-2); }
+.pt-expediente-item--elegido{ background: var(--pt-superficie-2); }
+.pt-expediente-item--no{ opacity: .55; cursor: not-allowed; }
+.pt-expediente-item__num{
+    width: 2.2rem; height: 2.2rem; flex: none; border-radius: 50%;
+    background: var(--pt-navy-700); color: var(--pt-blanco);
+    font-size: 1.2rem; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.pt-expediente-item:not(.pt-expediente-item--elegido) .pt-expediente-item__num{
+    background: transparent;
+}
+.pt-expediente-item__nombre{ flex: 1; min-width: 0; word-break: break-word; }
+
+/* ============ LEYES JUNTO A LA LISTA DE CARPETAS (todos los roles) ============ */
+.pt-carpetas-cuerpo{
+    display: flex;
+    gap: 1.8rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+.pt-carpetas-principal{
+    flex: 1 1 520px;
+    min-width: 0;
+    order: 1;               /* las carpetas primero; las leyes a la derecha */
+}
+.pt-carpetas-cuerpo .pt-leyes{ order: 2; }
+@media (max-width: 900px){
+    .pt-carpetas-cuerpo .pt-leyes{ position: static; flex: 1 1 100%; }
+}
+
+/* ============ SEMÁFOROS DE PROCESOS (días hábiles) ============ */
+.pt-semaforo{
+    display: inline-block;
+    border-radius: 50%;
+    flex: none;
+    vertical-align: middle;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.08);
+}
+.pt-semaforo--verde{   background: #22c55e; }
+.pt-semaforo--naranja{ background: #f59e0b; }
+.pt-semaforo--rojo{    background: #ef4444; }
+.pt-semaforo--pausado{ background: #8b8b8b; }
+
+.pt-semaforo-resumen{
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    margin: .8rem 0 .2rem;
+    font-size: 1.5rem;
+    flex-wrap: wrap;
+}
+.pt-semaforo-cadena{
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex-wrap: wrap;
+    margin: .6rem 0 .2rem;
+    font-size: 1.3rem;
+    color: var(--pt-gris);
+}
+.pt-semaforo-cadena__paso{
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    background: var(--pt-superficie-2);
+    border-radius: 999px;
+    padding: .3rem .9rem;
+}
+.pt-semaforo-cadena__paso.hecho{ text-decoration: line-through; opacity: .75; }
+.pt-semaforo-cadena__flecha{ color: var(--pt-gris); }
+
+/* Tarjetas de gestión de estados (operador) */
+.pt-estado-tramite-card{
+    background: var(--pt-superficie);
+    border-radius: 1.4rem;
+    box-shadow: var(--pt-sombra-1);
+    padding: 1.6rem 1.8rem;
+    margin-bottom: 1.4rem;
+}
+.pt-estado-tramite-card--pausada{ opacity: .85; }
+.pt-estado-tramite-card__cab{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.pt-estado-tramite-card__cab h3{ font-family: var(--pt-fuente-titulos); }
+.pt-estado-tramite-card__actual{
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    margin: .8rem 0;
+    flex-wrap: wrap;
+}
+.pt-proceso-lista{
+    border-top: 1px solid var(--pt-borde);
+    margin-top: .6rem;
+}
+.pt-proceso-fila{
+    display: flex;
+    align-items: center;
+    gap: .9rem;
+    padding: .8rem 0;
+    border-bottom: 1px solid var(--pt-borde);
+}
+.pt-proceso-fila__txt{
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+}
+.pt-fila-estado:hover td{ background: var(--pt-superficie-2); }
+
+/* ============ CALENDARIO DE VENCIMIENTOS (admin/monitor) ============ */
+.pt-calv-resumen{
+    display: flex;
+    gap: 1.6rem;
+    flex-wrap: wrap;
+    align-items: center;
+    background: var(--pt-superficie);
+    border-radius: 1.2rem;
+    box-shadow: var(--pt-sombra-1);
+    padding: 1.2rem 1.6rem;
+    margin-bottom: 1.4rem;
+}
+.pt-calv-resumen span{ display: inline-flex; align-items: center; gap: .5rem; }
+.pt-calv__semana, .pt-calv__rejilla{
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: .4rem;
+    max-width: 52rem;
+}
+.pt-calv__semana{ margin-top: 1rem; }
+.pt-calv__semana span{
+    text-align: center;
+    font-size: 1.2rem;
+    color: var(--pt-gris);
+    padding: .2rem 0;
+}
+.pt-calv__dia{
+    min-height: 5.2rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: .8rem;
+    background: var(--pt-superficie);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: .3rem;
+    padding: .4rem .2rem;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+}
+.pt-calv__dia:hover:not(.pt-calv__dia--vacio){ background: var(--pt-superficie-2); }
+.pt-calv__dia--vacio{ border: none; background: transparent; cursor: default; }
+.pt-calv__dia--nohabil{ background: var(--pt-superficie-2); color: var(--pt-gris); opacity: .75; }
+.pt-calv__dia--hoy{ border-color: var(--pt-azul); font-weight: 700; }
+.pt-calv__dia--sel{ outline: 2px solid var(--pt-azul); }
+.pt-calv__num{ font-size: 1.3rem; }
+.pt-calv__puntos{
+    display: flex;
+    gap: .25rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+}
+.pt-calv-dia-detalle{
+    margin-top: 1.6rem;
+    background: var(--pt-superficie);
+    border-radius: 1.2rem;
+    box-shadow: var(--pt-sombra-1);
+    padding: 1.4rem 1.8rem;
+    max-width: 72rem;
+}
+.pt-calv-dia-detalle h3{ margin-bottom: .6rem; font-family: var(--pt-fuente-titulos); }
+
+/* ============ CHAT DE SOPORTE FLOTANTE (admin ↔ operadores) ============ */
+.pt-soporte-burbuja{
+    position: fixed;
+    right: 2rem;
+    bottom: 2rem;
+    width: 5.2rem;
+    height: 5.2rem;
+    border-radius: 50%;
+    background: var(--pt-navy-700);
+    color: var(--pt-blanco);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: var(--pt-sombra-2);
+    z-index: var(--pt-z-modal);
+}
+.pt-soporte-burbuja:hover{ background: var(--pt-navy-800); }
+/* Parpadeo rojo cuando llega un mensaje nuevo */
+@keyframes pt-parpadeo-rojo{
+    0%, 100%{ background: var(--pt-navy-700); }
+    50%{ background: #ef4444; }
+}
+.pt-soporte-burbuja--alerta{ animation: pt-parpadeo-rojo 1s infinite; }
+.pt-soporte-contador{
+    position: absolute;
+    top: -0.4rem;
+    right: -0.4rem;
+    min-width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 .5rem;
+}
+.pt-soporte-panel{
+    position: fixed;
+    right: 2rem;
+    bottom: 8rem;
+    width: 34rem;
+    height: 44rem;
+    min-width: 28rem;
+    min-height: 30rem;
+    max-width: 90vw;
+    max-height: 80vh;
+    background: var(--pt-superficie);
+    border-radius: 1.2rem;
+    box-shadow: var(--pt-sombra-3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    resize: both;               /* redimensionable */
+    z-index: var(--pt-z-modal);
+}
+.pt-soporte-panel__cab{
+    background: var(--pt-navy-700);
+    color: var(--pt-blanco);
+    padding: 1rem 1.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    flex: none;
+}
+.pt-soporte-panel__cab .pt-boton{ color: var(--pt-blanco); }
+.pt-soporte-lista{
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+}
+.pt-soporte-lista__item{
+    display: flex;
+    align-items: center;
+    gap: .8rem;
+    width: 100%;
+    text-align: left;
+    padding: 1rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: .9rem;
+    background: var(--pt-superficie);
+    margin-bottom: .6rem;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+}
+.pt-soporte-lista__item:hover{ background: var(--pt-superficie-2); }
+.pt-soporte-mensajes{ flex: 1; }
+.pt-soporte-entrada{ flex: none; }
+
+/* Badge de no leídos en pestañas de chat y filas */
+.pt-badge-noleidos{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 0 .45rem;
+    margin-left: .4rem;
+}
+
+/* Modal de llamada */
+.pt-llamada{ text-align: center; }
+.pt-llamada .pt-nota{ margin: 1rem 0 1.6rem; }
+
+/* ============ CAMPANA DE NOTIFICACIONES ============ */
+.pt-campana-envoltura{ position: relative; }
+.pt-campana{ position: relative; }
+.pt-campana--alerta{ animation: pt-parpadeo-rojo 1s infinite; }
+.pt-campana-dropdown{
+    position: absolute;
+    right: 0;
+    top: calc(100% + .6rem);
+    width: 36rem;
+    max-width: 90vw;
+    max-height: 46rem;
+    background: var(--pt-superficie);
+    color: var(--pt-tinta);
+    border-radius: 1.2rem;
+    box-shadow: var(--pt-sombra-3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: var(--pt-z-modal);
+}
+.pt-campana-dropdown__cab{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.4rem;
+    border-bottom: 1px solid var(--pt-borde);
+    flex: none;
+}
+.pt-campana-lista{ overflow-y: auto; padding: .6rem; }
+.pt-campana-item{
+    display: flex;
+    gap: .8rem;
+    align-items: flex-start;
+    padding: .9rem 1rem;
+    border-radius: .8rem;
+    font-size: 1.35rem;
+}
+.pt-campana-item--nueva{ background: var(--pt-superficie-2); font-weight: 600; }
+.pt-campana-item .pt-nota{ display: block; font-weight: 400; }
+
+/* ============ BACKLOG: NAVEGACIÓN FIJA, BUSCADOR, PRESENCIA ============ */
+/* Barra superior UNIFICADA: marca + sesión + pestañas bajan juntas,
+   como un solo bloque, sin separarse al hacer scroll */
+.pt-topbar{
+    position: sticky;
+    top: 0;
+    z-index: var(--pt-z-encabezado);
+    box-shadow: var(--pt-sombra-1);
+}
+
+.pt-buscador{
+    display: flex;
+    align-items: center;
+    gap: .8rem;
+    background: var(--pt-superficie);
+    border: 1px solid var(--pt-borde);
+    border-radius: 999px;
+    padding: .7rem 1.4rem;
+    max-width: 42rem;
+    margin-bottom: 1.6rem;
+    color: var(--pt-gris);
+}
+.pt-buscador input{
+    border: none;
+    outline: none;
+    background: transparent;
+    font: inherit;
+    color: var(--pt-tinta);
+    width: 100%;
+}
+
+/* Indicador En línea / Desconectado */
+.pt-conexion{
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #8b8b8b;
+    vertical-align: middle;
+}
+.pt-conexion--en-linea{ background: #22c55e; }
+
+/* Recordatorios apilados (una tarjeta a la vez) */
+.pt-pila{ position: relative; }
+.pt-pila-sombra{
+    position: absolute;
+    inset: 0;
+    background: var(--pt-superficie-2);
+    border: 1px solid var(--pt-borde);
+    border-radius: 1rem;
+}
+.pt-pila-frente{ position: relative; }
+
+/* Chat de la carpeta ANCLADO (misma familia que el de soporte) */
+.pt-chat-flotante{
+    position: fixed;
+    left: 2rem;
+    bottom: 2rem;
+    width: 36rem;
+    height: 46rem;
+    min-width: 30rem;
+    min-height: 32rem;
+    max-width: 92vw;
+    max-height: 82vh;
+    background: var(--pt-superficie);
+    border-radius: 1.2rem;
+    box-shadow: var(--pt-sombra-3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    resize: both;
+    z-index: var(--pt-z-modal);
+    margin: 0;
+    padding: 0;
+}
+.pt-chat-flotante__cab{
+    background: var(--pt-navy-700);
+    color: var(--pt-blanco);
+    padding: 1rem 1.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    flex: none;
+}
+.pt-chat-flotante__cab h3{ color: var(--pt-blanco); }
+.pt-chat-flotante__cab .pt-nota{ color: var(--pt-azul-claro); }
+.pt-chat-flotante__cab .pt-boton{ color: var(--pt-blanco); }
+.pt-chat-flotante #chat-mensajes{ flex: 1; }
+.pt-chat-flotante #form-mensaje{ flex: none; }
+.pt-chat-carpeta-burbuja{ left: 2rem; right: auto; background: var(--pt-azul-600); }
+.pt-chat-destinatario{
+    padding: .5rem 1.2rem;
+    border-bottom: 1px solid var(--pt-borde);
+    flex: none;
+}
+.pt-chat-destinatario select{
+    font: inherit;
+    border: 1px solid var(--pt-borde);
+    border-radius: .6rem;
+    padding: .3rem .6rem;
+    background: var(--pt-superficie);
+    color: var(--pt-tinta);
+}
+
+/* Barra flotante de llamada en segundo plano */
+.pt-llamada-mini{
+    position: fixed;
+    top: 1.2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: .8rem;
+    background: var(--pt-navy-800);
+    color: var(--pt-blanco);
+    border-radius: 999px;
+    padding: .7rem 1.6rem;
+    box-shadow: var(--pt-sombra-3);
+    z-index: calc(var(--pt-z-toast) + 1);
+}
+.pt-llamada-mini .pt-boton{ color: var(--pt-blanco); }
+
+/* ============ REDISEÑO: CHATS Y LLAMADA DE SOPORTE ============ */
+/* Historial: fondo suave y burbujas modernas con radios asimétricos */
+.pt-chat-historial{
+    background:
+        radial-gradient(circle at 20% 10%, rgba(21,156,149,.05), transparent 40%),
+        var(--pt-fondo);
+    padding: 1.2rem;
+}
+.pt-chat-msg{
+    max-width: 82%;
+    background: var(--pt-superficie);
+    border: 1px solid var(--pt-borde);
+    border-radius: 1.4rem 1.4rem 1.4rem .4rem;
+    padding: .8rem 1.2rem;
+    margin: .5rem 0;
+    box-shadow: var(--pt-sombra-1);
+}
+.pt-chat-msg--mio{
+    margin-left: auto;
+    background: linear-gradient(135deg, var(--pt-navy-800), var(--pt-navy-700));
+    color: var(--pt-blanco);
+    border: none;
+    border-radius: 1.4rem 1.4rem .4rem 1.4rem;
+}
+.pt-chat-msg--mio .pt-chat-msg__meta{ color: var(--pt-azul-claro); }
+.pt-chat-msg__meta{ font-size: 1.15rem; color: var(--pt-gris); margin-bottom: .25rem; }
+.pt-chat-msg__texto{ font-size: 1.4rem; line-height: 1.45; word-wrap: break-word; }
+.pt-chat-msg--mio .pt-chat-msg__adjunto{ background: rgba(255,255,255,.12); border-color: transparent; }
+
+/* Entrada de mensaje: cápsula redondeada */
+.pt-chat-entrada{
+    background: var(--pt-superficie);
+    border-top: 1px solid var(--pt-borde);
+    padding: .8rem 1rem;
+    display: flex;
+    align-items: flex-end;
+    gap: .6rem;
+}
+.pt-chat-entrada textarea{
+    flex: 1;
+    border: 1px solid var(--pt-borde);
+    border-radius: 1.4rem;
+    padding: .8rem 1.2rem;
+    font: inherit;
+    resize: none;
+    background: var(--pt-fondo);
+    color: var(--pt-tinta);
+}
+.pt-chat-entrada textarea:focus{ outline: 2px solid var(--pt-azul); border-color: transparent; }
+
+/* Cabeceras de los paneles flotantes: degradado de marca */
+.pt-soporte-panel__cab,
+.pt-chat-flotante__cab{
+    background: linear-gradient(120deg, var(--pt-navy-900), var(--pt-navy-700));
+}
+.pt-soporte-lista__item{ border-radius: 1.1rem; }
+.pt-soporte-burbuja{ transition: transform .15s var(--pt-curva); }
+.pt-soporte-burbuja:hover{ transform: scale(1.07); }
+
+/* ---- Interfaz de la llamada ---- */
+.pt-llamada{ text-align: center; padding-top: 2.4rem; }
+.pt-llamada::before{
+    content: '';
+    display: block;
+    width: 7.2rem;
+    height: 7.2rem;
+    margin: 0 auto 1.2rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--pt-navy-800), var(--pt-navy-700));
+    background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92Z'/%3E%3C/svg%3E"),
+        linear-gradient(135deg, var(--pt-navy-800), var(--pt-navy-700));
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 3.2rem, cover;
+    animation: pt-pulso-llamada 1.6s ease-in-out infinite;
+}
+/* Latido sobrio (escala), sin halo de color brillante */
+@keyframes pt-pulso-llamada{
+    0%, 100%{ transform: scale(1); }
+    50%{ transform: scale(1.04); }
+}
+.pt-llamada .pt-modal__acciones{ flex-wrap: wrap; gap: .6rem; }
+.pt-boton-llamada{ display: inline-flex; align-items: center; gap: .5rem; }
+
+/* Botón de llamada PRESIONADO (mic/altavoz silenciado): marcado en ROJO
+   y el icono lleva la raya encima (se cambia el trazo desde app.js). */
+.pt-boton-llamada--activo,
+.pt-boton-llamada--activo:hover{
+    background: #ef4444 !important;
+    border-color: #ef4444 !important;
+    color: #fff !important;
+}
+.pt-llamada-mini .pt-boton-llamada--activo{ background: #ef4444 !important; color: #fff !important; }
+.pt-llamada-mini__estado{ display: inline-flex; align-items: center; gap: .5rem; }
+
+/* ============ CALENDARIO DE CARPETA: RANGOS DE LOS ESTADOS ============
+   Días dentro del plazo de un proceso (solo personal y monitor). */
+.pt-cal__dia--rango{
+    background: var(--pt-ambar-suave);
+    border-color: var(--pt-ambar);
+}
+.pt-cal__dia--rango.pt-cal__dia--audiencia{
+    /* audiencia dentro de un rango: manda el color de audiencia */
+    background: var(--pt-navy-700);
+}
+.pt-cal__cuadro-rango{
+    display: inline-block;
+    width: 10px; height: 10px;
+    background: var(--pt-ambar-suave);
+    border: 1px solid var(--pt-ambar);
+    border-radius: 3px;
+    vertical-align: middle;
+}
+
+/* Barra de filtros (calendario de vencimientos, notificaciones, constancias) */
+.pt-calv-filtros{
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+    background: var(--pt-superficie);
+    border: 1px solid var(--pt-borde);
+    border-radius: 1rem;
+    padding: .8rem 1.4rem;
+    margin: 0 0 1.2rem;
+}
+.pt-calv-filtros select{
+    font: inherit;
+    border: 1px solid var(--pt-borde);
+    border-radius: .6rem;
+    padding: .35rem .7rem;
+    background: var(--pt-superficie);
+    color: var(--pt-tinta);
+    max-width: 32rem;
+}
+
+/* ============ AJUSTES DEL LOTE: visor, soporte, leyes, usuarios ============ */
+
+/* Visor de Word/Excel dentro del portal */
+.pt-visor-caja{ display: flex; flex-direction: column; max-height: 88vh; width: min(96rem, 94vw); }
+.pt-visor-cab{
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 1rem; border-bottom: 1px solid var(--pt-borde); margin-bottom: 1rem;
+}
+.pt-visor-cab h3{ font-family: var(--pt-fuente-titulos); word-break: break-word; }
+.pt-visor-cuerpo{ overflow: auto; flex: 1; }
+.pt-visor-cuerpo table{ border-collapse: collapse; width: 100%; font-size: 1.3rem; }
+.pt-visor-cuerpo td, .pt-visor-cuerpo th{ border: 1px solid var(--pt-borde); padding: .3rem .6rem; }
+.pt-visor-hoja{ margin: 1.2rem 0 .6rem; color: var(--pt-navy-800); display: flex; align-items: center; gap: .5rem; }
+.pt-docx{ background: #fff; color: #111; padding: 1.6rem; border-radius: .8rem; }
+
+/* Cabecera del chat de soporte: botones ARRIBA, título DEBAJO */
+.pt-soporte-panel__cab{ flex-direction: column; align-items: stretch; gap: .5rem; cursor: default; }
+.pt-soporte-panel__acciones{ display: flex; align-items: center; justify-content: space-between; gap: .6rem; }
+.pt-soporte-panel__titulo{ cursor: pointer; font-size: 1.5rem; }
+
+/* Leyes ABAJO y en HORIZONTAL */
+.pt-leyes--horizontal{
+    position: static;
+    flex: none;
+    width: 100%;
+    margin-top: 1.8rem;
+}
+.pt-leyes--horizontal .pt-leyes__lista{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(24rem, 1fr));
+    gap: .8rem;
+}
+
+/* Barra de usuarios (buscador + Excel) y encabezados de grupo por rol */
+.pt-usuarios-barra{
+    display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap; margin: 1.6rem 0 1rem;
+}
+.pt-fila-grupo-rol td{
+    background: var(--pt-superficie-2);
+    font-weight: 700;
+    color: var(--pt-navy-800);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    font-size: 1.2rem;
+}
+
+/* Enlace "¿Olvidaste tu contraseña?" en el login */
+.pt-enlace-olvide{
+    display: block; margin: 1.2rem auto 0; background: none; border: none;
+    color: var(--pt-azul); font: inherit; font-size: 1.35rem; cursor: pointer; text-decoration: underline;
+}
+.pt-ayuda-olvide{ margin-top: 1rem; text-align: left; }

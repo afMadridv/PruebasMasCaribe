@@ -4,17 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal Documental | Iniciar sesión</title>
+    <!-- Aplica el tema guardado ANTES de pintar, para que no parpadee -->
+    <script>(function(){try{if(localStorage.getItem('portal_tema')==='oscuro')document.documentElement.dataset.tema='oscuro';}catch(e){}})();</script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://hheyihgktcswvxiscvdm.supabase.co" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Krub:wght@400;500;600;700&family=Lora:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/portal.css?v=15">
+    <link rel="stylesheet" href="css/portal.css?v=39">
 </head>
 <body class="pt-cuerpo-login">
     <div class="pt-tarjeta-login">
         <h1>Portal Documental</h1>
-        <p class="pt-subtitulo">Fundación de insolvencia y conciliaciones · Entorno de práctica</p>
-
         <div id="mensaje-error" class="pt-error" hidden></div>
 
         <form id="form-login">
@@ -33,21 +33,39 @@
             <button type="submit" id="boton-entrar" class="pt-boton pt-boton--primario" style="width: 100%;">Ingresar</button>
         </form>
 
-        <div class="pt-credenciales" id="caja-credenciales">
-            <strong>Usuarios de prueba</strong> (contraseña = usuario + 123):<br>
-            <code>administrador</code> control total: carpetas, archivos y usuarios ·
-            <code>operador</code> ve y sube archivos solo en SUS carpetas asignadas ·
-            <code>cliente</code> y <code>acreedor</code> ven y descargan sus documentos.
-        </div>
+        <button type="button" id="olvide-clave" class="pt-enlace-olvide">¿Olvidaste tu contraseña?</button>
     </div>
-    <a class="pt-volver-tienda" href="../index.html">&larr; Volver al sitio principal</a>
+
+    <!-- Modal nativo <dialog>: la solicitud llega a la campana del administrador -->
+    <dialog id="dialogo-olvide" class="pt-dialogo">
+        <form id="form-olvide" method="dialog">
+            <h3>Restablecer contraseña</h3>
+            <p class="pt-nota">Escribe tu <strong>usuario</strong> del portal. La administración recibirá
+                tu solicitud, te asignará una contraseña nueva y te la hará llegar.</p>
+            <label class="pt-campo">
+                <span>Usuario</span>
+                <input type="text" id="olvide-usuario" maxlength="30" autocomplete="username"
+                       pattern="[a-z0-9._-]+" title="Solo minúsculas, números, punto, guion y guion bajo">
+            </label>
+            <p id="olvide-mensaje" class="pt-nota" hidden></p>
+            <div class="pt-modal__acciones">
+                <button type="button" class="pt-boton pt-boton--fantasma" id="olvide-cancelar">Cancelar</button>
+                <button type="button" class="pt-boton pt-boton--primario" id="olvide-enviar">Enviar solicitud</button>
+            </div>
+        </form>
+    </dialog>
+    <a class="pt-volver-tienda" href="../index2.html">&larr; Volver al sitio principal</a>
+
+    <button class="pt-tema-flotante" data-accion="alternar-tema" data-icono-tam="20"
+            aria-label="Cambiar a tema oscuro" title="Cambiar a tema oscuro"></button>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.1"></script>
-    <script src="js/db.js?v=13"></script>
-    <script src="js/auth.js?v=13"></script>
-    <script src="js/config.js?v=13"></script>
-    <script src="js/iconos.js?v=13"></script>
-    <script src="js/nube.js?v=13"></script>
-    <script src="js/login.js?v=13"></script>
+    <script src="js/db.js?v=39"></script>
+    <script src="js/auth.js?v=39"></script>
+    <script src="js/config.js?v=39"></script>
+    <script src="js/iconos.js?v=39"></script>
+    <script src="js/tema.js?v=39"></script>
+    <script src="js/nube.js?v=39"></script>
+    <script src="js/login.js?v=39"></script>
 </body>
 </html>

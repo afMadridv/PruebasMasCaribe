@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Portal MASCaribe — Resumen de actualizaciones</title>
+<style>
+  :root{
+    --tinta:#17262E; --gris:#536068; --navy:#0C3A4E; --teal:#12867F;
+    --borde:#E2EAEC; --verde:#157039; --rojo:#B3261E; --ambar:#8A4B08;
+    --fondo:#F3F7F8;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    font-family:'Segoe UI', Arial, sans-serif; color:var(--tinta);
+    line-height:1.5; margin:0; padding:0 2.4rem; background:#fff; font-size:13px;
+  }
+  header.portada{
+    text-align:center; padding:3rem 0 2rem; border-bottom:4px solid var(--teal);
+    margin-bottom:1.6rem;
+  }
+  header.portada h1{ font-size:26px; margin:0 0 .4rem; color:var(--navy); }
+  header.portada .sub{ color:var(--gris); font-size:14px; }
+  header.portada .meta{ color:var(--gris); font-size:11px; margin-top:1rem; }
+  h2{
+    color:#fff; background:var(--navy); padding:.5rem 1rem; border-radius:6px;
+    font-size:16px; margin:1.8rem 0 .8rem;
+  }
+  h3{ color:var(--teal); font-size:14px; margin:1.1rem 0 .3rem; border-bottom:1px solid var(--borde); padding-bottom:.2rem; }
+  ul{ margin:.3rem 0 .6rem; padding-left:1.3rem; }
+  li{ margin:.2rem 0; }
+  .tag{ display:inline-block; font-size:10px; font-weight:700; padding:.1rem .5rem; border-radius:999px; vertical-align:middle; margin-left:.3rem; }
+  .t-bd{ background:#E7F0EF; color:var(--teal); }
+  .t-front{ background:#FCEFD3; color:var(--ambar); }
+  .t-fix{ background:#FBE3E1; color:var(--rojo); }
+  .t-sec{ background:#DDF3E4; color:var(--verde); }
+  table{ border-collapse:collapse; width:100%; margin:.5rem 0 1rem; font-size:12px; }
+  th,td{ border:1px solid var(--borde); padding:.4rem .6rem; text-align:left; vertical-align:top; }
+  th{ background:var(--fondo); color:var(--navy); }
+  code{ background:var(--fondo); padding:.05rem .3rem; border-radius:3px; font-size:11px; }
+  .nota{ background:var(--fondo); border-left:3px solid var(--teal); padding:.6rem 1rem; border-radius:0 6px 6px 0; margin:.8rem 0; font-size:12px; }
+  .leyenda{ font-size:11px; color:var(--gris); margin:.4rem 0 1.2rem; }
+  footer{ margin-top:2.4rem; border-top:1px solid var(--borde); padding-top:.8rem; color:var(--gris); font-size:11px; text-align:center; }
+  @media print{
+    body{ padding:0 .4rem; font-size:11.5px; }
+    h2{ break-after:avoid; }
+    h3{ break-after:avoid; }
+    section{ break-inside:avoid; }
+    .noprint{ display:none; }
+  }
+  .noprint{ text-align:center; background:#FFF7E6; border:1px solid var(--ambar); padding:.6rem; border-radius:6px; margin:1rem 0; font-size:12px; color:var(--ambar); }
+</style>
+</head>
+<body>
+
+<div class="noprint">Para guardar como PDF: pulsa <strong>Ctrl+P</strong> → Destino <strong>“Guardar como PDF”</strong> → Guardar. (Este aviso no sale en el PDF.)</div>
+
+<header class="portada">
+  <h1>Portal Documental MASCaribe</h1>
+  <div class="sub">Fundación de insolvencia y conciliaciones · Resumen de actualizaciones</div>
+  <div class="meta">Frontend: HTML / CSS / JavaScript &nbsp;·&nbsp; Backend: Supabase (PostgreSQL + Auth + Storage + Realtime + Edge Functions)<br>
+  Documento generado el 14 de julio de 2026</div>
+</header>
+
+<section>
+<p>El portal pasó de un gestor documental básico a una plataforma de seguimiento de procesos de
+insolvencia con monitoreo por semáforos, comunicación en tiempo real (chat, soporte y llamadas),
+notificaciones y control de acceso por rol. La seguridad real vive en el servidor: cada consulta se
+filtra por <strong>RLS (Row Level Security)</strong> según el rol; el navegador nunca decide qué se puede ver o hacer.</p>
+<p class="leyenda">Etiquetas:
+  <span class="tag t-bd">Base de datos</span>
+  <span class="tag t-front">Frontend</span>
+  <span class="tag t-sec">Seguridad</span>
+  <span class="tag t-fix">Corrección</span>
+</p>
+</section>
+
+<h2>1 · Roles del portal</h2>
+<table>
+  <tr><th>Rol</th><th>Qué puede hacer</th></tr>
+  <tr><td><strong>Administrador</strong></td><td>Control total: carpetas, archivos, usuarios y consentimientos, corrección de procesos, prórroga, iniciar conteo, pausar/reactivar, <strong>fin de trámite</strong>, ambos chats + soporte, <strong>único que inicia llamadas</strong>, bitácora completa, notificaciones.</td></tr>
+  <tr><td><strong>Monitor</strong> <span class="tag t-sec">nuevo</span></td><td>Ve TODO en solo lectura (carpetas incl. desactivadas, Estados, Calendario, Notificaciones, chats). No crea, edita ni elimina nada. Sin pestaña Usuarios.</td></tr>
+  <tr><td><strong>Operador</strong></td><td>Sus carpetas activas: archivos, procesos con semáforo (crear/completar), pausar/reactivar, iniciar conteo, <strong>prórroga</strong>, calendario con recordatorios, audiencias, chats de sus carpetas, soporte con administración, recibe llamadas.</td></tr>
+  <tr><td><strong>Cliente</strong></td><td>Sus carpetas activas: ver/descargar documentos, su canal de chat, calendario de audiencias (lectura), notificaciones, consentimiento obligatorio al primer ingreso.</td></tr>
+  <tr><td><strong>Acreedor</strong></td><td>Igual que el cliente, pero jamás ve la información del deudor. Cada acreedor solo ve su propio hilo de chat.</td></tr>
+</table>
+
+<h2>2 · Estados y flujo de trabajo (semáforos por días hábiles)</h2>
+<h3>Cálculo de días hábiles colombianos <span class="tag t-bd">BD</span> <span class="tag t-front">Front</span></h3>
+<ul>
+  <li>Festivos oficiales 2024–2027 (Ley Emiliani); funciones <code>esDiaHabil</code>, <code>sumarDiasHabiles</code>, <code>restarDiasHabiles</code>, <code>contarDiasHabiles</code>, <code>calcularVencimientoHabil</code> — en JS y su gemela SQL.</li>
+  <li>Tabla <code>festivos_colombia</code> y <code>procesos_tramite</code>; procesos con plazo (ej. "Aceptación, 3 días").</li>
+</ul>
+<h3>Semáforo centralizado en el servidor <span class="tag t-fix">Corrección</span> <span class="tag t-bd">BD</span></h3>
+<ul>
+  <li>El color se calculaba dos veces (SQL y JS) y se desincronizaba. Ahora <strong>única fuente de verdad</strong>: función SQL <code>calcular_semaforo</code> vía RPC <code>listar_procesos</code>; el navegador solo pinta.</li>
+  <li>Colores: 🟢 al día (2+ días hábiles) · 🟡 por vencer (0–1) · 🔴 vencido · ⏸ pausado. El admin puede fijarlo a mano.</li>
+</ul>
+<h3>Conteo del trámite completo: 60 días (90 con prórroga) <span class="tag t-bd">BD</span></h3>
+<ul>
+  <li><code>iniciar_tramite</code> (60 días), <code>aplicar_prorroga</code> (90 desde la misma fecha de inicio; admin u operador), <code>pausar_tramite</code>/<code>reactivar_tramite</code> congelan y reanudan el reloj.</li>
+  <li><strong>Fin de trámite</strong> exclusivo del administrador (<code>finalizar_tramite</code>); cierra el conteo y bloquea acciones.</li>
+  <li>El operador no puede completar un proceso vencido; solo el administrador.</li>
+</ul>
+<h3>Pestañas nuevas</h3>
+<ul>
+  <li><strong>Estados</strong>: operador gestiona los suyos; admin/monitor ven tabla global (Operador · Trámite · Proceso · Semáforo · Vencimiento · Días · Trámite 60/90), sub-tabs Activos/Desactivados, auto-refresco cada 5 min, buscador.</li>
+  <li><strong>Calendario</strong>: mensual, festivos y fines de semana en gris, puntos por vencimiento; clic en día muestra detalle + operador responsable. El operador ve sus procesos, el vencimiento del trámite y sus recordatorios.</li>
+</ul>
+
+<h2>3 · Comunicación: chats, soporte y llamadas</h2>
+<ul>
+  <li><strong>Chat del trámite</strong> anclado en la esquina, minimizable y redimensionable, con badges de no leídos; selección de acreedor (hilo con uno en particular). <span class="tag t-front">Front</span> <span class="tag t-bd">BD</span></li>
+  <li><strong>Chat de soporte</strong> flotante global admin ↔ operadores; persiste al navegar; leído/no-leído; sonido y parpadeo rojo al llegar mensaje (Supabase Realtime). <span class="tag t-bd">BD</span></li>
+  <li><strong>Llamadas de voz (WebRTC)</strong>: solo el administrador las inicia (validado en el servidor, no solo ocultando el botón). Silenciar micrófono/altavoz, permiso de micrófono con aviso claro, y <strong>minimizar la llamada</strong> para navegar sin cortarla. <span class="tag t-sec">Seguridad</span></li>
+  <li>Cada acreedor solo ve su hilo; un acreedor no puede dirigir mensajes a otro (política RLS). <span class="tag t-sec">Seguridad</span></li>
+</ul>
+
+<h2>4 · Notificaciones</h2>
+<ul>
+  <li>Tabla <code>notificaciones</code> por destinatario con leído/no-leído; <strong>cada quien ve solo las suyas</strong>. <span class="tag t-bd">BD</span></li>
+  <li>Triggers automáticos: mensaje nuevo o archivo nuevo → cliente/acreedor; soporte, cambio de proceso/semáforo, vencido, pausa/reactivación/prórroga, fin de trámite → administradores.</li>
+  <li>Filtro clave en el servidor: <strong>el admin nunca recibe notificación de los chats cliente-operador ni acreedor-operador</strong>. <span class="tag t-sec">Seguridad</span></li>
+  <li>Campana en la barra con contador, dropdown, auto-marcado como leídas al abrir, y <strong>deep linking</strong> (clic lleva a la carpeta o pestaña de origen).</li>
+</ul>
+
+<h2>5 · Portal y carpetas</h2>
+<ul>
+  <li><strong>Leyes de insolvencia</strong> movidas junto a la lista de carpetas, visibles para todos los roles.</li>
+  <li><strong>Consentimiento de datos</strong> (Ley 1581/2012): tabla <code>consentimientos</code> + modal bloqueante en el primer ingreso de cliente/acreedor; pestaña de auditoría para el admin. <span class="tag t-bd">BD</span></li>
+  <li><strong>Peso por carpeta</strong> (MB) y nº de documentos cacheados por trigger; el admin los ve en cada tarjeta. Antes se descargaban todos los metadatos solo para contar. <span class="tag t-fix">Rendimiento</span></li>
+  <li>Todos los <code>window.confirm()</code> reemplazados por un modal propio del portal.</li>
+  <li>Subida de archivos ahora en paralelo; ZIP y expediente PDF unificado ya en el navegador.</li>
+  <li>Pestaña "Información del deudor" retirada de la interfaz (la tabla y sus reglas quedan intactas por si se retoma).</li>
+</ul>
+
+<h2>6 · Usuarios e interfaz general</h2>
+<ul>
+  <li><strong>En línea / Desconectado</strong> en tiempo real (Supabase Presence) y <strong>última conexión</strong> por usuario. <span class="tag t-bd">BD</span></li>
+  <li><strong>Generador de credenciales</strong>: botón que crea usuario y contraseña aleatorios seguros.</li>
+  <li><strong>Buscador con lupa</strong> en Carpetas y Estados (filtra por trámite u operador).</li>
+  <li><strong>Barra de navegación fija</strong> (sticky) al hacer scroll.</li>
+  <li>Asignación al crear carpeta segmentada en pestañas <strong>Operadores / Clientes / Acreedores</strong>.</li>
+  <li><strong>Recordatorios apilados</strong>: una tarjeta a la vez ("1 de N"); al cerrar aparece la siguiente.</li>
+  <li>Detalle libre en cada evento del calendario de audiencias.</li>
+</ul>
+
+<h2>7 · Seguridad — auditoría realizada</h2>
+<ul>
+  <li>RLS activo y forzado en todas las tablas públicas; verificado directamente en la base de datos. <span class="tag t-sec">Seguridad</span></li>
+  <li>Las escrituras sensibles (procesos, trámites, notificaciones, soporte) pasan por funciones <code>security definer</code> con <code>search_path = public</code> y validación de permiso al inicio — no hay UPDATE/INSERT directo donde existe función controlada.</li>
+  <li>La clave <code>service_role</code> vive solo en la Edge Function <code>restablecer-clave</code>; la clave pública del navegador no otorga acceso por sí sola.</li>
+  <li>Todo el HTML dinámico pasa por <code>escaparHtml()</code> (sin XSS). La sesión en el navegador es cosmética: el rol real se deriva del JWT en el servidor.</li>
+</ul>
+<div class="nota"><strong>Pendientes / a confirmar:</strong> proteger contra contraseñas filtradas (opción de Supabase); llamadas usan STUN público (sin servidor TURN para redes muy restrictivas); la notificación de vencidos se genera al abrir la campana del admin (no a medianoche exacta salvo habilitar <code>pg_cron</code>).</div>
+
+<h2>8 · Correcciones aplicadas durante las pruebas</h2>
+<ul>
+  <li><span class="tag t-fix">Fix</span> <code>column reference "fecha" is ambiguous</code> al iniciar conteo — parámetro renombrado.</li>
+  <li><span class="tag t-fix">Fix</span> <code>42P13 cannot change return type</code> en <code>asignados_de_carpeta</code> — se agregó <code>DROP FUNCTION</code> antes de recrearla con la columna <code>id</code>.</li>
+  <li><span class="tag t-fix">Fix</span> semáforo vencido en fin de semana daba naranja en vez de rojo — corregido por fecha calendario.</li>
+</ul>
+
+<footer>
+  Portal Documental MASCaribe · Documento interno de seguimiento técnico ·
+  El detalle completo del esquema vive en <code>portal/supabase/esquema.sql</code>.
+</footer>
+
+</body>
+</html>

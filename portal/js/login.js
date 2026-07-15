@@ -6,6 +6,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mensajeError = document.getElementById('mensaje-error');
     const botonEntrar = document.getElementById('boton-entrar');
 
+    // ¿Olvidaste tu contraseña? → <dialog> nativo; la solicitud queda en
+    // solicitudes_clave y el administrador la ve en su campana (Realtime).
+    const botonOlvide = document.getElementById('olvide-clave');
+    const dialogo = document.getElementById('dialogo-olvide');
+    if (botonOlvide && dialogo) {
+        const campo = document.getElementById('olvide-usuario');
+        const mensaje = document.getElementById('olvide-mensaje');
+        botonOlvide.addEventListener('click', () => {
+            campo.value = document.getElementById('campo-usuario').value.trim().toLowerCase();
+            mensaje.hidden = true;
+            dialogo.showModal();
+            campo.focus();
+        });
+        document.getElementById('olvide-cancelar').addEventListener('click', () => dialogo.close());
+        document.getElementById('olvide-enviar').addEventListener('click', async () => {
+            const usuario = campo.value.trim().toLowerCase();
+            if (!usuario) { campo.focus(); return; }
+            const boton = document.getElementById('olvide-enviar');
+            boton.disabled = true;
+            try {
+                if (typeof solicitarRestablecimiento === 'function') {
+                    await solicitarRestablecimiento(usuario);
+                }
+            } catch (e) { /* misma respuesta siempre: no se revela nada */ }
+            boton.disabled = false;
+            // Mensaje único, exista o no el usuario (no se regala información)
+            mensaje.textContent = 'Solicitud enviada. Si el usuario existe, la administración ' +
+                'te asignará una contraseña nueva y te la hará llegar.';
+            mensaje.hidden = false;
+            campo.value = '';
+            setTimeout(() => dialogo.close(), 3500);
+        });
+    }
+
     // Mostrar / ocultar contraseña
     const campoClave = document.getElementById('campo-clave');
     const botonVerClave = document.getElementById('ver-clave');

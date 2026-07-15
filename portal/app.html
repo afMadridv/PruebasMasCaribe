@@ -4,20 +4,42 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal Documental | Carpetas</title>
+    <!-- Aplica el tema guardado ANTES de pintar, para que no parpadee -->
+    <script>(function(){try{if(localStorage.getItem('portal_tema')==='oscuro')document.documentElement.dataset.tema='oscuro';}catch(e){}})();</script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://hheyihgktcswvxiscvdm.supabase.co" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Krub:wght@400;500;600;700&family=Lora:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/portal.css?v=15">
+    <link rel="stylesheet" href="css/portal.css?v=39">
 </head>
 <body>
+    <!-- Barra superior UNIFICADA (marca + sesión + pestañas): un solo bloque
+         fijo que baja completo con el scroll, sin separarse. -->
+    <div class="pt-topbar">
     <header class="pt-encabezado">
         <div class="pt-marca">
-            <h1>Portal Documental</h1>
-            <small>Fundación de insolvencia y conciliaciones · Entorno de práctica</small>
+            <h1>Portal Mascaribe</h1>
+            <small>Fundación de insolvencia y conciliaciones</small>
         </div>
         <div class="pt-usuario-chip">
             <span id="chip-usuario"></span>
+            <!-- Campana de notificaciones (todos los roles) -->
+            <div class="pt-campana-envoltura">
+                <button class="pt-boton pt-boton--mini pt-campana" data-accion="campana-abrir"
+                        aria-label="Notificaciones" title="Notificaciones">
+                    <span data-icono="campana" data-icono-tam="18"></span>
+                    <span id="campana-contador" class="pt-soporte-contador" hidden></span>
+                </button>
+                <div id="campana-dropdown" class="pt-campana-dropdown" hidden>
+                    <div class="pt-campana-dropdown__cab">
+                        <strong>Notificaciones</strong>
+                        <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="campana-leidas">Marcar todas leídas</button>
+                    </div>
+                    <div id="campana-lista" class="pt-campana-lista"></div>
+                </div>
+            </div>
+            <button class="pt-boton pt-boton--mini pt-boton--tema" data-accion="alternar-tema" data-icono-tam="18"
+                    aria-label="Cambiar a tema oscuro" title="Cambiar a tema oscuro"></button>
             <button class="pt-boton pt-boton--mini" data-accion="salir-sitio">Sitio principal</button>
             <button class="pt-boton pt-boton--mini" data-accion="salir">Cerrar sesión</button>
         </div>
@@ -25,9 +47,12 @@
 
     <nav class="pt-pestanas">
         <button id="pestana-carpetas" class="activa" data-accion="ver-carpetas">Carpetas</button>
+        <button id="pestana-estados" data-accion="ver-estados" hidden>Estados</button>
+        <button id="pestana-calendario" data-accion="ver-calendario-vencimientos" hidden>Calendario</button>
         <button id="pestana-usuarios" data-accion="ver-usuarios" hidden>Usuarios</button>
         <button id="pestana-notificaciones" data-accion="ver-notificaciones" hidden>Notificaciones</button>
     </nav>
+    </div><!-- /pt-topbar -->
 
     <main class="pt-contenido">
 
@@ -37,36 +62,100 @@
                 <h2>Carpetas de procesos</h2>
                 <button id="boton-nueva-carpeta" class="pt-boton pt-boton--primario" data-accion="nueva-carpeta" hidden>+ Nueva carpeta</button>
             </div>
-            <div id="lista-carpetas" class="pt-grid-carpetas"></div>
-            <div id="carpetas-vacio" class="pt-vacio" hidden></div>
+            <!-- Secciones Activas / Desactivadas (solo administrador). Lo llena el controlador. -->
+            <div id="sub-pestanas-carpetas" class="pt-sub-pestanas" hidden></div>
+            <!-- Buscador de carpetas/trámites -->
+            <label class="pt-buscador">
+                <span data-icono="buscar" data-icono-tam="16"></span>
+                <input type="search" id="buscador-carpetas" placeholder="Buscar carpeta u operador…" maxlength="80">
+            </label>
+            <div class="pt-carpetas-cuerpo">
+                <div class="pt-carpetas-principal">
+                    <div id="lista-carpetas" class="pt-grid-carpetas"></div>
+                    <div id="carpetas-vacio" class="pt-vacio" hidden></div>
+                </div>
+            </div>
+            <!-- ===== LEYES DE INSOLVENCIA: ABAJO y en HORIZONTAL, visibles para TODOS ===== -->
+            <aside class="pt-leyes pt-leyes--horizontal" id="pt-leyes">
+                <h3><span data-icono="documento" data-icono-tam="18"></span> Leyes de insolvencia</h3>
+                <p class="pt-nota">Marco legal colombiano. Al hacer clic se abre el texto oficial en una pestaña nueva.</p>
+                <nav id="lista-leyes" class="pt-leyes__lista"></nav>
+            </aside>
+        </section>
+
+        <!-- ===== VISTA: ESTADOS DE LOS TRÁMITES (semáforos por días hábiles) =====
+             Operador: gestiona los procesos SOLO de sus trámites.
+             Administrador y monitor: tabla global de todos los operadores.
+             Lo llena el controlador según el rol. -->
+        <section id="vista-estados" hidden>
+            <div class="pt-barra-seccion">
+                <h2>Estados de los trámites</h2>
+                <button class="pt-boton pt-boton--fantasma" data-accion="refrescar-estados"><span data-icono="refrescar" data-icono-tam="15"></span> Actualizar</button>
+            </div>
+            <p class="pt-nota" id="estados-nota" style="margin-bottom:1.6rem;"></p>
+            <!-- Buscador de trámites (filtra activos e inactivos) -->
+            <label class="pt-buscador">
+                <span data-icono="buscar" data-icono-tam="16"></span>
+                <input type="search" id="buscador-estados" placeholder="Buscar trámite u operador…" maxlength="80">
+            </label>
+            <div id="contenido-estados"></div>
+        </section>
+
+        <!-- ===== VISTA: CALENDARIO DE VENCIMIENTOS (admin/monitor) ===== -->
+        <section id="vista-calendario" hidden>
+            <div class="pt-barra-seccion">
+                <h2>Calendario de vencimientos</h2>
+                <button class="pt-boton pt-boton--fantasma" data-accion="refrescar-calendario"><span data-icono="refrescar" data-icono-tam="15"></span> Actualizar</button>
+            </div>
+            <p class="pt-nota" style="margin-bottom:1.6rem;">Vencimientos de los procesos por día hábil.
+                Los fines de semana y festivos colombianos aparecen en gris.</p>
+            <div id="contenido-calendario-venc"></div>
         </section>
 
         <!-- ===== VISTA: DETALLE DE UNA CARPETA ===== -->
         <section id="vista-carpeta" hidden>
             <div class="pt-barra-seccion">
                 <button class="pt-boton pt-boton--fantasma" data-accion="ver-carpetas">&larr; Volver a carpetas</button>
-                <button id="boton-descargar-zip" class="pt-boton pt-boton--primario" data-accion="descargar-zip"><span data-icono="paquete" data-icono-tam="17"></span> Descargar carpeta (ZIP)</button>
+                <div class="pt-celda-acciones">
+                    <button id="boton-descargar-zip" class="pt-boton pt-boton--primario" data-accion="descargar-zip"><span data-icono="paquete" data-icono-tam="17"></span> Descargar carpeta (ZIP)</button>
+                    <!-- Generar expediente: solo administrador y operador responsable -->
+                    <button id="boton-generar-expediente" class="pt-boton pt-boton--primario" data-accion="generar-expediente" hidden><span data-icono="expediente" data-icono-tam="17"></span> Generar expediente</button>
+                </div>
             </div>
             <div class="pt-detalle-cabecera">
                 <h2 id="detalle-nombre"></h2>
                 <span id="detalle-estado"></span>
-                <div class="pt-estado-tramite">
+
+                <!-- Resumen del estado del trámite (semáforo por días hábiles).
+                     Se gestiona desde la pestaña "Estados"; aquí solo se muestra. -->
+                <div id="detalle-semaforo" class="pt-proceso"></div>
+
+                <!-- Notas internas del operador (antes "descripción"). Solo las
+                     ven el administrador y el operador responsable. -->
+                <div id="zona-notas" class="pt-estado-tramite" hidden>
                     <p id="detalle-descripcion" class="pt-nota"></p>
-                    <button id="boton-editar-descripcion" class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="editar-descripcion" hidden><span data-icono="editar" data-icono-tam="15"></span> Actualizar estado del trámite</button>
+                    <button id="boton-editar-descripcion" class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="editar-descripcion" hidden><span data-icono="editar" data-icono-tam="15"></span> Editar notas internas</button>
                 </div>
                 <form id="form-descripcion" hidden>
                     <label class="pt-campo">
-                        <span>Estado del trámite / descripción (lo verán los asignados a la carpeta)</span>
+                        <span>Notas internas del operador (no las ven el cliente ni el acreedor)</span>
                         <textarea id="descripcion-nueva" rows="2" maxlength="300"
                                   placeholder="Ej.: Audiencia de conciliación programada para el 25 de junio."></textarea>
                     </label>
                     <div class="pt-celda-acciones">
-                        <button type="submit" class="pt-boton pt-boton--primario pt-boton--mini">Guardar estado</button>
+                        <button type="submit" class="pt-boton pt-boton--primario pt-boton--mini">Guardar notas</button>
                         <button type="button" class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="cancelar-descripcion">Cancelar</button>
                     </div>
                 </form>
             </div>
 
+            <div class="pt-carpeta-cuerpo">
+              <div class="pt-carpeta-principal">
+
+            <!-- Sub-pestañas de la carpeta (Archivos / herramientas del personal) -->
+            <div id="sub-pestanas-carpeta" class="pt-sub-pestanas"></div>
+
+            <div id="panel-archivos">
             <div id="zona-subida" class="pt-zona-subida" hidden>
                 <p><span data-icono="adjunto" data-icono-tam="20"></span> Arrastra archivos aquí, o</p>
                 <label class="pt-boton pt-boton--primario">
@@ -74,7 +163,7 @@
                     <input type="file" id="entrada-archivos" multiple hidden
                            accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.mp3,.mp4">
                 </label>
-                <p class="pt-nota">Permitidos: PDF, Word, Excel, PNG, JPG, MP3, MP4 · máximo 50 MB por archivo</p>
+                <p class="pt-nota">Permitidos: PDF, Word, Excel, PNG, JPG, MP3, MP4 · máximo 100 MB por archivo</p>
             </div>
 
             <div class="pt-tabla-envoltura">
@@ -92,6 +181,59 @@
                 </table>
                 <div id="archivos-vacio" class="pt-vacio" hidden style="border: none;">Esta carpeta aún no tiene documentos.</div>
             </div>
+            </div><!-- /panel-archivos -->
+
+
+            <!-- Paneles del personal (admin/operador responsable): audiencias,
+                 recordatorios personales y notificaciones de la carpeta.
+                 Los llena el controlador; nunca existen para cliente/acreedor. -->
+            <div id="panel-audiencias" hidden></div>
+            <div id="panel-recordatorios" hidden></div>
+            <div id="panel-notif-carpeta" hidden></div>
+              </div>
+
+              <!-- ===== COLUMNA DERECHA: CALENDARIO DE AUDIENCIAS =====
+                   Lo ven todos los de la carpeta (deudor y acreedores en solo
+                   lectura); marcar días solo lo puede el admin/operador. -->
+              <aside class="pt-lateral-cal" id="pt-lateral-cal" hidden>
+                <h3><span data-icono="calendario" data-icono-tam="18"></span> Calendario</h3>
+                <div id="calendario-audiencias" class="pt-calendario"></div>
+              </aside>
+            </div>
+
+            <!-- ===== CHATS DEL TRÁMITE (cliente↔operador y acreedor↔operador) ===== -->
+            <!-- Chat del trámite: panel ANCLADO en la esquina (como el de
+                 soporte), para chatear mientras se consulta la carpeta. -->
+            <section class="pt-chats pt-chat-flotante" id="pt-chats" hidden>
+                <div class="pt-chats__cab pt-chat-flotante__cab" data-accion="chat-carpeta-minimizar" title="Minimizar">
+                    <div>
+                        <h3><span data-icono="chat" data-icono-tam="18"></span> Comunicación del trámite</h3>
+                        <p class="pt-nota" id="pt-chats-nota">Cada parte ve únicamente su propio chat.</p>
+                    </div>
+                    <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="chat-carpeta-minimizar"
+                            aria-label="Minimizar chat"><span data-icono="minimizar" data-icono-tam="16"></span></button>
+                </div>
+                <div id="chat-tabs" class="pt-sub-pestanas"></div>
+                <!-- Selector de acreedor (solo personal, canal acreedor): con
+                     quién en particular se conversa -->
+                <div id="chat-destinatario" class="pt-chat-destinatario" hidden></div>
+                <div id="chat-mensajes" class="pt-chat-historial"></div>
+                <!-- Adjunto pendiente de enviar (lo llena el controlador) -->
+                <div id="chat-adjunto-chip" class="pt-chat-adjunto" hidden>
+                    <span data-icono="adjunto" data-icono-tam="15"></span>
+                    <span id="chat-adjunto-nombre"></span>
+                    <button type="button" class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="quitar-adjunto-chat" aria-label="Quitar adjunto">Quitar</button>
+                </div>
+                <form id="form-mensaje" class="pt-chat-entrada">
+                    <label class="pt-boton pt-boton--fantasma pt-chat-clip" title="Adjuntar archivo (PDF, Word, Excel, imagen, audio o video · máx. 100 MB)">
+                        <span data-icono="adjunto" data-icono-tam="18"></span>
+                        <input type="file" id="chat-adjunto" hidden
+                               accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.mp3,.mp4">
+                    </label>
+                    <textarea id="mensaje-input" rows="2" maxlength="1000" placeholder="Escribe un mensaje…"></textarea>
+                    <button type="submit" class="pt-boton pt-boton--primario">Enviar</button>
+                </form>
+            </section>
         </section>
 
         <!-- ===== VISTA: USUARIOS (solo administrador) ===== -->
@@ -99,6 +241,25 @@
             <div class="pt-barra-seccion">
                 <h2>Usuarios del portal</h2>
             </div>
+            <!-- Sub-pestañas: gestión de usuarios / consentimientos de datos -->
+            <div class="pt-sub-pestanas" id="sub-pestanas-usuarios">
+                <button class="activa" data-accion="usuarios-panel" data-panel="gestion"><span data-icono="usuario" data-icono-tam="17"></span> Usuarios</button>
+                <button data-accion="usuarios-panel" data-panel="consentimientos"><span data-icono="documento" data-icono-tam="17"></span> Consentimientos</button>
+            </div>
+            <div id="panel-consentimientos" hidden>
+                <p class="pt-nota" style="margin-bottom:1.2rem;">Aceptaciones de la política de manejo de datos de
+                    clientes y acreedores (se registran en el primer ingreso).</p>
+                <div class="pt-tabla-envoltura">
+                    <table class="pt-tabla">
+                        <thead>
+                            <tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Fecha de aceptación</th><th>Versión de la política</th><th>Documento</th></tr>
+                        </thead>
+                        <tbody id="lista-consentimientos"></tbody>
+                    </table>
+                    <div id="consentimientos-vacio" class="pt-vacio" hidden style="border:none;">Todavía no hay consentimientos registrados.</div>
+                </div>
+            </div>
+            <div id="panel-usuarios-gestion">
             <form id="form-usuario" class="pt-form-usuario">
                 <label class="pt-campo">
                     <span>Usuario</span>
@@ -113,17 +274,44 @@
                     <span>Contraseña</span>
                     <input type="text" id="nueva-clave" required minlength="8" maxlength="50">
                 </label>
+                <div class="pt-campo" style="align-self:end;">
+                    <button type="button" class="pt-boton pt-boton--fantasma" data-accion="generar-credenciales"
+                            title="Asigna un usuario y una contraseña aleatorios"><span data-icono="dado" data-icono-tam="16"></span> Generar credenciales</button>
+                </div>
                 <label class="pt-campo">
                     <span>Rol</span>
                     <select id="nuevo-rol">
                         <option value="cliente">Cliente</option>
                         <option value="acreedor">Acreedor</option>
                         <option value="operador">Operador</option>
+                        <option value="monitor">Monitor (solo lectura)</option>
                         <option value="administrador">Administrador</option>
                     </select>
                 </label>
+                <label class="pt-campo" id="campo-nuevo-correo" style="grid-column:1/-1;">
+                    <span>Correo electrónico (para avisos y notificaciones del trámite)</span>
+                    <input type="email" id="nuevo-correo" required maxlength="120" placeholder="nombre@ejemplo.com">
+                </label>
                 <button type="submit" class="pt-boton pt-boton--primario">Crear usuario</button>
             </form>
+
+            <!-- Buscador + filtro por rol + exportar Excel -->
+            <div class="pt-usuarios-barra">
+                <label class="pt-buscador" style="margin-bottom:0;flex:1 1 26rem;">
+                    <span data-icono="buscar" data-icono-tam="16"></span>
+                    <input type="search" id="buscador-usuarios" placeholder="Buscar por usuario, nombre o correo…" maxlength="80">
+                </label>
+                <button class="pt-boton pt-boton--primario" data-accion="exportar-usuarios-excel">
+                    <span data-icono="hoja" data-icono-tam="16"></span> Descargar Excel</button>
+            </div>
+            <div class="pt-sub-pestanas" id="filtro-rol-usuarios">
+                <button class="activa" data-accion="filtro-rol-usuario" data-rol="">Todos</button>
+                <button data-accion="filtro-rol-usuario" data-rol="administrador">Administradores</button>
+                <button data-accion="filtro-rol-usuario" data-rol="monitor">Monitores</button>
+                <button data-accion="filtro-rol-usuario" data-rol="operador">Operadores</button>
+                <button data-accion="filtro-rol-usuario" data-rol="cliente">Clientes (deudores)</button>
+                <button data-accion="filtro-rol-usuario" data-rol="acreedor">Acreedores</button>
+            </div>
             <div class="pt-tabla-envoltura">
                 <table class="pt-tabla">
                     <thead>
@@ -132,13 +320,17 @@
                             <th>Nombre</th>
                             <th>Rol</th>
                             <th>Estado</th>
+                            <th>Conexión</th>
+                            <th>Última conexión</th>
                             <th>Creado</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="lista-usuarios"></tbody>
                 </table>
+                <div id="usuarios-vacio" class="pt-vacio" hidden style="border:none;">Sin usuarios para ese filtro o búsqueda.</div>
             </div>
+            </div><!-- /panel-usuarios-gestion -->
         </section>
 
         <!-- ===== VISTA: CENTRO DE NOTIFICACIONES (solo administrador) ===== -->
@@ -148,10 +340,14 @@
                 <button class="pt-boton pt-boton--fantasma" data-accion="refrescar-notificaciones"><span data-icono="refrescar" data-icono-tam="15"></span> Actualizar</button>
             </div>
             <p class="pt-nota" style="margin-bottom:1.6rem;">Registro de ingresos y de toda acción sobre carpetas y archivos. Elige la categoría:</p>
+            <!-- Filtro por carpeta: al elegir una, las pestañas de abajo muestran
+                 SOLO la actividad del operador, cliente y acreedores de esa carpeta -->
+            <div class="pt-calv-filtros" id="filtro-notif-carpeta-zona" style="margin-bottom:1.2rem;"></div>
             <div id="sub-pestanas-notif" class="pt-sub-pestanas">
                 <button class="activa" data-accion="notif-rol" data-rol="cliente"><span data-icono="usuario" data-icono-tam="17"></span> Clientes</button>
                 <button data-accion="notif-rol" data-rol="acreedor"><span data-icono="banco" data-icono-tam="17"></span> Acreedores</button>
                 <button data-accion="notif-rol" data-rol="operador"><span data-icono="maletin" data-icono-tam="17"></span> Operadores</button>
+                <button data-accion="notif-rol" data-rol="monitor"><span data-icono="ver" data-icono-tam="17"></span> Monitores</button>
             </div>
             <div id="lista-notificaciones" class="pt-notif-lista"></div>
             <div id="notificaciones-vacio" class="pt-vacio" hidden></div>
@@ -172,13 +368,23 @@
                     <span>Descripción</span>
                     <textarea id="carpeta-descripcion" rows="2" maxlength="300"></textarea>
                 </label>
-                <fieldset class="pt-campo">
+                <!-- Asignación segmentada por rol: Operadores / Clientes / Acreedores -->
+                <div class="pt-sub-pestanas" id="carpeta-tabs-roles">
+                    <button type="button" class="activa" data-accion="carpeta-tab-rol" data-grupo="operadores">Operadores</button>
+                    <button type="button" data-accion="carpeta-tab-rol" data-grupo="clientes">Clientes</button>
+                    <button type="button" data-accion="carpeta-tab-rol" data-grupo="acreedores">Acreedores</button>
+                </div>
+                <fieldset class="pt-campo" id="grupo-operadores">
                     <legend>Operador(es) responsable(s) del proceso</legend>
                     <div id="carpeta-operadores" class="pt-lista-chequeo"></div>
                 </fieldset>
-                <fieldset class="pt-campo">
-                    <legend>Visible para (clientes y acreedores)</legend>
-                    <div id="carpeta-asignados" class="pt-lista-chequeo"></div>
+                <fieldset class="pt-campo" id="grupo-clientes" hidden>
+                    <legend>Clientes (deudores) que pueden ver la carpeta</legend>
+                    <div id="carpeta-clientes" class="pt-lista-chequeo"></div>
+                </fieldset>
+                <fieldset class="pt-campo" id="grupo-acreedores" hidden>
+                    <legend>Acreedores que pueden ver la carpeta</legend>
+                    <div id="carpeta-acreedores" class="pt-lista-chequeo"></div>
                 </fieldset>
                 <label class="pt-interruptor">
                     <input type="checkbox" id="carpeta-activa" checked>
@@ -192,14 +398,337 @@
         </div>
     </div>
 
+    <!-- ===== MODAL: EDITAR USUARIO (solo administrador) ===== -->
+    <div id="modal-usuario" class="pt-modal" hidden>
+        <div class="pt-modal__caja">
+            <h3>Editar usuario</h3>
+            <form id="form-editar-usuario">
+                <label class="pt-campo">
+                    <span>Usuario</span>
+                    <input type="text" id="editar-usuario-id" disabled>
+                </label>
+                <label class="pt-campo">
+                    <span>Nombre completo</span>
+                    <input type="text" id="editar-nombre" required maxlength="80">
+                </label>
+                <label class="pt-campo">
+                    <span>Correo de contacto</span>
+                    <input type="email" id="editar-correo" maxlength="120" placeholder="Sin correo registrado">
+                </label>
+                <label class="pt-campo">
+                    <span>Nueva contraseña (opcional)</span>
+                    <input type="text" id="editar-clave" minlength="8" maxlength="50"
+                           placeholder="Déjala en blanco para no cambiarla">
+                </label>
+                <label class="pt-interruptor">
+                    <input type="checkbox" id="editar-notificar">
+                    <span>Notificar la nueva contraseña al correo del usuario</span>
+                </label>
+                <p class="pt-nota">No es posible ver la contraseña anterior: se guarda cifrada (hash) y nadie puede
+                    recuperarla. Si marcas «notificar», al guardar se abrirá tu correo con el mensaje y la nueva
+                    contraseña listos para enviar. El rol no se edita aquí.</p>
+                <div class="pt-modal__acciones">
+                    <button type="button" class="pt-boton pt-boton--fantasma" data-accion="cerrar-modal-usuario">Cancelar</button>
+                    <button type="submit" class="pt-boton pt-boton--primario">Guardar cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== MODAL: NOTIFICAR AUDIENCIA (admin/operador) ===== -->
+    <div id="modal-audiencia" class="pt-modal" hidden>
+        <div class="pt-modal__caja">
+            <h3><span data-icono="campana" data-icono-tam="18"></span> Notificar audiencia por correo</h3>
+            <form id="form-audiencia">
+                <fieldset class="pt-campo">
+                    <legend>Destinatarios (deudor y acreedores del trámite)</legend>
+                    <div id="audiencia-destinatarios" class="pt-lista-chequeo"></div>
+                </fieldset>
+                <label class="pt-campo">
+                    <span>Nombre de la reunión *</span>
+                    <input type="text" id="audiencia-titulo" required maxlength="120"
+                           placeholder="Ej.: Audiencia de negociación de deudas">
+                </label>
+                <div class="pt-audiencia-fecha-hora">
+                    <label class="pt-campo">
+                        <span>Fecha de la audiencia *</span>
+                        <input type="date" id="audiencia-fecha" required>
+                    </label>
+                    <label class="pt-campo">
+                        <span>Hora *</span>
+                        <input type="time" id="audiencia-hora" required>
+                    </label>
+                </div>
+                <label class="pt-campo">
+                    <span>Link de la reunión (Meet)</span>
+                    <input type="url" id="audiencia-enlace" maxlength="300"
+                           placeholder="https://meet.google.com/xxx-xxxx-xxx">
+                </label>
+                <label class="pt-campo">
+                    <span>Detalles del evento (opcional)</span>
+                    <textarea id="audiencia-descripcion" rows="2" maxlength="400"
+                              placeholder="Ej.: Llevar el acta firmada; asisten los dos acreedores principales."></textarea>
+                </label>
+                <p class="pt-nota">Al enviar se abre tu correo con el mensaje listo para los
+                    destinatarios seleccionados, y la audiencia queda marcada en el calendario
+                    de la carpeta.</p>
+                <div class="pt-modal__acciones">
+                    <button type="button" class="pt-boton pt-boton--fantasma" data-accion="cerrar-modal-audiencia">Cancelar</button>
+                    <button type="submit" class="pt-boton pt-boton--primario"><span data-icono="correo" data-icono-tam="16"></span> Enviar notificación</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== MODAL: GENERAR EXPEDIENTE (admin/operador) ===== -->
+    <div id="modal-expediente" class="pt-modal" hidden>
+        <div class="pt-modal__caja pt-modal__caja--ancha">
+            <h3><span data-icono="expediente" data-icono-tam="18"></span> Generar expediente (PDF unificado)</h3>
+            <p class="pt-nota">Marca los documentos uno por uno: el orden en que los selecciones
+                es el orden del PDF final. También puedes arrastrar o usar las flechas para
+                reorganizar los seleccionados.</p>
+            <div id="expediente-lista" class="pt-expediente-lista"></div>
+            <p class="pt-nota" id="expediente-aviso"></p>
+            <div class="pt-modal__acciones">
+                <button type="button" class="pt-boton pt-boton--fantasma" data-accion="cerrar-modal-expediente">Cancelar</button>
+                <button type="button" id="boton-crear-expediente" class="pt-boton pt-boton--primario" data-accion="crear-expediente" disabled>Generar PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL: CREAR / EDITAR RECORDATORIO (personal, privado) ===== -->
+    <div id="modal-recordatorio" class="pt-modal" hidden>
+        <div class="pt-modal__caja">
+            <h3 id="modal-recordatorio-titulo"><span data-icono="campana" data-icono-tam="18"></span> Nuevo recordatorio</h3>
+            <form id="form-recordatorio">
+                <label class="pt-campo">
+                    <span>Mensaje del recordatorio *</span>
+                    <textarea id="recordatorio-mensaje" rows="3" required maxlength="300"
+                              placeholder="Ej.: Preparar acta antes de la audiencia del 20 de agosto."></textarea>
+                </label>
+                <div class="pt-audiencia-fecha-hora">
+                    <label class="pt-campo">
+                        <span>Mostrar desde *</span>
+                        <input type="date" id="recordatorio-desde" required>
+                    </label>
+                    <label class="pt-campo">
+                        <span>Hasta *</span>
+                        <input type="date" id="recordatorio-hasta" required>
+                    </label>
+                </div>
+                <p class="pt-nota">Es privado: solo tú lo verás. Mientras la fecha de hoy esté
+                    dentro del rango, aparecerá una ventana emergente cada vez que ingreses al portal.</p>
+                <div class="pt-modal__acciones">
+                    <button type="button" class="pt-boton pt-boton--fantasma" data-accion="cerrar-modal-recordatorio">Cancelar</button>
+                    <button type="submit" class="pt-boton pt-boton--primario">Guardar recordatorio</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== VENTANA EMERGENTE: RECORDATORIOS VIGENTES (esquina) ===== -->
+    <div id="popup-recordatorios" class="pt-popup-recordatorios" hidden>
+        <div class="pt-popup-recordatorios__cab">
+            <span data-icono="campana" data-icono-tam="17"></span>
+            <strong>Tus recordatorios</strong>
+            <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="cerrar-popup-recordatorios" aria-label="Cerrar recordatorios"><span data-icono="cerrar" data-icono-tam="15"></span></button>
+        </div>
+        <div id="popup-recordatorios-lista"></div>
+    </div>
+
+    <!-- ===== MODAL: NUEVO PROCESO DEL TRÁMITE (admin/operador) ===== -->
+    <div id="modal-proceso" class="pt-modal" hidden>
+        <div class="pt-modal__caja">
+            <h3 id="modal-proceso-titulo"><span data-icono="estado" data-icono-tam="18"></span> Nuevo proceso</h3>
+            <form id="form-proceso">
+                <label class="pt-campo">
+                    <span>Nombre del proceso *</span>
+                    <input type="text" id="proceso-nombre" required maxlength="120"
+                           placeholder="Ej.: Aceptación, Litigación, Verificación de documentos">
+                </label>
+                <label class="pt-campo">
+                    <span>Plazo en días hábiles * (lun–vie, sin festivos colombianos)</span>
+                    <input type="number" id="proceso-dias" required min="1" max="365" placeholder="Ej.: 3, 5, 7">
+                </label>
+                <p class="pt-nota" id="proceso-venc-previo"></p>
+                <div class="pt-modal__acciones">
+                    <button type="button" class="pt-boton pt-boton--fantasma" data-accion="cerrar-modal-proceso">Cancelar</button>
+                    <button type="submit" class="pt-boton pt-boton--primario">Crear proceso</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== MODAL: CORREGIR PROCESO (solo administrador) ===== -->
+    <div id="modal-editar-proceso" class="pt-modal" hidden>
+        <div class="pt-modal__caja">
+            <h3><span data-icono="editar" data-icono-tam="18"></span> Corregir proceso (administrador)</h3>
+            <form id="form-editar-proceso">
+                <label class="pt-campo">
+                    <span>Nombre del proceso</span>
+                    <input type="text" id="edproc-nombre" maxlength="120">
+                </label>
+                <label class="pt-campo">
+                    <span>Plazo en días hábiles</span>
+                    <input type="number" id="edproc-dias" min="1" max="365">
+                </label>
+                <label class="pt-campo">
+                    <span>Fecha de vencimiento (día hábil)</span>
+                    <input type="date" id="edproc-vencimiento">
+                </label>
+                <label class="pt-campo">
+                    <span>Estado</span>
+                    <select id="edproc-completado">
+                        <option value="">— sin cambio —</option>
+                        <option value="true">Completado</option>
+                        <option value="false">Pendiente</option>
+                    </select>
+                </label>
+                <label class="pt-campo">
+                    <span>Semáforo manual</span>
+                    <select id="edproc-semaforo">
+                        <option value="">Automático (según días hábiles)</option>
+                        <option value="verde">🟢 Verde</option>
+                        <option value="naranja">🟡 Naranja</option>
+                        <option value="rojo">🔴 Rojo</option>
+                    </select>
+                </label>
+                <p class="pt-nota">La corrección queda registrada con tu usuario y la fecha.</p>
+                <div class="pt-modal__acciones">
+                    <button type="button" class="pt-boton pt-boton--fantasma" data-accion="cerrar-modal-editar-proceso">Cancelar</button>
+                    <button type="submit" class="pt-boton pt-boton--primario">Guardar corrección</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== MODAL: DETALLE DEL TRÁMITE (admin/monitor, desde Estados) ===== -->
+    <div id="modal-detalle-tramite" class="pt-modal" hidden>
+        <div class="pt-modal__caja pt-modal__caja--ancha" id="detalle-tramite-cuerpo"></div>
+    </div>
+
+    <!-- ===== MODAL: VISOR DE DOCUMENTOS WORD / EXCEL (dentro del portal) ===== -->
+    <div id="modal-visor" class="pt-modal" hidden>
+        <div class="pt-modal__caja pt-modal__caja--ancha pt-visor-caja">
+            <div class="pt-visor-cab">
+                <h3 id="visor-titulo">Documento</h3>
+                <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="cerrar-modal-visor" aria-label="Cerrar"><span data-icono="cerrar" data-icono-tam="16"></span></button>
+            </div>
+            <div id="visor-cuerpo" class="pt-visor-cuerpo"></div>
+        </div>
+    </div>
+
+    <!-- Burbuja del chat de la carpeta (cuando está minimizado) -->
+    <div id="chat-carpeta-burbuja" class="pt-soporte-burbuja pt-chat-carpeta-burbuja" data-accion="chat-carpeta-abrir" hidden
+         title="Chat del trámite" role="button" aria-label="Abrir chat del trámite">
+        <span data-icono="chat" data-icono-tam="22"></span>
+        <span id="chat-carpeta-contador" class="pt-soporte-contador" hidden></span>
+    </div>
+
+    <!-- ===== CHAT DE SOPORTE FLOTANTE (admin ↔ operadores) =====
+         Global: sigue visible/minimizado aunque se entre a una carpeta. -->
+    <div id="soporte-burbuja" class="pt-soporte-burbuja" data-accion="soporte-abrir" hidden
+         title="Chat de soporte" role="button" aria-label="Abrir chat de soporte">
+        <span data-icono="chat" data-icono-tam="22"></span>
+        <span id="soporte-burbuja-contador" class="pt-soporte-contador" hidden></span>
+    </div>
+    <div id="soporte-panel" class="pt-soporte-panel" hidden>
+        <div class="pt-soporte-panel__cab">
+            <!-- Fila 1: botones de acción (arriba) + minimizar a la derecha -->
+            <div class="pt-soporte-panel__acciones">
+                <div class="pt-celda-acciones">
+                    <button class="pt-boton pt-boton--fantasma pt-boton--mini" id="soporte-boton-volver"
+                            data-accion="soporte-volver" hidden><span data-icono="flecha-arriba" data-icono-tam="14" style="transform:rotate(-90deg);"></span> Operadores</button>
+                    <button class="pt-boton pt-boton--fantasma pt-boton--mini" id="soporte-boton-llamar"
+                            data-accion="soporte-llamar" hidden title="Llamar (solo administración)"><span data-icono="telefono" data-icono-tam="15"></span> Llamar</button>
+                </div>
+                <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="soporte-minimizar"
+                        aria-label="Minimizar chat" title="Minimizar"><span data-icono="minimizar" data-icono-tam="16"></span></button>
+            </div>
+            <!-- Fila 2: título (debajo de los botones) -->
+            <strong id="soporte-titulo" class="pt-soporte-panel__titulo" data-accion="soporte-minimizar" title="Minimizar">Soporte</strong>
+        </div>
+        <div id="soporte-lista" class="pt-soporte-lista" hidden></div>
+        <div id="soporte-mensajes" class="pt-chat-historial pt-soporte-mensajes" hidden></div>
+        <form id="form-soporte" class="pt-chat-entrada pt-soporte-entrada" hidden>
+            <textarea id="soporte-input" rows="2" maxlength="1000" placeholder="Escribe un mensaje…"></textarea>
+            <button type="submit" class="pt-boton pt-boton--primario">Enviar</button>
+        </form>
+    </div>
+
+    <!-- ===== MODAL: LLAMADA DE SOPORTE (WebRTC) ===== -->
+    <div id="modal-llamada" class="pt-modal" hidden>
+        <div class="pt-modal__caja pt-llamada">
+            <h3><span data-icono="chat" data-icono-tam="18"></span> <span id="llamada-titulo">Llamada</span></h3>
+            <p class="pt-nota" id="llamada-estado">Conectando…</p>
+            <audio id="llamada-audio-remoto" autoplay></audio>
+            <div class="pt-modal__acciones" style="justify-content:center;">
+                <button class="pt-boton pt-boton--primario" id="llamada-aceptar" data-accion="llamada-aceptar" hidden>Aceptar</button>
+                <button class="pt-boton pt-boton--fantasma pt-boton-llamada" id="llamada-mic" data-accion="llamada-mic" hidden><span data-icono="microfono" data-icono-tam="17"></span> Silenciar micrófono</button>
+                <button class="pt-boton pt-boton--fantasma pt-boton-llamada" id="llamada-altavoz" data-accion="llamada-altavoz" hidden><span data-icono="altavoz" data-icono-tam="17"></span> Silenciar altavoz</button>
+                <button class="pt-boton pt-boton--fantasma" id="llamada-minimizar" data-accion="llamada-minimizar" hidden>Minimizar</button>
+                <button class="pt-boton pt-boton--peligro" data-accion="llamada-colgar">Colgar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra flotante de llamada en segundo plano: permite navegar por el
+         portal sin cortar la comunicación -->
+    <div id="llamada-mini" class="pt-llamada-mini" hidden>
+        <span class="pt-llamada-mini__estado"><span data-icono="telefono" data-icono-tam="16"></span> <strong id="llamada-mini-texto">En llamada</strong></span>
+        <button class="pt-boton pt-boton--fantasma pt-boton--mini pt-boton-llamada" id="llamada-mic-mini" data-accion="llamada-mic-mini"
+                title="Silenciar micrófono" aria-label="Silenciar micrófono"><span data-icono="microfono" data-icono-tam="16"></span></button>
+        <button class="pt-boton pt-boton--fantasma pt-boton--mini pt-boton-llamada" id="llamada-altavoz-mini" data-accion="llamada-altavoz-mini"
+                title="Silenciar altavoz" aria-label="Silenciar altavoz"><span data-icono="altavoz" data-icono-tam="16"></span></button>
+        <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="llamada-restaurar">Abrir</button>
+        <button class="pt-boton pt-boton--peligro pt-boton--mini" data-accion="llamada-colgar">Colgar</button>
+    </div>
+
+    <!-- ===== MODAL: CONSENTIMIENTO DE DATOS (primer ingreso de cliente/acreedor) =====
+         BLOQUEANTE: no se puede cerrar sin aceptar. -->
+    <div id="modal-consentimiento" class="pt-modal" hidden>
+        <div class="pt-modal__caja">
+            <h3><span data-icono="documento" data-icono-tam="18"></span> Autorización de manejo de datos</h3>
+            <p class="pt-nota" style="margin:1rem 0;">
+                Para usar el portal debes autorizar a la Fundación el tratamiento de tus datos
+                personales y de los documentos de tu trámite, conforme a la Ley 1581 de 2012
+                (protección de datos personales en Colombia). Los datos se usan únicamente para
+                la gestión de tu proceso de insolvencia/conciliación, se comparten solo con las
+                partes autorizadas del trámite y puedes ejercer tus derechos de consulta y
+                reclamo escribiendo a la Fundación.
+            </p>
+            <label class="pt-interruptor">
+                <input type="checkbox" id="consentimiento-acepto">
+                <span>He leído y AUTORIZO el tratamiento de mis datos personales (versión 1.0 de la política).</span>
+            </label>
+            <div class="pt-modal__acciones">
+                <button class="pt-boton pt-boton--primario" data-accion="consentimiento-aceptar">Aceptar y continuar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL: CONFIRMACIÓN PROPIA (reemplaza a window.confirm) ===== -->
+    <div id="modal-confirmar" class="pt-modal" hidden>
+        <div class="pt-modal__caja">
+            <h3 id="confirmar-titulo">Confirmar</h3>
+            <p class="pt-nota" id="confirmar-mensaje" style="margin:1rem 0; white-space:pre-line;"></p>
+            <div class="pt-modal__acciones">
+                <button class="pt-boton pt-boton--fantasma" data-accion="confirmar-no">Cancelar</button>
+                <button class="pt-boton pt-boton--primario" id="confirmar-si" data-accion="confirmar-si">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast" class="pt-toast"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.1"></script>
-    <script src="js/db.js?v=13"></script>
-    <script src="js/auth.js?v=13"></script>
-    <script src="js/config.js?v=13"></script>
-    <script src="js/iconos.js?v=13"></script>
-    <script src="js/nube.js?v=13"></script>
-    <script src="js/app.js?v=15"></script>
+    <script src="js/diasHabiles.js?v=39"></script>
+    <script src="js/db.js?v=39"></script>
+    <script src="js/auth.js?v=17"></script>
+    <script src="js/config.js?v=17"></script>
+    <script src="js/iconos.js?v=19"></script>
+    <script src="js/tema.js?v=18"></script>
+    <script src="js/nube.js?v=39"></script>
+    <script src="js/app.js?v=39"></script>
 </body>
 </html>
