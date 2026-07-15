@@ -2118,3 +2118,79 @@ begin
             null, null);
 end;
 $$;
+
+-- ============================================================
+-- 14) OLVIDÉ MI CONTRASEÑA Y ADJUNTOS DE SOPORTE
+-- ============================================================
+create table if not exists public.solicitudes_clave (
+    id           bigint generated always as identity primary key,
+    usuario      text not null,
+    estado       text not null default 'pendiente' check (estado in ('pendiente','resuelta')),
+    fecha        timestamptz not null default now(),
+    resuelta_por uuid references public.perfiles (id) on delete set null,
+    fecha_resuelta timestamptz
+);
+create index if not exists idx_solicitudes_estado on public.solicitudes_clave (estado, fecha desc);
+alter table public.solicitudes_clave enable row level security;
+
+drop policy if exists "admin ve solicitudes de clave" on public.solicitudes_clave;
+create policy "admin ve solicitudes de clave" on public.solicitudes_clave
+    for select using (public.es_admin());
+drop policy if exists "admin resuelve solicitudes de clave" on public.solicitudes_clave;
+create policy "admin resuelve solicitudes de clave" on public.solicitudes_clave
+    for update using (public.es_admin()) with check (public.es_admin());
+
+-- La llama quien olvidó su clave (SIN sesión). Silencio si no existe (no
+-- revela usuarios) y no duplica pendientes; avisa a los administradores.
+create or replace function public.solicitar_restablecimiento(p_usuario text)
+returns void
+language plpgsql security definer set search_path = public
+as $$
+declare
+    u text := lower(trim(coalesce(p_usuario, '')));
+begin
+    if u = '' or length(u) > 30 then return; end if;
+    if not exists (select 1 from public.perfiles where usuario = u and activo) then return; end if;
+    if exists (select 1 from public.solicitudes_clave where usuario = u and estado = 'pendiente') then return; end if;
+    insert into public.solicitudes_clave (usuario) values (u);
+    perform public._notificar_admins('solicitud-clave',
+        'El usuario «' || u || '» olvidó su contraseña y solicita restablecerla', null, null);
+end;
+$$;
+
+create or replace function public.resolver_solicitud_clave(solicitud bigint)
+returns void
+language plpgsql security definer set search_path = public
+as $$
+begin
+    if not public.es_admin() then raise exception 'Solo el administrador puede resolver solicitudes'; end if;
+    update public.solicitudes_clave
+       set estado = 'resuelta', resuelta_por = auth.uid(), fecha_resuelta = now()
+     where id = solicitud and estado = 'pendiente';
+end;
+$$;
+
+-- Adjuntos del chat de soporte ('soporte/<uuid-operador>/...')
+alter table public.mensajes_soporte add column if not exists archivo_nombre text not null default '';
+alter table public.mensajes_soporte add column if not exists archivo_ruta   text not null default '';
+alter table public.mensajes_soporte add column if not exists archivo_tamano bigint not null default 0;
+alter table public.mensajes_soporte add column if not exists archivo_tipo   text not null default '';
+
+create or replace function public.soporte_operador_de_ruta(ruta text)
+returns uuid language plpgsql immutable as $$
+begin
+    return (split_part(ruta, '/', 2))::uuid;
+exception when others then return null;
+end; $$;
+
+drop policy if exists "soporte sube adjuntos" on storage.objects;
+create policy "soporte sube adjuntos" on storage.objects
+    for insert with check (bucket_id = 'documentos' and name like 'soporte/%'
+        and public.puede_soporte(public.soporte_operador_de_ruta(name)));
+drop policy if exists "soporte descarga adjuntos" on storage.objects;
+create policy "soporte descarga adjuntos" on storage.objects
+    for select using (bucket_id = 'documentos' and name like 'soporte/%'
+        and public.puede_soporte(public.soporte_operador_de_ruta(name)));
+drop policy if exists "admin borra adjuntos de soporte" on storage.objects;
+create policy "admin borra adjuntos de soporte" on storage.objects
+    for delete using (bucket_id = 'documentos' and name like 'soporte/%' and public.es_admin());

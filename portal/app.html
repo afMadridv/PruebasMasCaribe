@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://hheyihgktcswvxiscvdm.supabase.co" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Krub:wght@400;500;600;700&family=Lora:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/portal.css?v=39">
+    <link rel="stylesheet" href="css/portal.css?v=40">
 </head>
 <body>
     <!-- Barra superior UNIFICADA (marca + sesión + pestañas): un solo bloque
@@ -420,6 +420,9 @@
                     <input type="text" id="editar-clave" minlength="8" maxlength="50"
                            placeholder="Déjala en blanco para no cambiarla">
                 </label>
+                <button type="button" class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="generar-clave-editar"
+                        title="Genera una contraseña segura y la muestra en texto plano">
+                    <span data-icono="dado" data-icono-tam="15"></span> Generar contraseña segura</button>
                 <label class="pt-interruptor">
                     <input type="checkbox" id="editar-notificar">
                     <span>Notificar la nueva contraseña al correo del usuario</span>
@@ -650,7 +653,18 @@
         </div>
         <div id="soporte-lista" class="pt-soporte-lista" hidden></div>
         <div id="soporte-mensajes" class="pt-chat-historial pt-soporte-mensajes" hidden></div>
+        <!-- Adjunto pendiente de enviar -->
+        <div id="soporte-adjunto-chip" class="pt-chat-adjunto" hidden>
+            <span data-icono="adjunto" data-icono-tam="15"></span>
+            <span id="soporte-adjunto-nombre"></span>
+            <button type="button" class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="quitar-adjunto-soporte" aria-label="Quitar adjunto">Quitar</button>
+        </div>
         <form id="form-soporte" class="pt-chat-entrada pt-soporte-entrada" hidden>
+            <label class="pt-boton pt-boton--fantasma pt-chat-clip" title="Adjuntar archivo (máx. 100 MB)">
+                <span data-icono="adjunto" data-icono-tam="18"></span>
+                <input type="file" id="soporte-adjunto" hidden
+                       accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.mp3,.mp4">
+            </label>
             <textarea id="soporte-input" rows="2" maxlength="1000" placeholder="Escribe un mensaje…"></textarea>
             <button type="submit" class="pt-boton pt-boton--primario">Enviar</button>
         </form>
@@ -722,13 +736,13 @@
     <div id="toast" class="pt-toast"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.1"></script>
-    <script src="js/diasHabiles.js?v=39"></script>
-    <script src="js/db.js?v=39"></script>
+    <script src="js/diasHabiles.js?v=40"></script>
+    <script src="js/db.js?v=40"></script>
     <script src="js/auth.js?v=17"></script>
     <script src="js/config.js?v=17"></script>
     <script src="js/iconos.js?v=19"></script>
     <script src="js/tema.js?v=18"></script>
-    <script src="js/nube.js?v=39"></script>
-    <script src="js/app.js?v=39"></script>
+    <script src="js/nube.js?v=40"></script>
+    <script src="js/app.js?v=40"></script>
 </body>
 </html>

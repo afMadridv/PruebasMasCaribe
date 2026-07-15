@@ -159,17 +159,32 @@ function pintarEstadoConexion() {
     });
 }
 
-/* ============ GENERADOR DE CREDENCIALES (formulario de usuarios) ============ */
+/* ============ GENERADOR DE CREDENCIALES (formulario de usuarios) ============
+   Contraseña de 12 caracteres con mayúsculas, minúsculas, números y un
+   símbolo garantizados, usando crypto.getRandomValues (API criptográfica
+   del navegador). Se muestra en texto plano para copiarla antes de guardar. */
+function generarClaveSegura() {
+    const azar = (letras, n) => Array.from(crypto.getRandomValues(new Uint32Array(n)))
+        .map(x => letras[x % letras.length]).join('');
+    return azar('abcdefghjkmnpqrstuvwxyz', 5) + azar('ABCDEFGHJKMNPQRSTUVWXYZ', 3) +
+        azar('23456789', 3) + azar('!#$%*+', 1);
+}
+
 function generarCredenciales() {
     const azar = (letras, n) => Array.from(crypto.getRandomValues(new Uint32Array(n)))
         .map(x => letras[x % letras.length]).join('');
     const usuario = 'usuario' + azar('0123456789', 4);
-    // contraseña de 12: minúsculas, mayúsculas, números y símbolo garantizados
-    const clave = azar('abcdefghjkmnpqrstuvwxyz', 5) + azar('ABCDEFGHJKMNPQRSTUVWXYZ', 3) +
-        azar('23456789', 3) + azar('!#$%*+', 1);
+    const clave = generarClaveSegura();
     document.getElementById('nuevo-usuario').value = usuario;
     document.getElementById('nueva-clave').value = clave;
     avisar('Credenciales generadas: ' + usuario + ' / ' + clave + ' — cópialas antes de guardar.');
+}
+
+/* Botón "Generar contraseña segura" del modal Editar usuario */
+function generarClaveEditar() {
+    const clave = generarClaveSegura();
+    document.getElementById('editar-clave').value = clave; // visible en texto plano
+    avisar('Contraseña generada: ' + clave + ' — cópiala antes de guardar.');
 }
 
 /* ============ MENÚ LATERAL: LEYES DE INSOLVENCIA ============
@@ -1619,14 +1634,59 @@ async function pintarSoporteMensajes() {
     cont.innerHTML = mensajes.length
         ? mensajes.map(m => {
             const mio = m.autorId === sesion._id;
+            let adjunto = '';
+            if (m.archivoNombre) {
+                adjunto = '<div class="pt-chat-msg__adjunto">' +
+                    '<span class="pt-icono-archivo">' + iconoArchivo(extensionDe(m.archivoNombre)) + '</span>' +
+                    '<span class="pt-chat-msg__adjunto-info">' + escaparHtml(m.archivoNombre) +
+                        '<small>' + formatoTamano(m.archivoTamano) + '</small></span>' +
+                    '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="descargar-adjunto-soporte" data-id="' + m.id + '">Descargar</button>' +
+                    '</div>';
+            }
             return '<div class="pt-chat-msg' + (mio ? ' pt-chat-msg--mio' : '') + '">' +
                 '<div class="pt-chat-msg__meta"><strong>' + escaparHtml(m.autorNombre || '—') + '</strong>' +
                 (m.rol ? ' · ' + escaparHtml(ETIQUETAS_ROL[m.rol] || m.rol) : '') + ' · ' + formatoFecha(m.fecha) + '</div>' +
-                '<div class="pt-chat-msg__texto">' + escaparHtml(m.texto) + '</div>' +
+                (m.texto ? '<div class="pt-chat-msg__texto">' + escaparHtml(m.texto) + '</div>' : '') +
+                adjunto +
                 '</div>';
         }).join('')
         : '<p class="pt-chat-vacio">Aún no hay mensajes con ' + escaparHtml(_soporteOperador.nombre) + '.</p>';
     cont.scrollTop = cont.scrollHeight;
+}
+
+/* ---- Adjunto pendiente del chat de soporte ---- */
+let _adjuntoSoporte = null;
+
+function ponerAdjuntoSoporte(archivo) {
+    if (!archivo) return;
+    const ext = extensionDe(archivo.name);
+    if (!EXTENSIONES_PERMITIDAS.includes(ext)) { avisar('Tipo de archivo no permitido: ' + archivo.name, 'error'); return; }
+    if (archivo.size > TAMANO_MAXIMO) { avisar('El archivo supera 100 MB: ' + archivo.name, 'error'); return; }
+    _adjuntoSoporte = archivo;
+    document.getElementById('soporte-adjunto-nombre').textContent = archivo.name + ' (' + formatoTamano(archivo.size) + ')';
+    document.getElementById('soporte-adjunto-chip').hidden = false;
+}
+
+function quitarAdjuntoSoporte() {
+    _adjuntoSoporte = null;
+    const entrada = document.getElementById('soporte-adjunto');
+    if (entrada) entrada.value = '';
+    const chip = document.getElementById('soporte-adjunto-chip');
+    if (chip) chip.hidden = true;
+}
+
+async function descargarAdjuntoDeSoporte(mensajeId) {
+    try {
+        const adj = await descargarAdjuntoSoporte(mensajeId);
+        if (!adj || !adj.blob) return;
+        const url = URL.createObjectURL(adj.blob);
+        const enlace = document.createElement('a');
+        enlace.href = url; enlace.download = adj.nombre || 'adjunto';
+        document.body.appendChild(enlace); enlace.click(); enlace.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } catch (e) {
+        avisar((e && e.message) || 'No se pudo descargar el adjunto.', 'error');
+    }
 }
 
 async function enviarSoporte(evento) {
@@ -1634,13 +1694,19 @@ async function enviarSoporte(evento) {
     if (!_soporteOperador) return;
     const campo = document.getElementById('soporte-input');
     const texto = campo.value.trim();
-    if (!texto) return;
+    const archivo = _adjuntoSoporte;
+    if (!texto && !archivo) return; // ni mensaje ni adjunto: nada que enviar
+    const boton = document.querySelector('#form-soporte button[type="submit"]');
+    if (boton) boton.disabled = true;
     try {
-        await soporteEnviar(_soporteOperador.id, texto);
+        await soporteEnviar(_soporteOperador.id, texto, archivo || null);
         campo.value = '';
+        quitarAdjuntoSoporte();
         await pintarSoporteMensajes();
     } catch (e) {
         avisar((e && e.message) || 'No se pudo enviar el mensaje.', 'error');
+    } finally {
+        if (boton) boton.disabled = false;
     }
 }
 
@@ -1865,7 +1931,7 @@ const ICONO_NOTIF = {
     'proceso-estado': 'estado', 'proceso-semaforo': 'estado', 'proceso-vencido': 'alerta',
     'tramite-pausado': 'desactivar', 'tramite-reactivado': 'activar',
     'tramite-finalizado': 'activar', 'tramite-prorroga': 'estado',
-    'tramite-fin': 'activar', 'ingreso-propio': 'ingreso'
+    'tramite-fin': 'activar', 'ingreso-propio': 'ingreso', 'solicitud-clave': 'usuario'
 };
 
 /* Registra el ingreso del admin como notificación en su campana (fecha/hora),
@@ -1905,6 +1971,7 @@ function pintarCampanaLista() {
         : _notifCache.map(n =>
             '<div class="pt-campana-item' + (n.leido ? '' : ' pt-campana-item--nueva') + '"' +
                 ' data-accion="notif-abrir" data-tipo="' + escaparHtml(n.tipo) + '"' +
+                ' data-mensaje="' + escaparHtml(n.mensaje || '') + '"' +
                 (n.carpetaId ? ' data-id="' + n.carpetaId + '"' : '') + ' style="cursor:pointer;">' +
                 icono(ICONO_NOTIF[n.tipo] || 'campana', 16) +
                 '<div>' + escaparHtml(n.mensaje) +
@@ -1929,9 +1996,23 @@ async function alternarCampana() {
 }
 
 /* Deep link: abre el lugar de origen de la notificación */
-async function abrirDesdeNotificacion(tipo, carpetaId) {
+async function abrirDesdeNotificacion(tipo, carpetaId, mensaje) {
     document.getElementById('campana-dropdown').hidden = true;
     if (tipo === 'soporte') { abrirSoporte(); return; }
+    // Solicitud de restablecimiento de clave → abre la ficha del usuario
+    if (tipo === 'solicitud-clave' && ES_ADMIN) {
+        const m = /«([^»]+)»/.exec(mensaje || '');
+        if (m) {
+            const objetivo = await dbObtener('usuarios', m[1]);
+            if (objetivo) {
+                await mostrarVistaUsuarios();
+                abrirModalUsuario(objetivo);
+                return;
+            }
+        }
+        await mostrarVistaUsuarios();
+        return;
+    }
     const esDeEstados = ['proceso-estado', 'proceso-semaforo', 'proceso-vencido',
         'tramite-pausado', 'tramite-reactivado', 'tramite-finalizado', 'tramite-prorroga', 'tramite-fin'].includes(tipo);
     if (esDeEstados && (ES_PERSONAL || ES_MONITOR)) {
@@ -3769,7 +3850,16 @@ async function guardarEdicionUsuario(evento) {
 
     try {
         await dbGuardar('usuarios', { ...usuarioEditando, nombre, correo });
-        if (clave) await restablecerClave(usuarioEditando, clave);
+        if (clave) {
+            await restablecerClave(usuarioEditando, clave);
+            // Si el usuario tenía una solicitud de restablecimiento pendiente,
+            // se marca como resuelta automáticamente.
+            try {
+                const pendientes = await solicitudesClaveListar();
+                const suya = pendientes.find(s => s.usuario === usuarioEditando.usuario);
+                if (suya) await solicitudClaveResolver(suya.id);
+            } catch (e) { /* no bloquea el cambio de clave */ }
+        }
         avisar('Usuario actualizado' + (clave ? ', contraseña restablecida.' : '.'));
         if (notificar && clave && correo) {
             notificarClavePorCorreo({ nombre, usuario: usuarioEditando.usuario, correo, clave });
@@ -3884,6 +3974,8 @@ function conectarEventos() {
             case 'soporte-elegir':
                 abrirHiloSoporte({ id: boton.dataset.uuid, nombre: boton.dataset.nombre }); break;
             case 'soporte-llamar':       evento.stopPropagation(); iniciarLlamadaSoporte(); break;
+            case 'quitar-adjunto-soporte': quitarAdjuntoSoporte(); break;
+            case 'descargar-adjunto-soporte': descargarAdjuntoDeSoporte(id); break;
             case 'llamada-aceptar':      aceptarLlamada(); break;
             case 'llamada-colgar':       terminarLlamada(true); break;
             case 'llamada-mic':          alternarMicrofono(); break;
@@ -3905,8 +3997,9 @@ function conectarEventos() {
 
             // Backlog: credenciales, fin de trámite, deep links, chat flotante y llamada mini
             case 'generar-credenciales': generarCredenciales(); break;
+            case 'generar-clave-editar': generarClaveEditar(); break;
             case 'finalizar-tramite':    finalizarTramiteAccion(id); break;
-            case 'notif-abrir':          abrirDesdeNotificacion(boton.dataset.tipo, id || null); break;
+            case 'notif-abrir':          abrirDesdeNotificacion(boton.dataset.tipo, id || null, boton.dataset.mensaje); break;
             case 'carpeta-tab-rol':      cambiarTabRolCarpeta(boton.dataset.grupo); break;
             case 'chat-carpeta-abrir':   abrirChatCarpeta(); break;
             case 'chat-carpeta-minimizar': minimizarChatCarpeta(); break;
@@ -4019,6 +4112,27 @@ function conectarEventos() {
     document.getElementById('form-proceso').addEventListener('submit', crearProcesoDesdeModal);
     document.getElementById('form-editar-proceso').addEventListener('submit', guardarEdicionProceso);
     document.getElementById('form-soporte').addEventListener('submit', enviarSoporte);
+
+    // Adjuntos del chat de soporte: por clip y por arrastrar-soltar
+    const soporteAdjunto = document.getElementById('soporte-adjunto');
+    if (soporteAdjunto) {
+        soporteAdjunto.addEventListener('change', () => {
+            if (soporteAdjunto.files && soporteAdjunto.files[0]) ponerAdjuntoSoporte(soporteAdjunto.files[0]);
+        });
+    }
+    const soportePanel = document.getElementById('soporte-panel');
+    if (soportePanel) {
+        soportePanel.addEventListener('dragover', (e) => { e.preventDefault(); soportePanel.classList.add('pt-arrastrando'); });
+        soportePanel.addEventListener('dragleave', (e) => {
+            if (!soportePanel.contains(e.relatedTarget)) soportePanel.classList.remove('pt-arrastrando');
+        });
+        soportePanel.addEventListener('drop', (e) => {
+            e.preventDefault();
+            soportePanel.classList.remove('pt-arrastrando');
+            if (document.getElementById('form-soporte').hidden) return; // sin hilo abierto no se adjunta
+            if (e.dataTransfer && e.dataTransfer.files.length > 0) ponerAdjuntoSoporte(e.dataTransfer.files[0]);
+        });
+    }
 
     // Buscadores (carpetas y estados): filtran al escribir
     const buscadorCarpetas = document.getElementById('buscador-carpetas');

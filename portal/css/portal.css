@@ -634,7 +634,9 @@ fieldset.pt-campo{
 .pt-tabla-envoltura{
     background-color: var(--pt-superficie);
     border-radius: 1.4rem;
-    overflow-x: auto;
+    overflow: auto;            /* scroll propio: el encabezado sticky se ancla aquí,
+                                  no en la página (así no choca con la barra superior) */
+    max-height: 72vh;
     box-shadow: var(--pt-sombra-1);
 }
 .pt-tabla{
@@ -642,16 +644,21 @@ fieldset.pt-campo{
     border-collapse: collapse;
     font-size: 1.4rem;
 }
+/* Encabezado PEGAJOSO (queda fijo al hacer scroll dentro de la tabla),
+   estilo corporativo/legal: azul pizarra oscuro y texto claro. */
 .pt-tabla th{
     text-align: left;
     font-size: 1.2rem;
     text-transform: uppercase;
     letter-spacing: .06rem;
-    color: var(--pt-gris);
-    background-color: var(--pt-superficie-2);
+    color: var(--pt-blanco);
+    background-color: var(--pt-navy-900);
     padding: 1.3rem 1.6rem;
-    border-bottom: 1px solid var(--pt-borde);
+    border-bottom: 2px solid var(--pt-navy-800);
     white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 1;
 }
 .pt-tabla td{
     padding: 1.2rem 1.6rem;
@@ -659,6 +666,8 @@ fieldset.pt-campo{
     vertical-align: middle;
     transition: background-color var(--pt-rapido);
 }
+/* Números y valores monetarios: alineados a la derecha */
+.pt-tabla th.pt-num, .pt-tabla td.pt-num{ text-align: right; font-variant-numeric: tabular-nums; }
 .pt-tabla tbody tr{
     transition: background-color var(--pt-rapido);
 }
@@ -2259,3 +2268,20 @@ html[data-tema="oscuro"] .pt-cal-prox h4{ color: #DCE7EB; }
     color: var(--pt-azul); font: inherit; font-size: 1.35rem; cursor: pointer; text-decoration: underline;
 }
 .pt-ayuda-olvide{ margin-top: 1rem; text-align: left; }
+
+/* Modal nativo <dialog> del login (¿olvidaste tu contraseña?) */
+.pt-dialogo{
+    border: none;
+    border-radius: 1.4rem;
+    padding: 2rem 2.2rem;
+    max-width: 42rem;
+    width: 92vw;
+    box-shadow: var(--pt-sombra-3);
+    background: var(--pt-superficie);
+    color: var(--pt-tinta);
+}
+.pt-dialogo::backdrop{ background: rgba(15,42,68,.5); }
+.pt-dialogo h3{ font-family: var(--pt-fuente-titulos); margin-bottom: .6rem; color: var(--pt-navy-800); }
+
+/* Chat de soporte: resalte al arrastrar un archivo encima */
+.pt-soporte-panel.pt-arrastrando{ outline: 2px dashed var(--pt-azul); outline-offset: -6px; }
