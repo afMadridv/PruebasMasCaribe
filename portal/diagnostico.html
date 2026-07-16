@@ -25,9 +25,21 @@
     min-height:100vh; display:flex; flex-direction:column; align-items:center;
     padding:2.4rem 1.4rem; font-size:16px;
   }
-  .marca{ text-align:center; margin-bottom:1.8rem; }
-  .marca h1{ font-family:var(--titulos); color:var(--cian-prof); font-size:1.9rem; }
-  .marca p{ color:var(--gris); font-size:.95rem; }
+  .barra{
+    align-self:stretch; margin:-2.4rem -1.4rem 2rem;
+    background:linear-gradient(120deg, var(--cian-prof), var(--cian));
+    color:var(--blanco); padding:1.4rem 2rem;
+    display:flex; align-items:center; justify-content:space-between; gap:1.2rem; flex-wrap:wrap;
+  }
+  .barra h1{ font-family:var(--titulos); font-size:1.5rem; color:var(--blanco); line-height:1.2; }
+  .barra small{ display:block; opacity:.9; font-size:.88rem; margin-top:.2rem; }
+  .barra nav{ display:flex; gap:.6rem; flex-wrap:wrap; }
+  .barra nav a{
+    color:var(--blanco); text-decoration:none; font-weight:600; font-size:.95rem;
+    padding:.6rem 1.1rem; border-radius:.7rem; border:1px solid transparent; transition:background .18s var(--curva);
+  }
+  .barra nav a:hover{ background:rgba(255,255,255,.15); }
+  .barra nav a.activo{ background:rgba(0,0,0,.15); border-color:rgba(255,255,255,.3); }
   .tarjeta{
     background:var(--blanco); border-radius:1.4rem; box-shadow:var(--sombra);
     width:100%; max-width:680px; padding:2.2rem; overflow:hidden;
@@ -226,10 +238,16 @@
   </div>
 
   <!-- ===================== MÓDULO 2: CALCULADORA ===================== -->
-  <div class="marca">
-    <h1>Fundación MASCaribe</h1>
-    <p>Diagnóstico y calculadora de insolvencia · Persona natural</p>
-  </div>
+  <header class="barra">
+    <div>
+      <h1>Fundación MASCaribe</h1>
+      <small>Diagnóstico y calculadora de insolvencia · Persona natural</small>
+    </div>
+    <nav aria-label="Navegación principal">
+      <a href="diagnostico.html" class="activo">Inicio</a>
+      <a href="index.html">Portal</a>
+    </nav>
+  </header>
 
   <div class="tarjeta">
     <div class="progreso">
