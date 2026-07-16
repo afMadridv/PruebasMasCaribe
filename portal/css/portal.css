@@ -2285,3 +2285,17 @@ html[data-tema="oscuro"] .pt-cal-prox h4{ color: #DCE7EB; }
 
 /* Chat de soporte: resalte al arrastrar un archivo encima */
 .pt-soporte-panel.pt-arrastrando{ outline: 2px dashed var(--pt-azul); outline-offset: -6px; }
+
+/* Botón "X" para eliminar una notificación individual de la campana */
+.pt-campana-item{ position: relative; padding-right: 3.2rem; }
+.pt-campana-x{
+    position: absolute;
+    top: .6rem; right: .6rem;
+    width: 2.2rem; height: 2.2rem;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: none; border-radius: 50%;
+    background: transparent; color: var(--pt-gris);
+    cursor: pointer; opacity: .6; transition: all var(--pt-rapido);
+}
+.pt-campana-item:hover .pt-campana-x{ opacity: 1; }
+.pt-campana-x:hover{ background: var(--pt-rojo-suave); color: var(--pt-rojo); opacity: 1; }

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnóstico de insolvencia — Fundación MASCaribe</title>
+<meta name="description" content="Descubre en 3 pasos si calificas para la Ley de Insolvencia Económica de Persona Natural en Colombia.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Krub:wght@400;500;600;700&family=Lora:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cian:#00A1B8; --cian-osc:#00889C; --cian-prof:#006B7A;
+    --naranja:#FA9B02; --naranja-osc:#D98500;
+    --tinta:#17262E; --gris:#536068; --fondo:#F2F8F9; --blanco:#fff;
+    --borde:#E2EAEC; --verde:#157039; --verde-suave:#DDF3E4; --ambar:#8A4B08; --ambar-suave:#FCEFD3;
+    --sombra:0 10px 24px rgba(0,64,74,.12), 0 2px 8px rgba(0,64,74,.08);
+    --curva:cubic-bezier(.16,1,.3,1);
+    --titulos:'Lora', Georgia, serif; --texto:'Krub', Arial, sans-serif;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{
+    font-family:var(--texto); color:var(--tinta); background:var(--fondo);
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+    padding:2.4rem 1.4rem; font-size:16px;
+  }
+  .marca{ text-align:center; margin-bottom:1.8rem; }
+  .marca h1{ font-family:var(--titulos); color:var(--cian-prof); font-size:1.9rem; }
+  .marca p{ color:var(--gris); font-size:.95rem; }
+  .tarjeta{
+    background:var(--blanco); border-radius:1.4rem; box-shadow:var(--sombra);
+    width:100%; max-width:640px; padding:2.4rem; overflow:hidden;
+  }
+  /* Barra de progreso */
+  .progreso{ margin-bottom:2rem; }
+  .progreso__barra{ height:8px; background:var(--borde); border-radius:999px; overflow:hidden; }
+  .progreso__fill{
+    height:100%; width:0%; border-radius:999px;
+    background:linear-gradient(90deg, var(--cian), var(--naranja));
+    transition:width .4s var(--curva);
+  }
+  .progreso__txt{ margin-top:.6rem; font-size:.85rem; color:var(--gris); text-align:right; }
+  /* Pasos */
+  .paso{ animation:aparecer .35s var(--curva) backwards; }
+  @keyframes aparecer{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
+  .paso__num{ color:var(--naranja); font-weight:700; font-size:.85rem; text-transform:uppercase; letter-spacing:.05em; }
+  .paso__preg{ font-family:var(--titulos); font-size:1.4rem; margin:.4rem 0 .8rem; line-height:1.35; }
+  .paso__ayuda{ color:var(--gris); font-size:.95rem; margin-bottom:1.6rem; }
+  .opciones{ display:flex; gap:1rem; }
+  .opcion{
+    flex:1; padding:1.2rem; border:2px solid var(--borde); border-radius:1rem;
+    background:var(--blanco); color:var(--tinta); font:inherit; font-weight:600; font-size:1.05rem;
+    cursor:pointer; transition:all .18s var(--curva);
+  }
+  .opcion:hover{ border-color:var(--cian); background:var(--fondo); }
+  .opcion--si:hover{ border-color:var(--verde); }
+  .opcion--no:hover{ border-color:var(--ambar); }
+  .navegacion{ margin-top:1.8rem; display:flex; justify-content:space-between; }
+  .btn{
+    padding:.8rem 1.6rem; border-radius:.9rem; border:none; font:inherit; font-weight:600;
+    cursor:pointer; transition:all .18s var(--curva);
+  }
+  .btn--fantasma{ background:transparent; color:var(--gris); }
+  .btn--fantasma:hover{ color:var(--tinta); }
+  .btn--primario{ background:var(--cian); color:#fff; }
+  .btn--primario:hover{ background:var(--cian-osc); }
+  .btn--cta{ background:var(--naranja); color:#fff; font-size:1.1rem; padding:1rem 2rem; }
+  .btn--cta:hover{ background:var(--naranja-osc); }
+  .btn[hidden]{ display:none; }
+  /* Resultado */
+  .resultado{ text-align:center; animation:aparecer .4s var(--curva) backwards; }
+  .resultado__ico{
+    width:5.6rem; height:5.6rem; border-radius:50%; margin:0 auto 1.2rem;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .resultado--exito .resultado__ico{ background:var(--verde-suave); }
+  .resultado--info .resultado__ico{ background:var(--ambar-suave); }
+  .resultado__ico svg{ width:2.8rem; height:2.8rem; }
+  .resultado h2{ font-family:var(--titulos); font-size:1.6rem; margin-bottom:.8rem; }
+  .resultado--exito h2{ color:var(--verde); }
+  .resultado--info h2{ color:var(--ambar); }
+  .resultado p{ color:var(--gris); line-height:1.5; margin-bottom:1rem; }
+  .resultado__acciones{ margin-top:1.8rem; display:flex; flex-direction:column; gap:.8rem; align-items:center; }
+  .enlace-sec{ color:var(--cian); text-decoration:underline; background:none; border:none; font:inherit; cursor:pointer; }
+  .pie{ margin-top:1.6rem; color:var(--gris); font-size:.8rem; text-align:center; max-width:640px; }
+  .pie a{ color:var(--cian); }
+</style>
+</head>
+<body>
+  <div class="marca">
+    <h1>Fundación MASCaribe</h1>
+    <p>Diagnóstico de insolvencia económica · Persona natural</p>
+  </div>
+
+  <div class="tarjeta">
+    <div class="progreso">
+      <div class="progreso__barra"><div class="progreso__fill" id="progreso-fill"></div></div>
+      <div class="progreso__txt" id="progreso-txt">Paso 1 de 3</div>
+    </div>
+    <div id="contenido"></div>
+  </div>
+
+  <p class="pie">Este diagnóstico es orientativo y no constituye asesoría jurídica.
+     Basado en el régimen de insolvencia de persona natural no comerciante (Ley 1564 de 2012 y Ley 2445 de 2025).
+     <a href="index.html">Ingresar al portal</a></p>
+
+<script>
+/* ====== CONFIGURA AQUÍ el canal de contacto del asesor ======
+   Reemplaza el número por el WhatsApp real de la fundación (formato
+   internacional sin '+', ej. 57 300 1234567 → '573001234567'). */
+const CONTACTO = {
+    whatsapp: '573000000000',              // <-- CAMBIAR por el número real
+    correo: 'contacto@fundacionmascaribe.org'  // <-- CAMBIAR si aplica
+};
+
+const PREGUNTAS = [
+    {
+        num: 'Paso 1 de 3',
+        preg: '¿Eres una persona natural NO comerciante?',
+        ayuda: 'Es decir, una persona (no una empresa ni un comerciante registrado) que tiene deudas a título personal.'
+    },
+    {
+        num: 'Paso 2 de 3',
+        preg: '¿Tienes dos o más deudas vencidas con diferentes acreedores?',
+        ayuda: 'Por ejemplo: bancos, cooperativas, casas comerciales o personas naturales. Deben ser al menos dos acreedores distintos.'
+    },
+    {
+        num: 'Paso 3 de 3',
+        preg: '¿Esas deudas llevan más de 90 días de mora y suman más del 50% del total de lo que debes?',
+        ayuda: 'Las obligaciones vencidas hace más de 90 días deben representar más de la mitad del total de tu deuda.'
+    }
+];
+
+let pasoActual = 0;
+const respuestas = [];   // true = Sí, false = No
+
+const cont = document.getElementById('contenido');
+
+function pintarProgreso(indice, total) {
+    document.getElementById('progreso-fill').style.width = Math.round((indice / total) * 100) + '%';
+    document.getElementById('progreso-txt').textContent =
+        indice < total ? PREGUNTAS[indice].num : 'Resultado';
+}
+
+function pintarPaso() {
+    const p = PREGUNTAS[pasoActual];
+    pintarProgreso(pasoActual, PREGUNTAS.length);
+    cont.innerHTML =
+        '<div class="paso">' +
+            '<span class="paso__num">' + p.num + '</span>' +
+            '<h2 class="paso__preg">' + p.preg + '</h2>' +
+            '<p class="paso__ayuda">' + p.ayuda + '</p>' +
+            '<div class="opciones">' +
+                '<button class="opcion opcion--si" data-resp="si">Sí</button>' +
+                '<button class="opcion opcion--no" data-resp="no">No</button>' +
+            '</div>' +
+            '<div class="navegacion">' +
+                '<button class="btn btn--fantasma" id="btn-atras"' + (pasoActual === 0 ? ' hidden' : '') + '>&larr; Atrás</button>' +
+                '<span></span>' +
+            '</div>' +
+        '</div>';
+    cont.querySelectorAll('.opcion').forEach(b =>
+        b.addEventListener('click', () => responder(b.dataset.resp === 'si')));
+    const atras = document.getElementById('btn-atras');
+    if (atras) atras.addEventListener('click', () => { pasoActual--; respuestas.pop(); pintarPaso(); });
+}
+
+function responder(valor) {
+    respuestas[pasoActual] = valor;
+    if (pasoActual < PREGUNTAS.length - 1) { pasoActual++; pintarPaso(); }
+    else pintarResultado();
+}
+
+function pintarResultado() {
+    pintarProgreso(PREGUNTAS.length, PREGUNTAS.length);
+    const califica = respuestas.every(r => r === true);
+    const resumen = PREGUNTAS.map((p, i) => (i + 1) + '. ' + p.preg + ' → ' + (respuestas[i] ? 'Sí' : 'No')).join('\n');
+
+    const cheque = '<svg viewBox="0 0 24 24" fill="none" stroke="#157039" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+    const info = '<svg viewBox="0 0 24 24" fill="none" stroke="#8A4B08" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>';
+
+    if (califica) {
+        cont.innerHTML =
+            '<div class="resultado resultado--exito">' +
+                '<div class="resultado__ico">' + cheque + '</div>' +
+                '<h2>Cumples las condiciones</h2>' +
+                '<p>Según tus respuestas, <strong>calificas para acogerte a la Ley de Insolvencia Económica ' +
+                'para Personas Naturales</strong>. Un asesor puede iniciar tu trámite y guiarte en la negociación con tus acreedores.</p>' +
+                accionesResultado(true, resumen) +
+            '</div>';
+    } else {
+        cont.innerHTML =
+            '<div class="resultado resultado--info">' +
+                '<div class="resultado__ico">' + info + '</div>' +
+                '<h2>Aún no aplicas para la ley de insolvencia</h2>' +
+                '<p>Por ahora no reúnes todos los requisitos, pero <strong>tienes otras opciones</strong> como la ' +
+                '<strong>negociación directa de deudas</strong> o un plan de <strong>saneamiento financiero</strong>. ' +
+                'Un asesor puede revisar tu caso en detalle.</p>' +
+                accionesResultado(false, resumen) +
+            '</div>';
+    }
+    engancharAcciones(califica, resumen);
+}
+
+function accionesResultado() {
+    return '<div class="resultado__acciones">' +
+        '<button class="btn btn--cta" id="btn-asesor">Hablar con un asesor</button>' +
+        '<button class="enlace-sec" id="btn-reiniciar">Volver a empezar</button>' +
+        '</div>';
+}
+
+function engancharAcciones(califica, resumen) {
+    document.getElementById('btn-reiniciar').addEventListener('click', () => {
+        pasoActual = 0; respuestas.length = 0; pintarPaso();
+    });
+    document.getElementById('btn-asesor').addEventListener('click', () => {
+        const encabezado = califica
+            ? 'Hola, según el diagnóstico CALIFICO para la Ley de Insolvencia. Quiero hablar con un asesor.'
+            : 'Hola, hice el diagnóstico de insolvencia y quiero asesoría sobre mis opciones.';
+        const texto = encabezado + '\n\nResumen de mis respuestas:\n' + resumen;
+        // Canal directo: WhatsApp con el resumen ya escrito
+        const url = 'https://wa.me/' + CONTACTO.whatsapp + '?text=' + encodeURIComponent(texto);
+        window.open(url, '_blank', 'noopener');
+    });
+}
+
+pintarPaso();
+</script>
+</body>
+</html>

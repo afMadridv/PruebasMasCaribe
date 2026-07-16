@@ -498,6 +498,7 @@ function canalSenalizacion() { return { enviar: () => {}, cerrar: () => {} }; }
 /* Notificaciones (campana): en modo local no hay triggers de servidor */
 async function notificacionesListar() { return []; }
 async function notificacionesMarcarLeidas() {}
+async function notificacionEliminar() {}
 async function notificacionesGenerarVencidos() {}
 async function notificarMiIngreso() {}
 function suscribirNotificaciones() { return null; }

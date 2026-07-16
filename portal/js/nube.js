@@ -929,6 +929,11 @@
         const { error } = await nube.rpc('marcar_notificaciones_leidas', { ids: ids || null });
         if (error) fallar(error);
     };
+    /* Elimina UNA notificación propia (RLS: destinatario_id = auth.uid()) */
+    window.notificacionEliminar = async (id) => {
+        const { error } = await nube.from('notificaciones').delete().eq('id', id);
+        if (error) fallar(error);
+    };
     /* Solo el admin: genera (una vez por proceso) los avisos de vencidos */
     window.notificacionesGenerarVencidos = async () => {
         const { error } = await nube.rpc('generar_notificaciones_vencidos');

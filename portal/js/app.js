@@ -108,8 +108,34 @@ async function iniciar() {
     });
     // El botón "atrás" del navegador no debe sacar del portal
     instalarAtrasSeguro();
+    // Aviso del navegador al cerrar la pestaña (Decreto 0042 de 2026)
+    instalarAvisoCierre();
     // Aviso de ingreso en la campana (fecha y hora), como el de "nuevo dispositivo"
     avisarIngresoEnCampana();
+}
+
+/* ============ CIERRE DE SESIÓN CON CONFIRMACIÓN (Decreto 0042 de 2026) ============
+   Ningún usuario cierra sesión por accidente: se confirma al pulsar el botón, y
+   el navegador advierte si intenta cerrar la pestaña o salir del portal. */
+let _cerrandoSesion = false;   // al confirmar la salida, se desactiva el aviso de beforeunload
+
+async function confirmarSalida(destino) {
+    if (!await confirmarPortal(
+        'Estás a punto de finalizar tu sesión segura bajo los lineamientos del ' +
+        'Decreto 0042 de 2026. ¿Deseas confirmar y salir del portal?',
+        'Cerrar sesión')) return;
+    _cerrandoSesion = true;   // salida intencional: no dispares el aviso del navegador
+    cerrarSesion(destino);    // limpia los tokens de Supabase y redirige al login
+}
+
+function instalarAvisoCierre() {
+    window.addEventListener('beforeunload', (e) => {
+        if (_cerrandoSesion) return;               // el usuario ya confirmó la salida
+        if (!sesionActual()) return;               // sin sesión, nada que advertir
+        e.preventDefault();
+        e.returnValue = '';                        // el navegador muestra su diálogo estándar
+        return '';
+    });
 }
 
 /* ============ BOTÓN "ATRÁS" DEL NAVEGADOR ============
@@ -1724,7 +1750,15 @@ async function obtenerMicrofono() {
         throw new Error('sin getUserMedia');
     }
     try {
-        return await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Cancelación de eco, supresión de ruido y control de ganancia del
+        // navegador ACTIVADOS: evita el eco repetitivo ("hola-a-a") y el ruido.
+        return await navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            }
+        });
     } catch (e) {
         avisar('El portal necesita permiso del MICRÓFONO para la llamada. ' +
             'Haz clic en el candado de la barra del navegador, permite el micrófono y vuelve a intentar.', 'error');
@@ -1938,7 +1972,15 @@ const ICONO_NOTIF = {
    estilo aviso de "nuevo inicio de sesión". Luego refresca el contador. */
 async function avisarIngresoEnCampana() {
     if (!ES_ADMIN) return;
-    try { await notificarMiIngreso(); await refrescarCampana(); } catch (e) { /* silencioso */ }
+    // Un F5 / recarga NO cuenta como ingreso nuevo: se registra una sola vez por
+    // sesión del navegador (sessionStorage se borra al cerrar la pestaña). Solo
+    // al cerrar y volver a entrar más tarde se contará otro ingreso.
+    try {
+        if (sessionStorage.getItem('sesion_notificada')) { await refrescarCampana(); return; }
+        await notificarMiIngreso();
+        sessionStorage.setItem('sesion_notificada', 'true');
+        await refrescarCampana();
+    } catch (e) { /* silencioso */ }
 }
 
 async function iniciarCampana() {
@@ -1976,6 +2018,9 @@ function pintarCampanaLista() {
                 icono(ICONO_NOTIF[n.tipo] || 'campana', 16) +
                 '<div>' + escaparHtml(n.mensaje) +
                 '<span class="pt-nota">' + formatoFecha(n.fecha) + '</span></div>' +
+                '<button class="pt-campana-x" data-accion="notif-eliminar" data-notif="' + n.id + '"' +
+                    ' title="Eliminar notificación" aria-label="Eliminar notificación">' +
+                    icono('cerrar', 13) + '</button>' +
             '</div>').join('');
 }
 
@@ -2022,6 +2067,23 @@ async function abrirDesdeNotificacion(tipo, carpetaId, mensaje) {
     }
     if (carpetaId) { abrirCarpeta(carpetaId); return; }
     // sin origen conocido: no se navega
+}
+
+/* Elimina UNA notificación tras confirmar; la quita del DOM sin recargar */
+async function eliminarNotificacion(id, elemento) {
+    if (!await confirmarPortal('¿Estás seguro de que deseas eliminar esta notificación de manera permanente?', 'Eliminar notificación')) return;
+    try {
+        await notificacionEliminar(Number(id));
+        _notifCache = _notifCache.filter(n => String(n.id) !== String(id));
+        if (elemento) elemento.remove();
+        // actualizar el contador de no leídas
+        const noLeidas = _notifCache.filter(n => !n.leido).length;
+        const cont = document.getElementById('campana-contador');
+        if (cont) { cont.hidden = noLeidas === 0; cont.textContent = noLeidas > 99 ? '99+' : String(noLeidas); }
+        if (_notifCache.length === 0) pintarCampanaLista();
+    } catch (e) {
+        avisar((e && e.message) || 'No se pudo eliminar la notificación.', 'error');
+    }
 }
 
 async function marcarCampanaLeidas() {
@@ -3946,8 +4008,8 @@ function conectarEventos() {
         const id = Number(boton.dataset.id);
 
         switch (boton.dataset.accion) {
-            case 'salir':             cerrarSesion(); break;
-            case 'salir-sitio':       cerrarSesion('../index.html'); break; // volver al sitio cierra la sesión
+            case 'salir':             confirmarSalida(); break;
+            case 'salir-sitio':       confirmarSalida('../index.html'); break; // volver al sitio cierra la sesión
             case 'ver-carpetas':      mostrarVistaCarpetas(); break;
 
             // Estados de los trámites (semáforos) y calendario de vencimientos
@@ -4000,6 +4062,7 @@ function conectarEventos() {
             case 'generar-clave-editar': generarClaveEditar(); break;
             case 'finalizar-tramite':    finalizarTramiteAccion(id); break;
             case 'notif-abrir':          abrirDesdeNotificacion(boton.dataset.tipo, id || null, boton.dataset.mensaje); break;
+            case 'notif-eliminar':       evento.stopPropagation(); eliminarNotificacion(boton.dataset.notif, boton.closest('.pt-campana-item')); break;
             case 'carpeta-tab-rol':      cambiarTabRolCarpeta(boton.dataset.grupo); break;
             case 'chat-carpeta-abrir':   abrirChatCarpeta(); break;
             case 'chat-carpeta-minimizar': minimizarChatCarpeta(); break;

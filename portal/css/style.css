@@ -1,26 +1,26 @@
 
-        /* ============ INDEX 2.0 — Portal de Insolvencia ============
-           Página de inicio simplificada (estilo notaría): navegación
-           "Inicio" / "Portal" y diagnóstico de insolvencia económica.
-           Usa la misma paleta del Portal Documental. */
+        /* ============ INDEX 2.0 — Fundación MASCaribe ============
+           Página de inicio + solicitud de insolvencia económica en 4 pasos.
+           Paleta de marca: cian #00A1B8 + naranja #FA9B02. */
         :root{
             --tinta: #17262E;
             --gris: #536068;
-            --navy-900: #0C3A4E;
-            --navy-800: #0F4861;
-            --navy-700: #13607F;
-            --azul: #159C95;
-            --azul-600: #12867F;
-            --fondo: #F3F7F8;
+            --cian: #00A1B8;
+            --cian-osc: #00889C;
+            --cian-prof: #006B7A;
+            --naranja: #FA9B02;
+            --naranja-osc: #D98500;
+            --fondo: #F2F8F9;
             --blanco: #fff;
             --superficie: #fff;
-            --superficie-2: #EDF4F4;
+            --superficie-2: #EAF6F8;
             --borde: #E2EAEC;
             --verde: #157039;
             --verde-suave: #DDF3E4;
             --ambar: #8A4B08;
             --ambar-suave: #FCEFD3;
-            --sombra: 0 4px 10px rgba(15,42,68,.10), 0 14px 30px rgba(15,42,68,.14);
+            --sombra: 0 4px 10px rgba(0,64,74,.10), 0 14px 30px rgba(0,64,74,.12);
+            --curva: cubic-bezier(.16,1,.3,1);
         }
         *{ box-sizing: border-box; margin: 0; padding: 0; }
         html{ font-size: 62.5%; }
@@ -29,27 +29,28 @@
             font-size: 1.6rem; line-height: 1.6;
             color: var(--tinta); background: var(--fondo);
         }
-        h1, h2, h3{ font-family: 'Lora', Georgia, serif; color: var(--navy-800); }
+        h1, h2, h3, h4{ font-family: 'Lora', Georgia, serif; color: var(--cian-prof); }
 
-        /* ---- Encabezado y navegación principal: Inicio / Portal ---- */
+        /* ---- Encabezado / navegación ---- */
         .encabezado{
-            background: var(--navy-700); color: var(--blanco);
+            background: linear-gradient(120deg, var(--cian-prof), var(--cian));
+            color: var(--blanco);
             padding: 1.6rem 2.4rem;
             display: flex; align-items: center; justify-content: space-between;
             gap: 1.6rem; flex-wrap: wrap;
         }
         .encabezado h1{ color: var(--blanco); font-size: 2.2rem; }
-        .encabezado small{ display: block; opacity: .85; font-family: 'Krub', sans-serif; font-size: 1.3rem; }
+        .encabezado small{ display: block; opacity: .9; font-family: 'Krub', sans-serif; font-size: 1.3rem; }
         .navegacion{ display: flex; gap: .8rem; }
         .navegacion a{
             color: var(--blanco); text-decoration: none; font-weight: 600;
             padding: .8rem 1.6rem; border-radius: .8rem;
             border: 1px solid transparent; transition: background .18s ease;
         }
-        .navegacion a:hover{ background: var(--navy-800); }
-        .navegacion a.activo{ background: var(--navy-900); border-color: rgba(255,255,255,.25); }
+        .navegacion a:hover{ background: rgba(255,255,255,.15); }
+        .navegacion a.activo{ background: rgba(0,0,0,.15); border-color: rgba(255,255,255,.3); }
 
-        .contenedor{ max-width: 86rem; margin: 0 auto; padding: 3.2rem 2rem 6rem; }
+        .contenedor{ max-width: 82rem; margin: 0 auto; padding: 3.2rem 2rem 6rem; }
 
         /* ---- Portada ---- */
         .portada{
@@ -57,7 +58,7 @@
             border-radius: 1.4rem; box-shadow: var(--sombra);
             padding: 3.2rem 2.8rem; margin-bottom: 2.4rem; text-align: center;
         }
-        .portada h2{ font-size: 2.8rem; margin-bottom: .8rem; }
+        .portada h2{ font-size: 2.8rem; margin-bottom: .8rem; color: var(--cian-prof); }
         .portada p{ color: var(--gris); max-width: 60rem; margin: 0 auto 1.6rem; }
 
         .boton{
@@ -67,50 +68,92 @@
             transition: transform .15s ease, background .18s ease;
         }
         .boton:hover{ transform: translateY(-1px); }
-        .boton--primario{ background: var(--navy-700); color: var(--blanco); }
-        .boton--primario:hover{ background: var(--navy-800); }
-        .boton--acento{ background: var(--azul); color: var(--blanco); }
-        .boton--acento:hover{ background: var(--azul-600); }
-        .boton--fantasma{
-            background: transparent; color: var(--navy-700);
-            border: 1px solid var(--borde);
-        }
+        .boton--primario{ background: var(--cian); color: var(--blanco); }
+        .boton--primario:hover{ background: var(--cian-osc); }
+        .boton--acento{ background: var(--naranja); color: var(--blanco); }
+        .boton--acento:hover{ background: var(--naranja-osc); }
+        .boton--fantasma{ background: transparent; color: var(--cian); border: 1px solid var(--borde); }
+        .boton[disabled]{ opacity: .5; cursor: default; transform: none; }
 
-        /* ---- Diagnóstico ---- */
-        .diagnostico{
+        /* ---- Solicitud (wizard de 4 pasos) ---- */
+        .solicitud{
             background: var(--superficie); border: 1px solid var(--borde);
             border-radius: 1.4rem; box-shadow: var(--sombra);
             padding: 2.8rem;
         }
-        .diagnostico h3{ font-size: 2.2rem; margin-bottom: .4rem; }
-        .diagnostico > p{ color: var(--gris); margin-bottom: 2rem; }
-        .pregunta{
-            border: 1px solid var(--borde); border-radius: 1rem;
-            padding: 1.4rem 1.6rem; margin-bottom: 1.2rem;
+        .solicitud h3{ font-size: 2.2rem; margin-bottom: .4rem; }
+        .solicitud > .intro{ color: var(--gris); margin-bottom: 1.6rem; }
+        .confidencial{
+            background: var(--superficie-2); border-left: 3px solid var(--cian);
+            border-radius: 0 .8rem .8rem 0; padding: .9rem 1.4rem; margin-bottom: 2rem;
+            font-size: 1.35rem; color: var(--cian-prof);
+        }
+
+        /* Barra de progreso por pasos */
+        .pasos{ display: flex; gap: .6rem; margin-bottom: 2rem; }
+        .pasos__item{
+            flex: 1; text-align: center; font-size: 1.2rem; color: var(--gris);
+            padding-bottom: .8rem; border-bottom: 3px solid var(--borde);
+            transition: all .3s var(--curva);
+        }
+        .pasos__item.activo{ color: var(--cian-prof); font-weight: 700; border-color: var(--cian); }
+        .pasos__item.hecho{ color: var(--verde); border-color: var(--verde); }
+
+        .paso{ animation: aparecer .3s var(--curva) backwards; }
+        .paso[hidden]{ display: none; }
+        @keyframes aparecer{ from{ opacity:0; transform:translateY(8px);} to{ opacity:1; transform:none;} }
+        .paso h4{ font-size: 1.7rem; margin-bottom: .3rem; }
+        .paso .ayuda{ color: var(--gris); font-size: 1.4rem; margin-bottom: 1.4rem; }
+
+        .campo{ display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1.2rem; }
+        .campo label{ font-weight: 600; font-size: 1.4rem; }
+        .campo input, .campo select, .campo textarea{
+            font: inherit; padding: 1rem 1.2rem; border: 1px solid var(--borde);
+            border-radius: .8rem; background: var(--superficie); color: var(--tinta);
+        }
+        .campo input:focus, .campo select:focus, .campo textarea:focus{
+            outline: 2px solid var(--cian); border-color: transparent;
+        }
+        .fila{ display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+        @media (max-width: 560px){ .fila{ grid-template-columns: 1fr; } }
+
+        /* Acreedores (lista dinámica) */
+        .acreedor{
+            display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: .8rem;
+            align-items: end; margin-bottom: 1rem;
+            border: 1px solid var(--borde); border-radius: 1rem; padding: 1.2rem;
             background: var(--superficie-2);
         }
-        .pregunta p{ font-weight: 600; margin-bottom: .8rem; }
-        .pregunta label{
-            margin-right: 2rem; cursor: pointer; font-weight: 500;
+        @media (max-width: 640px){ .acreedor{ grid-template-columns: 1fr 1fr; } }
+        .acreedor .campo{ margin: 0; }
+        .quitar{
+            background: var(--ambar-suave); color: var(--ambar); border: none;
+            border-radius: .8rem; padding: .8rem 1rem; cursor: pointer; font: inherit; font-weight: 600;
         }
-        .pregunta input{ margin-right: .5rem; accent-color: var(--navy-700); }
 
-        /* ---- Resultado ---- */
-        .resultado{ margin-top: 2rem; border-radius: 1rem; padding: 2rem; }
-        .resultado[hidden]{ display: none; }
-        .resultado--aplica{ background: var(--verde-suave); border: 1px solid var(--verde); }
-        .resultado--empresa{ background: var(--ambar-suave); border: 1px solid var(--ambar); }
-        .resultado--no{ background: var(--superficie-2); border: 1px solid var(--borde); }
-        .resultado h4{ font-family: 'Lora', serif; font-size: 1.9rem; margin-bottom: .6rem; }
-        .resultado p{ margin-bottom: 1.4rem; }
-        .resultado .acciones{ display: flex; gap: 1.2rem; flex-wrap: wrap; }
+        .navegacion-pasos{
+            display: flex; justify-content: space-between; gap: 1rem; margin-top: 1.8rem;
+        }
+
+        /* Resumen (paso 4) */
+        .resumen dl{ display: grid; grid-template-columns: auto 1fr; gap: .5rem 1.4rem; margin: 1rem 0; }
+        .resumen dt{ font-weight: 700; color: var(--cian-prof); }
+        .resumen__acreedores{ margin: 1rem 0; }
+        .resumen__acreedores li{ margin-left: 2rem; }
+
+        /* Pantalla de envío */
+        .enviado{ text-align: center; padding: 1.6rem 0; }
+        .enviado h4{ color: var(--verde); font-size: 2rem; margin-bottom: .8rem; }
+        .enviado .acciones{ display: flex; gap: 1.2rem; flex-wrap: wrap; justify-content: center; margin-top: 1.6rem; }
 
         .nota{ font-size: 1.3rem; color: var(--gris); margin-top: 1.6rem; }
+        .contacto-alt{ text-align: center; margin-top: 1.2rem; font-size: 1.4rem; }
+        .contacto-alt a{ color: var(--cian); }
         .pie{
             text-align: center; padding: 2rem; color: var(--gris);
             font-size: 1.3rem; border-top: 1px solid var(--borde);
         }
         @media (max-width: 600px){
             .contenedor{ padding: 2rem 1.4rem 4rem; }
-            .portada, .diagnostico{ padding: 2rem 1.6rem; }
+            .portada, .solicitud{ padding: 2rem 1.6rem; }
         }

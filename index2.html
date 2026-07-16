@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fundación de Insolvencia | Inicio</title>
+    <title>Fundación MASCaribe | Solicitud de insolvencia económica</title>
+    <meta name="description" content="Solicita tu proceso de insolvencia económica de persona natural. Completa tu información básica y un resumen de ingresos, gastos y acreedores.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Krub:wght@400;500;600;700&family=Lora:wght@500;600;700&display=swap" rel="stylesheet">
@@ -12,7 +13,7 @@
 <body>
     <header class="encabezado">
         <div>
-            <h1>Fundación de Insolvencia y Conciliaciones</h1>
+            <h1>Fundación MASCaribe</h1>
             <small>Acompañamiento en procesos de insolvencia económica</small>
         </div>
         <nav class="navegacion" aria-label="Navegación principal">
@@ -23,139 +24,239 @@
 
     <main class="contenedor">
         <section class="portada">
-            <h2>¿Sus deudas superan su capacidad de pago?</h2>
-            <p>La ley colombiana le permite negociar sus deudas con acompañamiento
-               legal y proteger su patrimonio. Responda el siguiente diagnóstico para
-               saber si usted puede acogerse a un proceso de insolvencia económica.</p>
-            <a class="boton boton--fantasma" href="#diagnostico">Hacer el diagnóstico ↓</a>
+            <h2>Solicita tu proceso de insolvencia económica</h2>
+            <p>La ley colombiana te permite negociar tus deudas con acompañamiento legal y
+               proteger tu patrimonio. Diligencia la solicitud en pocos pasos y un asesor
+               revisará tu caso.</p>
+            <a class="boton boton--primario" href="#solicitud">Iniciar solicitud ↓</a>
         </section>
 
-        <section id="diagnostico" class="diagnostico">
-            <h3>Diagnóstico de insolvencia económica</h3>
-            <p>Hoja de trabajo sencilla: marque la respuesta que describa su situación.
-               No es una asesoría legal; es una orientación inicial.</p>
+        <section id="solicitud" class="solicitud">
+            <h3>Solicitud de insolvencia</h3>
+            <p class="intro">Completa tu información básica y un resumen de ingresos y gastos.</p>
+            <p class="confidencial">Esta información es confidencial, y la ley nos obliga a mantenerla en reserva.</p>
 
-            <form id="form-diagnostico">
-                <!-- Las preguntas definitivas de la hoja de trabajo se ajustarán
-                     cuando la fundación entregue el contenido final. -->
-                <div class="pregunta">
-                    <p>1. ¿Usted actúa como persona natural (no como empresa) y su actividad principal NO es el comercio?</p>
-                    <label><input type="radio" name="p1" value="si" required> Sí</label>
-                    <label><input type="radio" name="p1" value="no"> No, soy comerciante o represento una empresa</label>
+            <!-- Progreso por pasos -->
+            <div class="pasos" id="pasos">
+                <div class="pasos__item activo" data-p="0">1. Datos personales</div>
+                <div class="pasos__item" data-p="1">2. Ingresos y gastos</div>
+                <div class="pasos__item" data-p="2">3. Acreedores</div>
+                <div class="pasos__item" data-p="3">4. Resumen</div>
+            </div>
+
+            <form id="form-solicitud">
+                <!-- PASO 1: Información personal -->
+                <div class="paso" data-paso="0">
+                    <h4>Información personal</h4>
+                    <p class="ayuda">Con estos datos un asesor podrá comunicarse contigo.</p>
+                    <div class="campo">
+                        <label for="s-nombre">Nombre completo *</label>
+                        <input type="text" id="s-nombre" name="nombre" maxlength="90" required>
+                    </div>
+                    <div class="fila">
+                        <div class="campo">
+                            <label for="s-correo">Correo electrónico *</label>
+                            <input type="email" id="s-correo" name="correo" maxlength="120" required>
+                        </div>
+                        <div class="campo">
+                            <label for="s-telefono">Teléfono (opcional)</label>
+                            <input type="tel" id="s-telefono" name="telefono" maxlength="20" placeholder="Ej.: 300 123 4567">
+                        </div>
+                    </div>
                 </div>
-                <div class="pregunta">
-                    <p>2. ¿Tiene deudas con dos (2) o más acreedores distintos (bancos, particulares, impuestos, etc.)?</p>
-                    <label><input type="radio" name="p2" value="si" required> Sí</label>
-                    <label><input type="radio" name="p2" value="no"> No</label>
+
+                <!-- PASO 2: Ingresos y gastos -->
+                <div class="paso" data-paso="1" hidden>
+                    <h4>Ingresos y gastos</h4>
+                    <p class="ayuda">Un resumen aproximado de tu situación económica mensual.</p>
+                    <div class="fila">
+                        <div class="campo">
+                            <label for="s-ingresos">Ingresos mensuales (COP) *</label>
+                            <input type="number" id="s-ingresos" name="ingresos" min="0" step="1000" required placeholder="0">
+                        </div>
+                        <div class="campo">
+                            <label for="s-gastos">Gastos mensuales (COP) *</label>
+                            <input type="number" id="s-gastos" name="gastos" min="0" step="1000" required placeholder="0">
+                        </div>
+                    </div>
+                    <div class="campo">
+                        <label for="s-ocupacion">Actividad u ocupación</label>
+                        <input type="text" id="s-ocupacion" name="ocupacion" maxlength="90" placeholder="Ej.: empleado, independiente…">
+                    </div>
                 </div>
-                <div class="pregunta">
-                    <p>3. ¿Está en mora (incumplimiento) de dos o más obligaciones desde hace más de 90 días, o tiene demandas de cobro en su contra?</p>
-                    <label><input type="radio" name="p3" value="si" required> Sí</label>
-                    <label><input type="radio" name="p3" value="no"> No</label>
+
+                <!-- PASO 3: Acreedores -->
+                <div class="paso" data-paso="2" hidden>
+                    <h4>Acreedores</h4>
+                    <p class="ayuda">Agrega a quién le debes: bancos, cooperativas, casas comerciales o personas.</p>
+                    <div id="lista-acreedores"></div>
+                    <button type="button" class="boton boton--fantasma" id="btn-agregar-acreedor">+ Agregar acreedor</button>
                 </div>
-                <div class="pregunta">
-                    <p>4. ¿Las deudas atrasadas representan una parte importante (alrededor del 30% o más) del total de lo que debe?</p>
-                    <label><input type="radio" name="p4" value="si" required> Sí</label>
-                    <label><input type="radio" name="p4" value="no"> No / No lo sé</label>
+
+                <!-- PASO 4: Resumen -->
+                <div class="paso" data-paso="3" hidden>
+                    <h4>Revisa tu solicitud</h4>
+                    <p class="ayuda">Confirma que los datos sean correctos antes de enviarla.</p>
+                    <div class="resumen" id="resumen"></div>
                 </div>
-                <div class="pregunta">
-                    <p>5. ¿Sus ingresos mensuales ya no alcanzan para cubrir las cuotas de sus deudas y sus gastos básicos?</p>
-                    <label><input type="radio" name="p5" value="si" required> Sí</label>
-                    <label><input type="radio" name="p5" value="no"> No</label>
+
+                <div class="navegacion-pasos">
+                    <button type="button" class="boton boton--fantasma" id="btn-atras" hidden>&larr; Atrás</button>
+                    <span></span>
+                    <button type="button" class="boton boton--primario" id="btn-siguiente">Siguiente &rarr;</button>
+                    <button type="button" class="boton boton--acento" id="btn-enviar" hidden>Enviar solicitud</button>
                 </div>
-                <button type="submit" class="boton boton--primario">Ver mi resultado</button>
             </form>
 
-            <!-- Resultado: aplica a insolvencia de persona natural -->
-            <div id="resultado-aplica" class="resultado resultado--aplica" hidden>
-                <h4>✔ Usted podría acogerse a un proceso de insolvencia económica</h4>
-                <p>Según sus respuestas, su situación se ajusta a los supuestos de la
-                   insolvencia de persona natural no comerciante (Ley 1564 de 2012 y
-                   Ley 2445 de 2025). La fundación puede acompañarlo en la negociación
-                   de deudas con sus acreedores.</p>
+            <!-- Pantalla de envío -->
+            <div class="enviado" id="enviado" hidden>
+                <h4>✔ Solicitud lista para enviar</h4>
+                <p>Tu resumen ya quedó preparado. Envíalo a la fundación por WhatsApp o correo y
+                   un asesor revisará tu caso.</p>
                 <div class="acciones">
-                    <a class="boton boton--primario" href="portal/index.html">Ingresar al portal principal</a>
-                    <a class="boton boton--acento" id="contacto-aplica" href="#">Contáctenos</a>
+                    <a class="boton boton--acento" id="enviar-whatsapp" target="_blank" rel="noopener">Enviar por WhatsApp</a>
+                    <a class="boton boton--primario" id="enviar-correo">Enviar por correo</a>
                 </div>
             </div>
 
-            <!-- Resultado: comerciante/empresa → otros procesos de insolvencia -->
-            <div id="resultado-empresa" class="resultado resultado--empresa" hidden>
-                <h4>Su caso corresponde a otro proceso de insolvencia</h4>
-                <p>Los comerciantes y las empresas se rigen por el régimen de insolvencia
-                   empresarial (Ley 1116 de 2006 y normas complementarias). La fundación
-                   puede orientarlo sobre el proceso que corresponde a su situación.</p>
-                <div class="acciones">
-                    <a class="boton boton--primario" href="portal/index.html">Ingresar al portal principal</a>
-                    <a class="boton boton--acento" id="contacto-empresa" href="#">Contáctenos</a>
-                </div>
-            </div>
-
-            <!-- Resultado: no parece aplicar todavía -->
-            <div id="resultado-no" class="resultado resultado--no" hidden>
-                <h4>Por ahora su situación no parece requerir un proceso de insolvencia</h4>
-                <p>Según sus respuestas, no se cumplen aún los supuestos legales de la
-                   insolvencia económica. Si su situación cambia, o si quiere una revisión
-                   personalizada, comuníquese con nosotros.</p>
-                <div class="acciones">
-                    <a class="boton boton--acento" id="contacto-no" href="#">Contáctenos</a>
-                </div>
-            </div>
-
-            <p class="nota">Este diagnóstico es orientativo y no reemplaza la asesoría de la
-               fundación ni el registro oficial del caso en SICAAC.</p>
+            <p class="contacto-alt">Si prefieres, también puedes escribirnos desde
+               <a id="link-contacto" href="#">contacto</a>.</p>
+            <p class="nota">Esta solicitud es orientativa y no reemplaza el registro oficial del caso en SICAAC.</p>
         </section>
     </main>
 
     <footer class="pie">
-        <p>Fundación de insolvencia y conciliaciones &copy; 2026</p>
+        <p>Fundación MASCaribe &copy; 2026</p>
     </footer>
 
     <script>
-        /* Diagnóstico: reglas simples (se ajustarán con la hoja de trabajo
-           definitiva de la fundación).
-           - Comerciante/empresa → otros procesos (Ley 1116).
-           - Persona natural con 2+ acreedores Y (mora >90 días, deudas ~30%+
-             o incapacidad de pago) → aplica a insolvencia económica.
-           - En caso contrario → todavía no aplica. */
-        (function () {
-            // Correo de contacto de la fundación (ajustar cuando se defina)
-            const CORREO_CONTACTO = 'contacto@fundacion.example';
-            const ASUNTO = 'Solicitud de información — diagnóstico de insolvencia';
+    /* ====== CONFIGURA el canal de contacto de la fundación ======
+       WhatsApp en formato internacional sin '+' (ej. 573001234567). */
+    const CONTACTO = {
+        whatsapp: '573000000000',                    // <-- CAMBIAR por el número real
+        correo: 'contacto@fundacionmascaribe.org'    // <-- CAMBIAR si aplica
+    };
 
-            function enlaceContacto(resumen) {
-                const cuerpo = 'Buenos días,\n\nHice el diagnóstico de insolvencia en la página ' +
-                    'de la fundación y quiero recibir orientación.\n\nResultado del diagnóstico: ' +
-                    resumen + '\n\nQuedo atento(a) a su respuesta.\n';
-                return 'mailto:' + CORREO_CONTACTO +
-                    '?subject=' + encodeURIComponent(ASUNTO) +
-                    '&body=' + encodeURIComponent(cuerpo);
-            }
-            document.getElementById('contacto-aplica').href = enlaceContacto('podría aplicar a insolvencia económica');
-            document.getElementById('contacto-empresa').href = enlaceContacto('caso de comerciante/empresa (otro proceso de insolvencia)');
-            document.getElementById('contacto-no').href = enlaceContacto('por ahora no aplica, pide revisión personalizada');
+    (function () {
+        const form = document.getElementById('form-solicitud');
+        const pasos = [...document.querySelectorAll('.paso')];
+        const marcas = [...document.querySelectorAll('.pasos__item')];
+        const btnAtras = document.getElementById('btn-atras');
+        const btnSig = document.getElementById('btn-siguiente');
+        const btnEnviar = document.getElementById('btn-enviar');
+        let actual = 0;
 
-            document.getElementById('form-diagnostico').addEventListener('submit', function (e) {
-                e.preventDefault();
-                const v = (n) => (document.querySelector('input[name="' + n + '"]:checked') || {}).value;
-                const esNatural = v('p1') === 'si';
-                const dosAcreedores = v('p2') === 'si';
-                const mora = v('p3') === 'si';
-                const treinta = v('p4') === 'si';
-                const sinCapacidad = v('p5') === 'si';
+        /* ---- Acreedores dinámicos ---- */
+        const lista = document.getElementById('lista-acreedores');
+        function filaAcreedor() {
+            const div = document.createElement('div');
+            div.className = 'acreedor';
+            div.innerHTML =
+                '<div class="campo"><label>Acreedor</label><input type="text" class="ac-nombre" maxlength="80" placeholder="Ej.: Banco…"></div>' +
+                '<div class="campo"><label>Tipo</label><select class="ac-tipo">' +
+                    '<option>Banco</option><option>Cooperativa</option><option>Casa comercial</option><option>Persona natural</option><option>Impuestos</option><option>Otro</option>' +
+                '</select></div>' +
+                '<div class="campo"><label>Valor (COP)</label><input type="number" class="ac-valor" min="0" step="1000" placeholder="0"></div>' +
+                '<button type="button" class="quitar">Quitar</button>';
+            div.querySelector('.quitar').addEventListener('click', () => div.remove());
+            lista.appendChild(div);
+        }
+        document.getElementById('btn-agregar-acreedor').addEventListener('click', filaAcreedor);
+        filaAcreedor(); // una fila por defecto
 
-                let mostrar = 'resultado-no';
-                if (!esNatural) {
-                    mostrar = 'resultado-empresa';
-                } else if (dosAcreedores && (mora || treinta || sinCapacidad)) {
-                    mostrar = 'resultado-aplica';
-                }
-                for (const id of ['resultado-aplica', 'resultado-empresa', 'resultado-no']) {
-                    document.getElementById(id).hidden = (id !== mostrar);
-                }
-                document.getElementById(mostrar).scrollIntoView({ behavior: 'smooth', block: 'center' });
+        function pesos(n) {
+            const v = Number(n || 0);
+            return v ? v.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }) : '—';
+        }
+
+        function acreedoresData() {
+            return [...lista.querySelectorAll('.acreedor')].map(a => ({
+                nombre: a.querySelector('.ac-nombre').value.trim(),
+                tipo: a.querySelector('.ac-tipo').value,
+                valor: Number(a.querySelector('.ac-valor').value || 0)
+            })).filter(a => a.nombre);
+        }
+
+        function mostrarPaso(i) {
+            actual = i;
+            pasos.forEach((p, idx) => p.hidden = (idx !== i));
+            marcas.forEach((m, idx) => {
+                m.classList.toggle('activo', idx === i);
+                m.classList.toggle('hecho', idx < i);
             });
-        })();
+            btnAtras.hidden = (i === 0);
+            btnSig.hidden = (i === pasos.length - 1);
+            btnEnviar.hidden = (i !== pasos.length - 1);
+            if (i === pasos.length - 1) pintarResumen();
+            document.getElementById('solicitud').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        /* Valida solo los campos requeridos del paso visible */
+        function pasoValido() {
+            const requeridos = pasos[actual].querySelectorAll('[required]');
+            for (const c of requeridos) {
+                if (!c.reportValidity()) return false;
+            }
+            return true;
+        }
+
+        function pintarResumen() {
+            const d = new FormData(form);
+            const acs = acreedoresData();
+            const totalDeuda = acs.reduce((s, a) => s + a.valor, 0);
+            document.getElementById('resumen').innerHTML =
+                '<dl>' +
+                    '<dt>Nombre</dt><dd>' + (d.get('nombre') || '—') + '</dd>' +
+                    '<dt>Correo</dt><dd>' + (d.get('correo') || '—') + '</dd>' +
+                    '<dt>Teléfono</dt><dd>' + (d.get('telefono') || '—') + '</dd>' +
+                    '<dt>Ingresos</dt><dd>' + pesos(d.get('ingresos')) + '</dd>' +
+                    '<dt>Gastos</dt><dd>' + pesos(d.get('gastos')) + '</dd>' +
+                    '<dt>Ocupación</dt><dd>' + (d.get('ocupacion') || '—') + '</dd>' +
+                '</dl>' +
+                '<div class="resumen__acreedores"><strong>Acreedores (' + acs.length + '):</strong><ul>' +
+                    (acs.length ? acs.map(a => '<li>' + a.nombre + ' — ' + a.tipo + ' — ' + pesos(a.valor) + '</li>').join('')
+                                : '<li>Sin acreedores agregados.</li>') +
+                '</ul><p><strong>Deuda total:</strong> ' + pesos(totalDeuda) + '</p></div>';
+        }
+
+        btnSig.addEventListener('click', () => { if (pasoValido()) mostrarPaso(Math.min(actual + 1, pasos.length - 1)); });
+        btnAtras.addEventListener('click', () => mostrarPaso(Math.max(actual - 1, 0)));
+
+        /* Arma el texto de la solicitud para enviarlo */
+        function resumenTexto() {
+            const d = new FormData(form);
+            const acs = acreedoresData();
+            const total = acs.reduce((s, a) => s + a.valor, 0);
+            return 'SOLICITUD DE INSOLVENCIA — Fundación MASCaribe\n\n' +
+                'Nombre: ' + (d.get('nombre') || '') + '\n' +
+                'Correo: ' + (d.get('correo') || '') + '\n' +
+                'Teléfono: ' + (d.get('telefono') || '') + '\n' +
+                'Ocupación: ' + (d.get('ocupacion') || '') + '\n' +
+                'Ingresos mensuales: ' + pesos(d.get('ingresos')) + '\n' +
+                'Gastos mensuales: ' + pesos(d.get('gastos')) + '\n\n' +
+                'Acreedores:\n' +
+                (acs.length ? acs.map(a => '- ' + a.nombre + ' (' + a.tipo + '): ' + pesos(a.valor)).join('\n') : '- (ninguno)') +
+                '\nDeuda total: ' + pesos(total);
+        }
+
+        btnEnviar.addEventListener('click', () => {
+            if (!pasoValido()) return;
+            const texto = resumenTexto();
+            document.getElementById('enviar-whatsapp').href =
+                'https://wa.me/' + CONTACTO.whatsapp + '?text=' + encodeURIComponent(texto);
+            document.getElementById('enviar-correo').href =
+                'mailto:' + CONTACTO.correo +
+                '?subject=' + encodeURIComponent('Solicitud de insolvencia') +
+                '&body=' + encodeURIComponent(texto);
+            document.getElementById('enviado').hidden = false;
+            document.getElementById('enviado').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+
+        document.getElementById('link-contacto').href =
+            'mailto:' + CONTACTO.correo + '?subject=' + encodeURIComponent('Consulta — insolvencia económica');
+
+        mostrarPaso(0);
+    })();
     </script>
 </body>
 </html>
