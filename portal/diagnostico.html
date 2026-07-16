@@ -8,184 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Krub:wght@400;500;600;700&family=Lora:wght@600;700&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --cian:#00A1B8; --cian-osc:#00889C; --cian-prof:#006B7A;
-    --naranja:#FA9B02; --naranja-osc:#D98500;
-    --tinta:#17262E; --gris:#536068; --fondo:#F2F8F9; --blanco:#fff;
-    --borde:#E2EAEC; --verde:#157039; --verde-suave:#DDF3E4; --verde-borde:#B7E3C6;
-    --ambar:#8A4B08; --ambar-suave:#FCEFD3; --rojo:#B42318;
-    --sombra:0 10px 24px rgba(0,64,74,.12), 0 2px 8px rgba(0,64,74,.08);
-    --curva:cubic-bezier(.16,1,.3,1);
-    --titulos:'Lora', Georgia, serif; --texto:'Krub', Arial, sans-serif;
-  }
-  *{ box-sizing:border-box; margin:0; padding:0; }
-  body{
-    font-family:var(--texto); color:var(--tinta); background:var(--fondo);
-    min-height:100vh; display:flex; flex-direction:column; align-items:center;
-    padding:2.4rem 1.4rem; font-size:16px;
-  }
-  .barra{
-    align-self:stretch; margin:-2.4rem -1.4rem 2rem;
-    background:linear-gradient(120deg, var(--cian-prof), var(--cian));
-    color:var(--blanco); padding:1.4rem 2rem;
-    display:flex; align-items:center; justify-content:space-between; gap:1.2rem; flex-wrap:wrap;
-  }
-  .barra h1{ font-family:var(--titulos); font-size:1.5rem; color:var(--blanco); line-height:1.2; }
-  .barra small{ display:block; opacity:.9; font-size:.88rem; margin-top:.2rem; }
-  .barra nav{ display:flex; gap:.6rem; flex-wrap:wrap; }
-  .barra nav a{
-    color:var(--blanco); text-decoration:none; font-weight:600; font-size:.95rem;
-    padding:.6rem 1.1rem; border-radius:.7rem; border:1px solid transparent; transition:background .18s var(--curva);
-  }
-  .barra nav a:hover{ background:rgba(255,255,255,.15); }
-  .barra nav a.activo{ background:rgba(0,0,0,.15); border-color:rgba(255,255,255,.3); }
-  .tarjeta{
-    background:var(--blanco); border-radius:1.4rem; box-shadow:var(--sombra);
-    width:100%; max-width:680px; padding:2.2rem; overflow:hidden;
-  }
-  /* ===== Progreso ===== */
-  .progreso{ margin-bottom:1.8rem; }
-  .progreso__barra{ height:8px; background:var(--borde); border-radius:999px; overflow:hidden; }
-  .progreso__fill{
-    height:100%; width:0%; border-radius:999px;
-    background:linear-gradient(90deg, var(--cian), var(--naranja));
-    transition:width .4s var(--curva);
-  }
-  .progreso__txt{ margin-top:.6rem; font-size:.85rem; color:var(--gris); text-align:right; }
-  /* ===== Pasos ===== */
-  .paso{ animation:aparecer .35s var(--curva) backwards; }
-  @keyframes aparecer{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
-  .paso__num{ color:var(--naranja); font-weight:700; font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; }
-  .paso__preg{ font-family:var(--titulos); font-size:1.35rem; margin:.4rem 0 .7rem; line-height:1.35; }
-  .paso__ayuda{ color:var(--gris); font-size:.95rem; margin-bottom:1.4rem; line-height:1.5; }
-  /* ===== Botones ===== */
-  .btn{
-    padding:.8rem 1.6rem; border-radius:.9rem; border:none; font:inherit; font-weight:600;
-    cursor:pointer; transition:all .18s var(--curva);
-  }
-  .btn--fantasma{ background:transparent; color:var(--gris); }
-  .btn--fantasma:hover{ color:var(--tinta); }
-  .btn--primario{ background:var(--cian); color:#fff; }
-  .btn--primario:hover{ background:var(--cian-osc); }
-  .btn--primario:disabled{ background:var(--borde); color:#9aa7ad; cursor:not-allowed; }
-  .btn--cta{ background:var(--naranja); color:#fff; font-size:1.05rem; padding:1rem 2rem; }
-  .btn--cta:hover{ background:var(--naranja-osc); }
-  .btn[hidden]{ display:none; }
-  .navegacion{ margin-top:1.8rem; display:flex; justify-content:space-between; align-items:center; gap:1rem; }
-  /* ===== Perfil (selección única) ===== */
-  .opciones{ display:flex; gap:1rem; flex-wrap:wrap; }
-  .opcion{
-    flex:1; min-width:220px; padding:1.2rem; border:2px solid var(--borde); border-radius:1rem;
-    background:var(--blanco); color:var(--tinta); font:inherit; font-weight:600; font-size:1.02rem;
-    cursor:pointer; transition:all .18s var(--curva); text-align:left;
-  }
-  .opcion small{ display:block; font-weight:400; color:var(--gris); font-size:.85rem; margin-top:.3rem; }
-  .opcion:hover{ border-color:var(--cian); background:var(--fondo); }
-  .opcion.activa{ border-color:var(--cian); background:var(--fondo); box-shadow:0 0 0 3px rgba(0,161,184,.15); }
-  /* ===== Toggle segmentado (Valor neto / Detallado) ===== */
-  .toggle{ display:inline-flex; background:var(--fondo); border:1px solid var(--borde); border-radius:.8rem; padding:.25rem; margin-bottom:1.2rem; }
-  .toggle button{
-    border:none; background:transparent; font:inherit; font-weight:600; font-size:.9rem;
-    padding:.5rem 1rem; border-radius:.6rem; cursor:pointer; color:var(--gris); transition:all .18s var(--curva);
-  }
-  .toggle button.activo{ background:var(--blanco); color:var(--cian-prof); box-shadow:0 1px 3px rgba(0,0,0,.08); }
-  /* ===== Filas dinámicas ===== */
-  .filas{ display:flex; flex-direction:column; gap:.7rem; margin-bottom:1rem; }
-  .fila{ display:flex; gap:.6rem; align-items:stretch; }
-  .fila input, .fila select, .campo-neto input{
-    width:100%; padding:.75rem .9rem; border:1.5px solid var(--borde); border-radius:.7rem;
-    font:inherit; color:var(--tinta); background:var(--blanco); transition:border-color .15s;
-  }
-  .fila input:focus, .fila select:focus, .campo-neto input:focus{ outline:none; border-color:var(--cian); }
-  .fila .desc{ flex:2; } .fila .monto{ flex:1; min-width:110px; } .fila .mora{ flex:.9; min-width:96px; }
-  .fila .quitar{
-    flex:0 0 44px; border:1.5px solid var(--borde); background:var(--blanco); border-radius:.7rem;
-    cursor:pointer; color:var(--gris); font-size:1.1rem; line-height:1; transition:all .15s;
-  }
-  .fila .quitar:hover{ border-color:var(--rojo); color:var(--rojo); }
-  .btn-add{
-    align-self:flex-start; background:var(--blanco); border:1.5px dashed var(--cian); color:var(--cian-prof);
-    padding:.6rem 1.1rem; border-radius:.7rem; font:inherit; font-weight:600; cursor:pointer; transition:all .15s;
-  }
-  .btn-add:hover{ background:var(--fondo); }
-  .campo-neto label{ display:block; font-weight:600; margin-bottom:.4rem; font-size:.95rem; }
-  /* ===== Barras de total / balance ===== */
-  .total{
-    display:flex; justify-content:space-between; align-items:center;
-    background:var(--fondo); border-radius:.8rem; padding:.9rem 1.1rem; margin-top:.4rem; font-weight:600;
-  }
-  .total strong{ font-size:1.05rem; }
-  .balance{ background:var(--verde-suave); border:1px solid var(--verde-borde); margin-top:.7rem; }
-  .balance.neg{ background:var(--ambar-suave); border-color:#F0D9A8; }
-  .balance .val{ color:var(--verde); }
-  .balance.neg .val{ color:var(--ambar); }
-  /* ===== Resultado ===== */
-  .resultado{ text-align:center; animation:aparecer .4s var(--curva) backwards; }
-  .resultado__ico{ width:5.4rem; height:5.4rem; border-radius:50%; margin:0 auto 1.1rem; display:flex; align-items:center; justify-content:center; }
-  .resultado--exito .resultado__ico{ background:var(--verde-suave); }
-  .resultado--info .resultado__ico{ background:var(--ambar-suave); }
-  .resultado__ico svg{ width:2.7rem; height:2.7rem; }
-  .resultado h2{ font-family:var(--titulos); font-size:1.55rem; margin-bottom:.7rem; }
-  .resultado--exito h2{ color:var(--verde); }
-  .resultado--info h2{ color:var(--ambar); }
-  .resultado p{ color:var(--gris); line-height:1.55; margin-bottom:1rem; }
-  .criterios{ text-align:left; background:var(--fondo); border-radius:.9rem; padding:1rem 1.2rem; margin:1.2rem 0; }
-  .criterios li{ list-style:none; display:flex; gap:.6rem; align-items:flex-start; padding:.35rem 0; font-size:.92rem; }
-  .criterios .ic{ flex:0 0 auto; margin-top:.1rem; }
-  .criterios .ok{ color:var(--verde); } .criterios .no{ color:var(--rojo); }
-  /* ===== Captura de datos ===== */
-  .lead{ text-align:left; margin-top:1.4rem; }
-  .lead h3{ font-family:var(--titulos); font-size:1.15rem; margin-bottom:.3rem; }
-  .lead p.sub{ color:var(--gris); font-size:.9rem; margin-bottom:1rem; }
-  .lead .campo{ margin-bottom:.8rem; }
-  .lead label{ display:block; font-weight:600; font-size:.9rem; margin-bottom:.35rem; }
-  .lead input{ width:100%; padding:.75rem .9rem; border:1.5px solid var(--borde); border-radius:.7rem; font:inherit; }
-  .lead input:focus{ outline:none; border-color:var(--cian); }
-  .lead input.error{ border-color:var(--rojo); }
-  .resultado__acciones{ margin-top:1.6rem; display:flex; flex-direction:column; gap:.7rem; align-items:center; }
-  .acciones-cta{ display:flex; gap:.8rem; flex-wrap:wrap; justify-content:center; width:100%; }
-  .acciones-cta .btn{ flex:1; min-width:200px; }
-  .btn--wa{ background:#25D366; color:#fff; }
-  .btn--wa:hover{ background:#1eb958; }
-  .enlace-sec{ color:var(--cian); text-decoration:underline; background:none; border:none; font:inherit; cursor:pointer; }
-  .pie{ margin-top:1.6rem; color:var(--gris); font-size:.8rem; text-align:center; max-width:680px; }
-  .pie a{ color:var(--cian); }
-
-  /* ===== Módulo 1: Modal de privacidad (Habeas Data) ===== */
-  .overlay{
-    position:fixed; inset:0; background:rgba(9,32,38,.55); backdrop-filter:blur(3px);
-    display:flex; align-items:center; justify-content:center; padding:1.2rem; z-index:1000;
-    animation:aparecer .25s var(--curva);
-  }
-  .overlay[hidden]{ display:none; }
-  .modal{
-    background:var(--blanco); border-radius:1.3rem; box-shadow:var(--sombra);
-    width:100%; max-width:620px; max-height:92vh; display:flex; flex-direction:column; overflow:hidden;
-  }
-  .modal__cab{ padding:1.6rem 1.8rem 1rem; border-bottom:1px solid var(--borde); }
-  .modal__cab h2{ font-family:var(--titulos); color:var(--cian-prof); font-size:1.4rem; }
-  .modal__cab p{ color:var(--gris); font-size:.9rem; margin-top:.3rem; }
-  .modal__cuerpo{ padding:1.2rem 1.8rem; overflow-y:auto; font-size:.92rem; line-height:1.6; color:var(--tinta); }
-  .modal__cuerpo h3{ font-size:1rem; margin:1.1rem 0 .4rem; color:var(--cian-prof); font-family:var(--texto); }
-  .modal__cuerpo h3:first-child{ margin-top:0; }
-  .modal__cuerpo p{ margin-bottom:.6rem; color:var(--gris); }
-  .modal__cuerpo strong{ color:var(--tinta); }
-  .confidencial{
-    background:var(--verde-suave); border:1px solid var(--verde-borde); border-radius:.8rem;
-    padding:.9rem 1.1rem; margin:1rem 0; color:var(--tinta);
-  }
-  .modal__pie{ padding:1.2rem 1.8rem 1.6rem; border-top:1px solid var(--borde); background:var(--fondo); }
-  .check{ display:flex; gap:.7rem; align-items:flex-start; margin-bottom:1rem; cursor:pointer; font-size:.92rem; }
-  .check input{ margin-top:.2rem; width:1.15rem; height:1.15rem; accent-color:var(--cian); flex:0 0 auto; cursor:pointer; }
-  .modal__pie .btn--primario{ width:100%; }
-
-  @media (max-width:560px){
-    .tarjeta{ padding:1.5rem; } .fila{ flex-wrap:wrap; }
-    .fila .desc, .fila .monto, .fila .mora{ flex:1 1 100%; min-width:0; }
-    .fila .quitar{ flex:1 1 100%; height:44px; }
-  }
-</style>
+<link rel="stylesheet" href="/portal/css/style.css">
 </head>
 <body>
   <!-- ===================== MÓDULO 1: MODAL DE PRIVACIDAD ===================== -->
@@ -264,11 +87,9 @@
 <script>
 /* ============================================================================
    CONFIGURA AQUÍ el canal de contacto de la fundación.
-   WhatsApp en formato internacional sin '+' (ej. 57 300 1234567 -> '573001234567')
    ========================================================================== */
 const CONTACTO = {
-    whatsapp: '573000000000',                    // <-- CAMBIAR por el número real
-    correo:   'contacto@fundacionmascaribe.org'  // <-- CAMBIAR si aplica
+    correo: 'contacto@fundacionmascaribe.org'  // <-- CAMBIAR si aplica
 };
 
 const CLAVE_CONSENT = 'mascaribe_consentimiento_v1';
@@ -354,7 +175,8 @@ function render(){
 
 /* Botones de navegación estándar (atrás / siguiente) */
 function navHTML(mostrarSiguiente){
-    return '<div class="navegacion">' +
+    return '<p class="aviso" id="aviso-paso" hidden>Completa todos los campos para continuar.</p>' +
+        '<div class="navegacion">' +
         '<button class="btn btn--fantasma" id="btn-atras"' + (paso === 0 ? ' hidden' : '') + '>&larr; Atrás</button>' +
         (mostrarSiguiente
             ? '<button class="btn btn--primario" id="btn-sig">' + (paso === 3 ? 'Ver diagnóstico' : 'Siguiente') + ' &rarr;</button>'
@@ -365,7 +187,56 @@ function engancharNav(){
     const atras = document.getElementById('btn-atras');
     if (atras) atras.addEventListener('click', () => irA(paso - 1));
     const sig = document.getElementById('btn-sig');
-    if (sig) sig.addEventListener('click', () => irA(paso + 1));
+    if (sig) sig.addEventListener('click', () => {
+        if (pasoValido()){ irA(paso + 1); return; }
+        const aviso = document.getElementById('aviso-paso');
+        if (aviso) aviso.hidden = false;
+        const primerError = cont.querySelector('.error');
+        if (primerError) primerError.focus();
+    });
+}
+
+/* Todos los campos del paso son obligatorios */
+function marcarError(el, mal){ if (el) el.classList.toggle('error', !!mal); return !mal; }
+
+function pasoValido(){
+    if (paso === 0) return !!estado.perfil;
+    if (paso === 1) return validarMonto('ingresos');
+    if (paso === 2) return validarMonto('gastos');
+    if (paso === 3) return validarAcreedores();
+    return true;
+}
+
+function validarMonto(clave){
+    const d = estado[clave];
+    let ok = true;
+    if (d.modo === 'neto'){
+        ok = marcarError(document.getElementById('neto-' + clave), d.neto <= 0);
+    } else {
+        cont.querySelectorAll('#filas-' + clave + ' .fila').forEach((row, i) => {
+            const f = d.filas[i]; if (!f) return;
+            if (!marcarError(row.querySelector('.desc'), !f.desc.trim())) ok = false;
+            if (!marcarError(row.querySelector('.monto'), f.monto <= 0)) ok = false;
+        });
+    }
+    return ok;
+}
+
+function validarAcreedores(){
+    const d = estado.acreedores;
+    let ok = true;
+    if (d.modo === 'neto'){
+        ok = marcarError(document.getElementById('neto-acreedores'), d.neto <= 0);
+    } else {
+        cont.querySelectorAll('#filas-ac .fila').forEach((row, i) => {
+            const f = d.filas[i]; if (!f) return;
+            const ins = row.querySelectorAll('input'); // [nombre, concepto, monto, mora]
+            if (!marcarError(ins[0], !f.nombre.trim())) ok = false;
+            if (!marcarError(ins[2], f.monto <= 0)) ok = false;
+            if (!marcarError(ins[3], ins[3].value.trim() === '')) ok = false; // mora obligatoria (0 válido)
+        });
+    }
+    return ok;
 }
 
 /* Toggle Valor neto / Detallado */
@@ -454,6 +325,7 @@ function cuerpoMonto(clave, host, textoAdd, placeholderDesc, onCambio){
         inp.addEventListener('input', () => {
             d.neto = aNumero(inp.value);
             inp.value = d.neto ? d.neto.toLocaleString('es-CO') : '';
+            limpiar(inp);
             onCambio();
         });
         return;
@@ -472,9 +344,9 @@ function cuerpoMonto(clave, host, textoAdd, placeholderDesc, onCambio){
                 '<input class="desc" type="text" placeholder="' + placeholderDesc + '" value="' + esc(f.desc) + '">' +
                 '<input class="monto" type="text" inputmode="numeric" placeholder="0" value="' + (f.monto ? f.monto.toLocaleString('es-CO') : '') + '">' +
                 '<button class="quitar" title="Eliminar" aria-label="Eliminar fila">×</button>';
-            row.querySelector('.desc').addEventListener('input', e => { f.desc = e.target.value; });
+            row.querySelector('.desc').addEventListener('input', e => { f.desc = e.target.value; limpiar(e.target); });
             const m = row.querySelector('.monto');
-            m.addEventListener('input', () => { f.monto = aNumero(m.value); m.value = f.monto ? f.monto.toLocaleString('es-CO') : ''; onCambio(); });
+            m.addEventListener('input', () => { f.monto = aNumero(m.value); m.value = f.monto ? f.monto.toLocaleString('es-CO') : ''; limpiar(m); onCambio(); });
             row.querySelector('.quitar').addEventListener('click', () => {
                 d.filas.splice(i, 1);
                 if (d.filas.length === 0) d.filas.push({ desc:'', monto:0 });
@@ -516,6 +388,7 @@ function cuerpoAcreedores(host){
         inp.addEventListener('input', () => {
             d.neto = aNumero(inp.value);
             inp.value = d.neto ? d.neto.toLocaleString('es-CO') : '';
+            limpiar(inp);
             actualizarTotalDeudas();
         });
         return;
@@ -536,10 +409,10 @@ function cuerpoAcreedores(host){
                 '<input class="mora" type="number" min="0" placeholder="Días mora" value="' + (f.mora || '') + '">' +
                 '<button class="quitar" title="Eliminar" aria-label="Eliminar fila">×</button>';
             const ins = row.querySelectorAll('input');
-            ins[0].addEventListener('input', e => { f.nombre = e.target.value; });
+            ins[0].addEventListener('input', e => { f.nombre = e.target.value; limpiar(ins[0]); });
             ins[1].addEventListener('input', e => { f.concepto = e.target.value; });
-            ins[2].addEventListener('input', () => { f.monto = aNumero(ins[2].value); ins[2].value = f.monto ? f.monto.toLocaleString('es-CO') : ''; actualizarTotalDeudas(); });
-            ins[3].addEventListener('input', e => { f.mora = Number(e.target.value) || 0; });
+            ins[2].addEventListener('input', () => { f.monto = aNumero(ins[2].value); ins[2].value = f.monto ? f.monto.toLocaleString('es-CO') : ''; limpiar(ins[2]); actualizarTotalDeudas(); });
+            ins[3].addEventListener('input', e => { f.mora = Number(e.target.value) || 0; limpiar(ins[3]); });
             row.querySelector('.quitar').addEventListener('click', () => {
                 d.filas.splice(i, 1);
                 if (d.filas.length === 0) d.filas.push({ nombre:'', concepto:'', monto:0, mora:0 });
@@ -562,6 +435,9 @@ function engancharToggle(clave, repintar){
 
 /* Escapa texto para inyectarlo en atributos value */
 function esc(s){ return String(s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+
+/* Limpia el estado de error de un campo al editarlo */
+function limpiar(el){ el.classList.remove('error'); const a = document.getElementById('aviso-paso'); if (a) a.hidden = true; }
 
 /* ===================== PASO 4: Evaluación legal ===================== */
 function evaluar(){
@@ -629,7 +505,6 @@ function pintarResultado(){
             leadHTML() +
             '<div class="resultado__acciones">' +
                 '<div class="acciones-cta">' +
-                    '<button class="btn btn--wa" id="btn-wa">Enviar por WhatsApp</button>' +
                     '<button class="btn btn--primario" id="btn-correo">Enviar al correo</button>' +
                 '</div>' +
                 '<button class="enlace-sec" id="btn-reiniciar">Volver a empezar</button>' +
@@ -666,11 +541,6 @@ function engancharResultado(ev){
         return ok;
     }
 
-    document.getElementById('btn-wa').addEventListener('click', () => {
-        if (!leadValido()) return;
-        const url = 'https://wa.me/' + CONTACTO.whatsapp + '?text=' + encodeURIComponent(plantilla(ev));
-        window.open(url, '_blank', 'noopener');
-    });
     document.getElementById('btn-correo').addEventListener('click', () => {
         if (!leadValido()) return;
         const asunto = 'Solicitud de Asesoría de Insolvencia - ' + estado.lead.nombre;
