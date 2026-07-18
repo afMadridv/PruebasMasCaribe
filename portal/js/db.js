@@ -16,7 +16,7 @@ function abrirDB() {
         peticion.onupgradeneeded = (e) => {
             const db = e.target.result;
             // Al cambiar de versión se reinician los datos de práctica
-            for (const nombre of ['usuarios', 'carpetas', 'archivos', 'actividad', 'chat', 'hoja', 'mensajes', 'deudores', 'audiencias', 'recordatorios', 'procesos']) {
+            for (const nombre of ['usuarios', 'carpetas', 'archivos', 'actividad', 'chat', 'hoja', 'mensajes', 'audiencias', 'recordatorios', 'procesos']) {
                 if (db.objectStoreNames.contains(nombre)) db.deleteObjectStore(nombre);
             }
             db.createObjectStore('usuarios', { keyPath: 'usuario' });
@@ -28,7 +28,6 @@ function abrirDB() {
             const mensajes = db.createObjectStore('mensajes', { keyPath: 'id', autoIncrement: true });
             mensajes.createIndex('porCarpeta', 'carpetaId', { unique: false });
             // Info del deudor: una fila por carpeta (clave = carpetaId)
-            db.createObjectStore('deudores', { keyPath: 'carpetaId' });
             // Audiencias marcadas en el calendario de cada carpeta
             const audiencias = db.createObjectStore('audiencias', { keyPath: 'id', autoIncrement: true });
             audiencias.createIndex('porCarpeta', 'carpetaId', { unique: false });
@@ -275,34 +274,7 @@ async function actualizarDescripcionCarpeta(carpetaId, descripcion) {
     await dbGuardar('carpetas', carpeta);
 }
 
-/* ============================================================
-   >>> SIN USO — REVISAR Y ELIMINAR MANUALMENTE <<<
-   El timeline de 9 etapas (Ley 2445) se reemplazó por el sistema
-   de procesos con semáforo: ya NADIE llama actualizarEstadoProceso.
-   ============================================================ */
-async function actualizarEstadoProceso(carpetaId, estado) {
-    const carpeta = await dbObtener('carpetas', carpetaId);
-    if (!carpeta) return;
-    carpeta.estadoProceso = estado;
-    await dbGuardar('carpetas', carpeta);
-}
-/* >>> FIN SIN USO <<< */
 
-/* ============================================================
-   >>> SIN USO — REVISAR Y ELIMINAR MANUALMENTE <<<
-   La pestaña "Deudor" se eliminó de la interfaz: ya NADIE llama
-   cargarInfoDeudor / guardarInfoDeudor. (La tabla deudores_info
-   de Supabase se conserva a propósito; esto es solo el frontend.)
-   Si se borran, borrar también el store 'deudores' del
-   onupgradeneeded de arriba.
-   ============================================================ */
-async function cargarInfoDeudor(carpetaId) {
-    return (await dbObtener('deudores', carpetaId)) || null;
-}
-async function guardarInfoDeudor(carpetaId, datos) {
-    await dbGuardar('deudores', { ...datos, carpetaId, actualizado: Date.now() });
-}
-/* >>> FIN SIN USO <<< */
 
 /* ============ SEMÁFOROS: PROCESOS DEL TRÁMITE (modo local) ============
    Mismas reglas que el servidor (nube.js las reemplaza por funciones con
@@ -591,7 +563,6 @@ async function sembrarDatosIniciales() {
     await dbAgregar('carpetas', {
         nombre: 'Insolvencia — Pedro Cliente (Exp. 001-2026)',
         descripcion: 'Notas internas: audiencia de conciliación pendiente de fecha.',
-        estadoProceso: 'En negociación con acreedores', // >>> SIN USO: campo del timeline eliminado <<<
         activa: true,
         asignados: ['cliente', 'acreedor'],
         operadores: ['operador'],
@@ -601,7 +572,6 @@ async function sembrarDatosIniciales() {
     await dbAgregar('carpetas', {
         nombre: 'Conciliación — Caso de práctica (Exp. 002-2026)',
         descripcion: 'Carpeta sin operador asignado y desactivada: solo la ve el administrador.',
-        estadoProceso: 'Solicitud recibida', // >>> SIN USO: campo del timeline eliminado <<<
         activa: false,
         asignados: ['cliente'],
         operadores: [],

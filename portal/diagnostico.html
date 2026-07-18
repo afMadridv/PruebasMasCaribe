@@ -8,10 +8,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Krub:wght@400;500;600;700&family=Lora:wght@600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/portal/css/style.css">
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <!-- ===================== MÓDULO 1: MODAL DE PRIVACIDAD ===================== -->
+  <!-- Modal de consentimiento de datos -->
   <div class="overlay" id="overlay-privacidad" role="dialog" aria-modal="true" aria-labelledby="priv-titulo" hidden>
     <div class="modal">
       <div class="modal__cab">
@@ -60,7 +60,7 @@
     </div>
   </div>
 
-  <!-- ===================== MÓDULO 2: CALCULADORA ===================== -->
+  <!-- Calculadora paso a paso -->
   <header class="barra">
     <div>
       <h1>Fundación MASCaribe</h1>
@@ -85,23 +85,17 @@
      <a href="index.html">Ingresar al portal</a></p>
 
 <script>
-/* ============================================================================
-   CONFIGURA AQUÍ el canal de contacto de la fundación.
-   ========================================================================== */
-const CONTACTO = {
-    correo: 'contacto@fundacionmascaribe.org'  // <-- CAMBIAR si aplica
-};
-
+// Correo de la fundación al que se envía el diagnóstico
+const CONTACTO = { correo: 'contacto@fundacionmascaribe.org' };
 const CLAVE_CONSENT = 'mascaribe_consentimiento_v1';
 
-/* ===================== MÓDULO 1: gestión del consentimiento ===================== */
+// El consentimiento de datos se pide una sola vez por dispositivo
 (function gestionarPrivacidad(){
     const overlay = document.getElementById('overlay-privacidad');
-    // Si ya autorizó en este dispositivo, no volver a mostrar.
     if (localStorage.getItem(CLAVE_CONSENT)) return;
 
     overlay.hidden = false;
-    document.body.style.overflow = 'hidden';   // bloquea el scroll de fondo
+    document.body.style.overflow = 'hidden';
 
     const check = document.getElementById('priv-acepto');
     const btn   = document.getElementById('priv-continuar');
@@ -115,7 +109,7 @@ const CLAVE_CONSENT = 'mascaribe_consentimiento_v1';
     document.getElementById('priv-cuerpo').focus();
 })();
 
-/* ===================== Utilidades ===================== */
+// ---- Utilidades ----
 const cont = document.getElementById('contenido');
 const NUM_PASOS = 4;  // Perfil, Ingresos, Gastos, Acreedores (el resultado va aparte)
 
@@ -136,7 +130,7 @@ const estado = {
 
 let paso = 0;   // 0..3 pasos de entrada; 4 = resultado
 
-/* ===================== Progreso ===================== */
+// ---- Progreso ----
 function pintarProgreso(){
     const idx = Math.min(paso, NUM_PASOS);
     document.getElementById('progreso-fill').style.width = Math.round((idx / NUM_PASOS) * 100) + '%';
@@ -144,7 +138,7 @@ function pintarProgreso(){
         paso < NUM_PASOS ? ('Paso ' + (paso + 1) + ' de ' + NUM_PASOS) : 'Resultado';
 }
 
-/* ===================== Totales ===================== */
+// ---- Totales ----
 function totalIngresos(){
     return estado.ingresos.modo === 'neto'
         ? estado.ingresos.neto
@@ -161,7 +155,7 @@ function totalDeudas(){
         : estado.acreedores.filas.reduce((s, f) => s + f.monto, 0);
 }
 
-/* ===================== Navegación ===================== */
+// ---- Navegación ----
 function irA(p){ paso = p; render(); document.querySelector('.tarjeta').scrollIntoView({ behavior:'smooth', block:'start' }); }
 
 function render(){
@@ -247,7 +241,7 @@ function toggleHTML(modo){
         '</div>';
 }
 
-/* ===================== PASO 0: Perfil ===================== */
+// ---- PASO 0: Perfil ----
 function pintarPerfil(){
     cont.innerHTML =
         '<div class="paso">' +
@@ -269,7 +263,7 @@ function pintarPerfil(){
     engancharNav();
 }
 
-/* ===================== PASO 1: Ingresos ===================== */
+// ---- PASO 1: Ingresos ----
 function pintarIngresos(){
     const d = estado.ingresos;
     cont.innerHTML =
@@ -288,7 +282,7 @@ function pintarIngresos(){
 }
 function actualizarTotalesIngresos(){ document.getElementById('tot-ingresos').textContent = pesos(totalIngresos()); }
 
-/* ===================== PASO 2: Gastos ===================== */
+// ---- PASO 2: Gastos ----
 function pintarGastos(){
     const d = estado.gastos;
     cont.innerHTML =
@@ -359,7 +353,7 @@ function cuerpoMonto(clave, host, textoAdd, placeholderDesc, onCambio){
     document.getElementById('add-' + clave).addEventListener('click', () => { d.filas.push({ desc:'', monto:0 }); dibujar(); onCambio(); });
 }
 
-/* ===================== PASO 3: Acreedores ===================== */
+// ---- PASO 3: Acreedores ----
 function pintarAcreedores(){
     const d = estado.acreedores;
     cont.innerHTML =
@@ -439,7 +433,7 @@ function esc(s){ return String(s || '').replace(/"/g, '&quot;').replace(/</g, '&
 /* Limpia el estado de error de un campo al editarlo */
 function limpiar(el){ el.classList.remove('error'); const a = document.getElementById('aviso-paso'); if (a) a.hidden = true; }
 
-/* ===================== PASO 4: Evaluación legal ===================== */
+// ---- PASO 4: Evaluación legal ----
 function evaluar(){
     const total = totalDeudas();
     // La fórmula legal requiere el detalle de acreedores (mora por obligación).
@@ -590,7 +584,7 @@ function plantilla(ev){
     return L.join('\n');
 }
 
-/* ===================== Arranque ===================== */
+// ---- Arranque ----
 render();
 </script>
 </body>

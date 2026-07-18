@@ -128,7 +128,6 @@
 
         return rCarpetas.data.map(c => ({
             id: c.id, nombre: c.nombre, descripcion: c.descripcion,
-            estadoProceso: c.estado_proceso, // >>> SIN USO: nadie lee ya este campo (timeline eliminado) — eliminar junto con la columna estado_proceso <<<
             pausado: !!c.pausado, fechaPausa: c.fecha_pausa || null,
             fechaReactivacion: c.fecha_reactivacion || null,
             fechaInicioTramite: c.fecha_inicio_tramite || null,
@@ -168,7 +167,6 @@
         const c = rC.data;
         return {
             id: c.id, nombre: c.nombre, descripcion: c.descripcion,
-            estadoProceso: c.estado_proceso, // >>> SIN USO: nadie lee ya este campo (timeline eliminado) — eliminar junto con la columna estado_proceso <<<
             pausado: !!c.pausado, fechaPausa: c.fecha_pausa || null,
             fechaReactivacion: c.fecha_reactivacion || null,
             fechaInicioTramite: c.fecha_inicio_tramite || null,
@@ -584,54 +582,6 @@
         });
         if (error) fallar(error);
     };
-
-    /* ============================================================
-       >>> SIN USO — REVISAR Y ELIMINAR MANUALMENTE <<<
-       El timeline de 9 etapas se reemplazó por los procesos con
-       semáforo: ya NADIE llama actualizarEstadoProceso (ni la RPC
-       actualizar_estado_proceso del esquema).
-       ============================================================ */
-    window.actualizarEstadoProceso = async (carpetaId, estado) => {
-        const { error } = await nube.rpc('actualizar_estado_proceso', {
-            carpeta: carpetaId,
-            nuevo_estado: estado
-        });
-        if (error) fallar(error);
-    };
-    /* >>> FIN SIN USO <<< */
-
-    /* ============================================================
-       >>> SIN USO — REVISAR Y ELIMINAR MANUALMENTE <<<
-       La pestaña "Deudor" se eliminó de la interfaz: ya NADIE llama
-       cargarInfoDeudor / guardarInfoDeudor. (La tabla deudores_info
-       y sus políticas RLS se conservan a propósito en Supabase.)
-       ============================================================ */
-    window.cargarInfoDeudor = async (carpetaId) => {
-        const { data, error } = await nube.from('deudores_info')
-            .select('*').eq('carpeta_id', carpetaId).maybeSingle();
-        if (error) fallar(error);
-        if (!data) return null;
-        return {
-            nombre: data.nombre, cedula: data.cedula, actividad: data.actividad,
-            empleador: data.empleador, estadoCivil: data.estado_civil, correo: data.correo,
-            apoderadoNombre: data.apoderado_nombre, apoderadoCedula: data.apoderado_cedula,
-            apoderadoTp: data.apoderado_tp, apoderadoCorreo: data.apoderado_correo,
-            actualizado: Date.parse(data.actualizado)
-        };
-    };
-    window.guardarInfoDeudor = async (carpetaId, datos) => {
-        const { error } = await nube.from('deudores_info').upsert({
-            carpeta_id: carpetaId,
-            nombre: datos.nombre || '', cedula: datos.cedula || '',
-            actividad: datos.actividad || '', empleador: datos.empleador || '',
-            estado_civil: datos.estadoCivil || '', correo: datos.correo || '',
-            apoderado_nombre: datos.apoderadoNombre || '', apoderado_cedula: datos.apoderadoCedula || '',
-            apoderado_tp: datos.apoderadoTp || '', apoderado_correo: datos.apoderadoCorreo || ''
-            // 'actualizado' lo fija el servidor (trigger deudores_tocar_actualizado)
-        }, { onConflict: 'carpeta_id' });
-        if (error) fallar(error);
-    };
-    /* >>> FIN SIN USO <<< */
 
     /* Crear usuario: llama a la Edge Function "crear-usuario" (la clave
        service_role vive SOLO en el servidor, que verifica que quien llama

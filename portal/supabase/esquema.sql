@@ -29,16 +29,6 @@ create table if not exists public.carpetas (
     fecha       timestamptz not null default now()
 );
 
--- >>> SIN USO — REVISAR Y ELIMINAR MANUALMENTE: la columna estado_proceso
--- >>> pertenecía al timeline de 9 etapas, reemplazado por procesos_tramite.
--- >>> Para retirarla: borrar este alter y la función actualizar_estado_proceso,
--- >>> y en la base de datos: drop function ... ; alter table carpetas drop column estado_proceso;
--- Estado formal del proceso (Ley 2445 de 2025). 9 etapas; la primera por
--- defecto. 'descripcion' se conserva para las notas internas del operador.
--- (por si la tabla ya existía de una versión anterior del esquema)
-alter table public.carpetas
-    add column if not exists estado_proceso text not null default 'Solicitud recibida';
-
 -- Qué cliente/acreedor puede ver qué carpeta
 create table if not exists public.carpeta_asignados (
     carpeta_id bigint not null references public.carpetas (id) on delete cascade,
@@ -359,35 +349,6 @@ begin
 end;
 $$;
 
--- >>> SIN USO — REVISAR Y ELIMINAR MANUALMENTE: el portal ya no llama esta
--- >>> función (el timeline de 9 etapas fue reemplazado por procesos_tramite).
--- Actualiza SOLO el estado formal del proceso (Ley 2445 de 2025). La puede
--- usar el admin o el operador responsable; el valor debe ser una de las 9
--- etapas válidas (igual que el control de acceso del estado del trámite).
-create or replace function public.actualizar_estado_proceso(carpeta bigint, nuevo_estado text)
-returns void
-language plpgsql security definer set search_path = public
-as $$
-begin
-    if not public.puede_subir_a_carpeta(carpeta) then
-        raise exception 'Sin permiso para actualizar esta carpeta';
-    end if;
-    if nuevo_estado is null or nuevo_estado not in (
-        'Solicitud recibida',
-        'Documentos verificados / Requisitos validados',
-        'En negociación con acreedores',
-        'Acuerdo en proceso',
-        'Acuerdo aprobado',
-        'En ejecución de acuerdo',
-        'Acuerdo cumplido',
-        'Liquidación patrimonial',
-        'Proceso cerrado / Finalizado'
-    ) then
-        raise exception 'Estado de proceso no válido';
-    end if;
-    update public.carpetas set estado_proceso = nuevo_estado where id = carpeta;
-end;
-$$;
 
 -- Registra una acción en la bitácora. El actor (usuario/nombre/rol) se
 -- toma del servidor según auth.uid(), así NO se puede falsificar quién hizo qué.
@@ -1064,60 +1025,6 @@ begin
 end;
 $$;
 
--- >>> DEFINICIÓN SUPERADA — REVISAR Y ELIMINAR MANUALMENTE: pausar_tramite y
--- >>> reactivar_tramite se REDEFINEN más abajo (sección 8, versión que también
--- >>> congela el vencimiento del trámite 60/90). Estas dos primeras versiones
--- >>> quedan sobreescritas al ejecutar el archivo: son código muerto.
--- Pausa el trámite completo: guarda cuántos días hábiles le quedaban a cada
--- proceso pendiente, para reanudar el conteo exacto al reactivar.
-create or replace function public.pausar_tramite(carpeta bigint)
-returns void
-language plpgsql security definer set search_path = public
-as $$
-declare
-    en_pausa boolean;
-begin
-    if not public.puede_subir_a_carpeta(carpeta) then
-        raise exception 'Sin permiso para pausar este trámite';
-    end if;
-    select pausado into en_pausa from public.carpetas where id = carpeta;
-    if en_pausa is null then raise exception 'Carpeta no encontrada'; end if;
-    if en_pausa then raise exception 'El trámite ya estaba pausado'; end if;
-    update public.carpetas
-       set pausado = true, fecha_pausa = current_date, fecha_reactivacion = null
-     where id = carpeta;
-    update public.procesos_tramite
-       set pausado = true, fecha_pausa = current_date,
-           dias_restantes_al_pausar = greatest(public.contar_dias_habiles(current_date, fecha_vencimiento_habil), 0)
-     where carpeta_id = carpeta and not completado;
-end;
-$$;
-
--- Reactiva el trámite: recalcula el vencimiento de cada proceso pendiente
--- con los días hábiles que le quedaban al pausar.
-create or replace function public.reactivar_tramite(carpeta bigint)
-returns void
-language plpgsql security definer set search_path = public
-as $$
-declare
-    en_pausa boolean;
-begin
-    if not public.puede_subir_a_carpeta(carpeta) then
-        raise exception 'Sin permiso para reactivar este trámite';
-    end if;
-    select pausado into en_pausa from public.carpetas where id = carpeta;
-    if en_pausa is null then raise exception 'Carpeta no encontrada'; end if;
-    if not en_pausa then raise exception 'El trámite no está pausado'; end if;
-    update public.carpetas
-       set pausado = false, fecha_reactivacion = current_date
-     where id = carpeta;
-    update public.procesos_tramite
-       set pausado = false, fecha_reactivacion = current_date, fecha_pausa = null,
-           fecha_vencimiento_habil = public.sumar_dias_habiles(current_date, coalesce(dias_restantes_al_pausar, 0))
-     where carpeta_id = carpeta and not completado and pausado;
-end;
-$$;
-
 -- Corrección del administrador: puede ajustar nombre, plazo, vencimiento,
 -- estado de completado y fijar el semáforo a mano ('' = volver a automático).
 -- Queda registrado quién editó y cuándo.
@@ -1253,66 +1160,6 @@ alter table public.carpetas add constraint carpetas_dias_habiles_tramite_check
 alter table public.carpetas add column if not exists tiene_prorroga boolean not null default false;
 alter table public.carpetas add column if not exists fecha_vencimiento_tramite date;
 alter table public.carpetas add column if not exists dias_restantes_tramite_al_pausar int;
-
--- >>> DEFINICIÓN SUPERADA — REVISAR Y ELIMINAR MANUALMENTE: iniciar_tramite y
--- >>> aplicar_prorroga se REDEFINEN más abajo (sección 12: prórroga también
--- >>> para el operador y candado de trámite finalizado). Estas versiones
--- >>> quedan sobreescritas al ejecutar el archivo: son código muerto.
--- Inicia el conteo del trámite: 60 días hábiles desde la fecha dada.
--- (el parámetro se llama p_fecha para no chocar con la columna carpetas.fecha)
-create or replace function public.iniciar_tramite(carpeta bigint, p_fecha date default current_date)
-returns void
-language plpgsql security definer set search_path = public
-as $$
-declare
-    c record;
-begin
-    if not public.puede_subir_a_carpeta(carpeta) then
-        raise exception 'Sin permiso para iniciar el conteo de este trámite';
-    end if;
-    select * into c from public.carpetas where id = carpeta for update;
-    if not found then raise exception 'Carpeta no encontrada'; end if;
-    if c.pausado then raise exception 'El trámite está pausado: reactívalo antes de iniciar el conteo'; end if;
-    if c.fecha_inicio_tramite is not null then
-        raise exception 'El conteo del trámite ya fue iniciado el %', c.fecha_inicio_tramite;
-    end if;
-    if p_fecha is null then p_fecha := current_date; end if;
-    update public.carpetas
-       set fecha_inicio_tramite = p_fecha,
-           dias_habiles_tramite = 60,
-           tiene_prorroga = false,
-           fecha_vencimiento_tramite = public.calcular_vencimiento_habil(p_fecha, 60),
-           dias_restantes_tramite_al_pausar = null
-     where id = carpeta;
-end;
-$$;
-
--- Prórroga: SOLO admin, SOLO una vez, SOLO con el trámite iniciado y sin
--- pausa. Extiende a 90 días hábiles desde la MISMA fecha de inicio.
-create or replace function public.aplicar_prorroga(carpeta bigint)
-returns void
-language plpgsql security definer set search_path = public
-as $$
-declare
-    c record;
-begin
-    if not public.es_admin() then
-        raise exception 'Solo el administrador puede aplicar la prórroga';
-    end if;
-    select * into c from public.carpetas where id = carpeta for update;
-    if not found then raise exception 'Carpeta no encontrada'; end if;
-    if c.fecha_inicio_tramite is null then
-        raise exception 'El trámite aún no tiene conteo iniciado: usa iniciar_tramite primero';
-    end if;
-    if c.tiene_prorroga then raise exception 'El trámite ya tiene la prórroga aplicada'; end if;
-    if c.pausado then raise exception 'El trámite está pausado: reactívalo antes de aplicar la prórroga'; end if;
-    update public.carpetas
-       set dias_habiles_tramite = 90,
-           tiene_prorroga = true,
-           fecha_vencimiento_tramite = public.calcular_vencimiento_habil(c.fecha_inicio_tramite, 90)
-     where id = carpeta;
-end;
-$$;
 
 -- Pausa/reactivación AMPLIADAS: congelan y reanudan también el vencimiento
 -- del trámite completo, igual que ya lo hacían con cada proceso.
@@ -2011,28 +1858,6 @@ create policy "escribir mensajes del canal" on public.mensajes
         public.puede_chat(carpeta_id, canal)
         and (public.es_personal_de_chat(carpeta_id) or destinatario_id is null)
     );
-
--- >>> DEFINICIÓN DUPLICADA — REVISAR Y ELIMINAR MANUALMENTE: esta función ya
--- >>> quedó IDÉNTICA en la sección 3 (con la columna id incluida); este bloque
--- >>> repetido no aporta nada.
--- Asignados con su id (para dirigir mensajes a UN acreedor)
-drop function if exists public.asignados_de_carpeta(bigint);
-create or replace function public.asignados_de_carpeta(carpeta bigint)
-returns table (id uuid, usuario text, nombre text, rol text, correo text)
-language plpgsql stable security definer set search_path = public
-as $$
-begin
-    if not public.puede_subir_a_carpeta(carpeta) then
-        raise exception 'Sin permiso para consultar los asignados de esta carpeta';
-    end if;
-    return query
-        select p.id, p.usuario, p.nombre, p.rol, coalesce(p.correo, '')
-        from public.carpeta_asignados a
-        join public.perfiles p on p.id = a.perfil_id
-        where a.carpeta_id = carpeta and p.activo
-        order by p.rol, p.nombre;
-end;
-$$;
 
 -- ============================================================
 -- 13) PRE-DESPLIEGUE: integridad de autor y avisos de ingreso

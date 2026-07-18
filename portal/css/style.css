@@ -33,7 +33,7 @@
     background:var(--blanco); border-radius:1.4rem; box-shadow:var(--sombra);
     width:100%; max-width:680px; padding:2.2rem; overflow:hidden;
   }
-  /* ===== Progreso ===== */
+  /* Progreso */
   .progreso{ margin-bottom:1.8rem; }
   .progreso__barra{ height:8px; background:var(--borde); border-radius:999px; overflow:hidden; }
   .progreso__fill{
@@ -42,13 +42,13 @@
     transition:width .4s var(--curva);
   }
   .progreso__txt{ margin-top:.6rem; font-size:.85rem; color:var(--gris); text-align:right; }
-  /* ===== Pasos ===== */
+  /* Pasos */
   .paso{ animation:aparecer .35s var(--curva) backwards; }
   @keyframes aparecer{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
   .paso__num{ color:var(--naranja); font-weight:700; font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; }
   .paso__preg{ font-family:var(--titulos); font-size:1.35rem; margin:.4rem 0 .7rem; line-height:1.35; }
   .paso__ayuda{ color:var(--gris); font-size:.95rem; margin-bottom:1.4rem; line-height:1.5; }
-  /* ===== Botones ===== */
+  /* Botones */
   .btn{
     padding:.8rem 1.6rem; border-radius:.9rem; border:none; font:inherit; font-weight:600;
     cursor:pointer; transition:all .18s var(--curva);
@@ -58,11 +58,9 @@
   .btn--primario{ background:var(--cian); color:#fff; }
   .btn--primario:hover{ background:var(--cian-osc); }
   .btn--primario:disabled{ background:var(--borde); color:#9aa7ad; cursor:not-allowed; }
-  .btn--cta{ background:var(--naranja); color:#fff; font-size:1.05rem; padding:1rem 2rem; }
-  .btn--cta:hover{ background:var(--naranja-osc); }
   .btn[hidden]{ display:none; }
   .navegacion{ margin-top:1.8rem; display:flex; justify-content:space-between; align-items:center; gap:1rem; }
-  /* ===== Perfil (selección única) ===== */
+  /* Perfil (selección única) */
   .opciones{ display:flex; gap:1rem; flex-wrap:wrap; }
   .opcion{
     flex:1; min-width:220px; padding:1.2rem; border:2px solid var(--borde); border-radius:1rem;
@@ -72,14 +70,14 @@
   .opcion small{ display:block; font-weight:400; color:var(--gris); font-size:.85rem; margin-top:.3rem; }
   .opcion:hover{ border-color:var(--cian); background:var(--fondo); }
   .opcion.activa{ border-color:var(--cian); background:var(--fondo); box-shadow:0 0 0 3px rgba(0,161,184,.15); }
-  /* ===== Toggle segmentado (Valor neto / Detallado) ===== */
+  /* Toggle segmentado (Valor neto / Detallado) */
   .toggle{ display:inline-flex; background:var(--fondo); border:1px solid var(--borde); border-radius:.8rem; padding:.25rem; margin-bottom:1.2rem; }
   .toggle button{
     border:none; background:transparent; font:inherit; font-weight:600; font-size:.9rem;
     padding:.5rem 1rem; border-radius:.6rem; cursor:pointer; color:var(--gris); transition:all .18s var(--curva);
   }
   .toggle button.activo{ background:var(--blanco); color:var(--cian-prof); box-shadow:0 1px 3px rgba(0,0,0,.08); }
-  /* ===== Filas dinámicas ===== */
+  /* Filas dinámicas */
   .filas{ display:flex; flex-direction:column; gap:.7rem; margin-bottom:1rem; }
   .fila{ display:flex; gap:.6rem; align-items:stretch; }
   .fila input, .fila select, .campo-neto input{
@@ -102,7 +100,7 @@
   }
   .btn-add:hover{ background:var(--fondo); }
   .campo-neto label{ display:block; font-weight:600; margin-bottom:.4rem; font-size:.95rem; }
-  /* ===== Barras de total / balance ===== */
+  /* Barras de total / balance */
   .total{
     display:flex; justify-content:space-between; align-items:center;
     background:var(--fondo); border-radius:.8rem; padding:.9rem 1.1rem; margin-top:.4rem; font-weight:600;
@@ -112,7 +110,7 @@
   .balance.neg{ background:var(--ambar-suave); border-color:#F0D9A8; }
   .balance .val{ color:var(--verde); }
   .balance.neg .val{ color:var(--ambar); }
-  /* ===== Resultado ===== */
+  /* Resultado */
   .resultado{ text-align:center; animation:aparecer .4s var(--curva) backwards; }
   .resultado__ico{ width:5.4rem; height:5.4rem; border-radius:50%; margin:0 auto 1.1rem; display:flex; align-items:center; justify-content:center; }
   .resultado--exito .resultado__ico{ background:var(--verde-suave); }
@@ -126,7 +124,7 @@
   .criterios li{ list-style:none; display:flex; gap:.6rem; align-items:flex-start; padding:.35rem 0; font-size:.92rem; }
   .criterios .ic{ flex:0 0 auto; margin-top:.1rem; }
   .criterios .ok{ color:var(--verde); } .criterios .no{ color:var(--rojo); }
-  /* ===== Captura de datos ===== */
+  /* Captura de datos */
   .lead{ text-align:left; margin-top:1.4rem; }
   .lead h3{ font-family:var(--titulos); font-size:1.15rem; margin-bottom:.3rem; }
   .lead p.sub{ color:var(--gris); font-size:.9rem; margin-bottom:1rem; }
@@ -138,13 +136,11 @@
   .resultado__acciones{ margin-top:1.6rem; display:flex; flex-direction:column; gap:.7rem; align-items:center; }
   .acciones-cta{ display:flex; gap:.8rem; flex-wrap:wrap; justify-content:center; width:100%; }
   .acciones-cta .btn{ flex:1; min-width:200px; }
-  .btn--wa{ background:#25D366; color:#fff; }
-  .btn--wa:hover{ background:#1eb958; }
   .enlace-sec{ color:var(--cian); text-decoration:underline; background:none; border:none; font:inherit; cursor:pointer; }
   .pie{ margin-top:1.6rem; color:var(--gris); font-size:.8rem; text-align:center; max-width:680px; }
   .pie a{ color:var(--cian); }
 
-  /* ===== Módulo 1: Modal de privacidad (Habeas Data) ===== */
+  /* Modal de consentimiento */
   .overlay{
     position:fixed; inset:0; background:rgba(9,32,38,.55); backdrop-filter:blur(3px);
     display:flex; align-items:center; justify-content:center; padding:1.2rem; z-index:1000;
