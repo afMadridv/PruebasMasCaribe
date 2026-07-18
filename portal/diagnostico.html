@@ -499,7 +499,8 @@ function pintarResultado(){
             leadHTML() +
             '<div class="resultado__acciones">' +
                 '<div class="acciones-cta">' +
-                    '<button class="btn btn--primario" id="btn-correo">Enviar al correo</button>' +
+                    '<button class="btn btn--primario" id="btn-correo">Enviar por Gmail</button>' +
+                    '<button class="btn btn--fantasma" id="btn-copiar">Copiar resumen</button>' +
                 '</div>' +
                 '<button class="enlace-sec" id="btn-reiniciar">Volver a empezar</button>' +
             '</div>' +
@@ -535,12 +536,27 @@ function engancharResultado(ev){
         return ok;
     }
 
+    // Compose web de Gmail: no depende de que el PC tenga un cliente de correo
     document.getElementById('btn-correo').addEventListener('click', () => {
         if (!leadValido()) return;
         const asunto = 'Solicitud de Asesoría de Insolvencia - ' + estado.lead.nombre;
-        window.location.href = 'mailto:' + CONTACTO.correo +
-            '?subject=' + encodeURIComponent(asunto) +
+        const url = 'https://mail.google.com/mail/?view=cm&fs=1' +
+            '&to=' + encodeURIComponent(CONTACTO.correo) +
+            '&su=' + encodeURIComponent(asunto) +
             '&body=' + encodeURIComponent(plantilla(ev));
+        window.open(url, '_blank', 'noopener');
+    });
+
+    // Respaldo para quien no use Gmail: copia destinatario + resumen al portapapeles
+    document.getElementById('btn-copiar').addEventListener('click', async () => {
+        if (!leadValido()) return;
+        const texto = 'Para: ' + CONTACTO.correo +
+            '\nAsunto: Solicitud de Asesoría de Insolvencia - ' + estado.lead.nombre +
+            '\n\n' + plantilla(ev);
+        try { await navigator.clipboard.writeText(texto); } catch (e) { /* sin permiso de portapapeles */ }
+        const b = document.getElementById('btn-copiar');
+        b.textContent = '¡Copiado!';
+        setTimeout(() => { b.textContent = 'Copiar resumen'; }, 1800);
     });
     document.getElementById('btn-reiniciar').addEventListener('click', () => {
         estado.perfil = null;
