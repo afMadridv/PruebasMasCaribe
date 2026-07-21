@@ -492,7 +492,33 @@ async function tramiteFinalizar(carpetaId) {
     const carpeta = await dbObtener('carpetas', carpetaId);
     if (!carpeta) throw new Error('Carpeta no encontrada.');
     if (carpeta.finalizado) throw new Error('El trámite ya estaba finalizado.');
-    await dbGuardar('carpetas', { ...carpeta, finalizado: true, fechaFinTramite: fechaISOLocal(new Date()) });
+    const hoy = fechaISOLocal(new Date());
+    await dbGuardar('carpetas', {
+        ...carpeta, finalizado: true, fechaFinTramite: hoy,
+        // 30 días hábiles de gracia para que las partes descarguen
+        fechaDesactivacion: sumarDiasHabiles(hoy, 30)
+    });
+}
+
+/* Avisos de cierre (modo local): mismo contrato que la versión en la nube.
+   Desactiva de paso las carpetas a las que ya se les cumplió el plazo. */
+async function avisosFinTramite() {
+    const carpetas = (await dbTodos('carpetas')).filter(c => c.finalizado && c.fechaDesactivacion);
+    const hoy = fechaISOLocal(new Date());
+    for (const c of carpetas) {
+        if (c.activa && !c.desactivacionAutoAplicada && c.fechaDesactivacion <= hoy) {
+            await dbGuardar('carpetas', { ...c, activa: false, desactivacionAutoAplicada: true });
+            c.activa = false;
+        }
+    }
+    return carpetas
+        .filter(c => puedeVerCarpeta(c))
+        .map(c => ({
+            carpetaId: c.id, nombre: c.nombre, fechaFin: c.fechaFinTramite,
+            fechaDesactivacion: c.fechaDesactivacion,
+            diasRestantes: Math.max(contarDiasHabiles(hoy, c.fechaDesactivacion), 0),
+            activa: !!c.activa
+        }));
 }
 
 /* Consentimiento de datos (modo local) */

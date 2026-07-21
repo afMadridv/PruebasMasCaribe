@@ -138,6 +138,7 @@
             totalArchivos: Number(c.total_archivos || 0),
             finalizado: !!c.finalizado,
             fechaFinTramite: c.fecha_fin_tramite || null,
+            fechaDesactivacion: c.fecha_desactivacion_programada || null,
             activa: c.activa, creadaPor: c.creada_por, fecha: Date.parse(c.fecha),
             asignados: (rAsignados.data || [])
                 .filter(a => a.carpeta_id === c.id)
@@ -177,6 +178,7 @@
             totalArchivos: Number(c.total_archivos || 0),
             finalizado: !!c.finalizado,
             fechaFinTramite: c.fecha_fin_tramite || null,
+            fechaDesactivacion: c.fecha_desactivacion_programada || null,
             activa: c.activa, creadaPor: c.creada_por, fecha: Date.parse(c.fecha),
             asignados: (rA.data || []).map(a => usuarioPorId[a.perfil_id] || a.perfil_id),
             operadores: (rO.data || []).map(o => usuarioPorId[o.perfil_id] || o.perfil_id)
@@ -692,6 +694,23 @@
     window.tramiteFinalizar = async (carpetaId) => {
         const { error } = await nube.rpc('finalizar_tramite', { carpeta: carpetaId });
         if (error) fallar(error);
+    };
+
+    /* Trámites finalizados que el usuario todavía puede ver, con los días
+       hábiles que le quedan para descargar. De paso desactiva las carpetas a
+       las que ya se les cumplió el plazo (no hace falta un cron). */
+    window.avisosFinTramite = async () => {
+        try { await nube.rpc('aplicar_desactivaciones_automaticas'); } catch (e) { /* no rompe el ingreso */ }
+        const { data, error } = await nube.rpc('avisos_fin_tramite');
+        if (error) { console.warn('No se pudieron cargar los avisos de cierre:', error.message); return []; }
+        return (data || []).map(a => ({
+            carpetaId: a.carpeta_id,
+            nombre: a.nombre,
+            fechaFin: a.fecha_fin,
+            fechaDesactivacion: a.fecha_desactivacion,
+            diasRestantes: Number(a.dias_habiles_restantes || 0),
+            activa: !!a.activa
+        }));
     };
 
     /* ============ PRESENCIA Y ÚLTIMA CONEXIÓN (modo nube) ============ */

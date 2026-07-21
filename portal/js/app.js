@@ -100,6 +100,8 @@ async function iniciar() {
     iniciarCampana();
     // Primer ingreso de cliente/acreedor: consentimiento de datos (bloqueante)
     verificarConsentimiento();
+    // Trámites cerrados: recordar en cada ingreso el plazo para descargar
+    avisarCierresPendientes();
     // Marca de última conexión + presencia en tiempo real (En línea / Desconectado)
     registrarConexion();
     presenciaIniciar((enLinea) => {
@@ -411,7 +413,8 @@ function semaforoEfectivo(p, pausadoCarpeta) {
 function resumenTramite(c) {
     if (c.finalizado) {
         return puntoSemaforo('verde', 10) + ' <strong>Trámite finalizado</strong>' +
-            (c.fechaFinTramite ? ' el ' + escaparHtml(formatoFechaDia(c.fechaFinTramite)) : '');
+            (c.fechaFinTramite ? ' el ' + escaparHtml(formatoFechaDia(c.fechaFinTramite)) : '') +
+            resumenCierre(c);
     }
     if (!c.fechaInicioTramite) return null;
     const total = c.diasHabilesTramite || 60;
@@ -428,6 +431,70 @@ function resumenTramite(c) {
             : '<strong>' + restantes + '</strong> de ' + total + ' días hábiles restantes · vence el ' +
               escaparHtml(formatoVencimiento(c.fechaVencimientoTramite))) +
         (c.tieneProrroga ? ' · con prórroga' : '');
+}
+
+/* Aviso de cada ingreso: por cada trámite finalizado que el usuario todavía
+   puede ver, recuerda cuántos días hábiles le quedan para descargar. */
+async function avisarCierresPendientes() {
+    if (typeof avisosFinTramite !== 'function') return;
+    let avisos = [];
+    try { avisos = await avisosFinTramite(); } catch (e) { return; }
+    avisos.filter(a => a.activa).forEach((a, i) => {
+        setTimeout(() => avisar(textoAvisoCierre(a.nombre, a.diasRestantes, a.fechaDesactivacion), 'aviso'),
+                   1200 + i * 600);
+    });
+}
+
+/* Ventana emergente al abrir una carpeta con el trámite ya finalizado */
+function mostrarModalCierre(c) {
+    if (!c || !c.finalizado || !c.fechaDesactivacion) return;
+    if (document.getElementById('modal-cierre-tramite')) return;
+    const dias = diasParaCierre(c);
+    const caja = document.createElement('div');
+    caja.className = 'pt-modal';
+    caja.id = 'modal-cierre-tramite';
+    caja.innerHTML =
+        '<div class="pt-modal__caja">' +
+            '<h3>Trámite finalizado</h3>' +
+            '<p>' + escaparHtml(textoAvisoCierre(c.nombre, dias, c.fechaDesactivacion)) + '</p>' +
+            (c.activa
+                ? '<p>La carpeta se desactivará el <strong>' +
+                  escaparHtml(formatoFechaDia(c.fechaDesactivacion)) + '</strong>.</p>'
+                : '<p>La carpeta ya fue <strong>desactivada</strong>.</p>') +
+            '<div class="pt-modal__acciones">' +
+                '<button class="pt-boton pt-boton--primario" data-accion="cerrar-modal-cierre">Entendido</button>' +
+            '</div>' +
+        '</div>';
+    document.body.appendChild(caja);
+    caja.querySelector('[data-accion="cerrar-modal-cierre"]')
+        .addEventListener('click', () => caja.remove());
+}
+
+/* Días hábiles que quedan para descargar antes de que la carpeta se desactive.
+   Devuelve null si la carpeta no está finalizada o no tiene fecha programada. */
+function diasParaCierre(c) {
+    if (!c || !c.finalizado || !c.fechaDesactivacion) return null;
+    return Math.max(contarDiasHabiles(fechaISOLocalHabil(), c.fechaDesactivacion), 0);
+}
+
+/* Complemento de la línea "Trámite finalizado": cuenta regresiva y fecha exacta
+   en que la carpeta deja de estar disponible. */
+function resumenCierre(c) {
+    const dias = diasParaCierre(c);
+    if (dias === null) return '';
+    const fecha = escaparHtml(formatoFechaDia(c.fechaDesactivacion));
+    if (!c.activa) return ' · <strong>carpeta desactivada</strong> el ' + fecha;
+    if (dias === 0) return ' · <strong>se desactiva hoy</strong> (' + fecha + ')';
+    return ' · quedan <strong>' + dias + '</strong> día' + (dias === 1 ? '' : 's') +
+           ' hábil' + (dias === 1 ? '' : 'es') + ' para descargar · se desactiva el ' + fecha;
+}
+
+/* Texto único del aviso de cierre, para la notificación y el modal */
+function textoAvisoCierre(nombre, dias, fechaISO) {
+    const fecha = formatoFechaDia(fechaISO);
+    return 'El trámite «' + nombre + '» finalizó. Tienes ' + dias + ' día' + (dias === 1 ? '' : 's') +
+        ' hábil' + (dias === 1 ? '' : 'es') + ' (hasta el ' + fecha + ') para descargar los documentos ' +
+        'de la carpeta. Después de esa fecha deberás solicitarlos escribiendo al correo de la fundación.';
 }
 
 /* Línea de resumen de la tarjeta: proceso actual + color, o estado general */
@@ -477,6 +544,9 @@ async function abrirCarpeta(id) {
 
     // Resumen del semáforo del trámite (se gestiona desde la pestaña "Estados")
     pintarSemaforoDetalle(carpeta);
+
+    // Trámite cerrado: recordar el plazo para descargar los documentos
+    mostrarModalCierre(carpeta);
 
     // Notas internas del operador: las ve el personal (y el monitor, en lectura)
     document.getElementById('zona-notas').hidden = !(ES_PERSONAL || ES_MONITOR);
