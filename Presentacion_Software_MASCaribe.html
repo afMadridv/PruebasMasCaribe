@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Portal Documental MASCaribe — Presentación del software</title>
+<style>
+  :root{
+    --tinta:#17262E; --gris:#536068; --navy:#0C3A4E; --teal:#12867F;
+    --borde:#E2EAEC; --verde:#157039; --rojo:#B3261E; --ambar:#8A4B08; --fondo:#F3F7F8;
+  }
+  *{ box-sizing:border-box; }
+  @page{ size:A4; margin:14mm 12mm; }
+  body{ font-family:'Segoe UI', Arial, sans-serif; color:var(--tinta); line-height:1.5;
+        margin:0; background:#fff; font-size:11.5px; }
+  header.portada{ text-align:center; padding:2.2rem 0 1.4rem; border-bottom:4px solid var(--teal); margin-bottom:1.2rem; }
+  header.portada h1{ font-size:25px; margin:0 0 .35rem; color:var(--navy); }
+  header.portada .sub{ color:var(--gris); font-size:13.5px; }
+  header.portada .meta{ color:var(--gris); font-size:10.5px; margin-top:.9rem; }
+  h2{ color:#fff; background:var(--navy); padding:.45rem .9rem; border-radius:5px; font-size:14.5px; margin:1.5rem 0 .7rem; }
+  h3{ color:var(--teal); font-size:12.8px; margin:.95rem 0 .28rem; border-bottom:1px solid var(--borde); padding-bottom:.18rem; }
+  p{ margin:.35rem 0; }
+  ul{ margin:.28rem 0 .55rem; padding-left:1.15rem; }
+  li{ margin:.2rem 0; }
+  table{ border-collapse:collapse; width:100%; margin:.45rem 0 .9rem; font-size:10.8px; }
+  th,td{ border:1px solid var(--borde); padding:.38rem .5rem; text-align:left; vertical-align:top; }
+  th{ background:var(--fondo); color:var(--navy); }
+  code{ background:var(--fondo); padding:.05rem .25rem; border-radius:3px; font-size:10.2px; }
+  .nota{ background:var(--fondo); border-left:3px solid var(--teal); padding:.5rem .85rem;
+         border-radius:0 5px 5px 0; margin:.6rem 0; font-size:11px; }
+  .destacado{ background:#EAF5F4; border:1px solid var(--teal); border-radius:5px; padding:.6rem .9rem; margin:.7rem 0; }
+  .cifras{ display:flex; gap:.5rem; flex-wrap:wrap; margin:.6rem 0; }
+  .cifra{ flex:1; min-width:105px; border:1px solid var(--borde); border-radius:5px; padding:.5rem .6rem; text-align:center; background:var(--fondo); }
+  .cifra b{ display:block; font-size:17px; color:var(--navy); }
+  .cifra span{ font-size:9.8px; color:var(--gris); }
+  .sem{ display:inline-block; width:9px; height:9px; border-radius:50%; vertical-align:middle; margin-right:.2rem; }
+  footer{ margin-top:1.8rem; border-top:1px solid var(--borde); padding-top:.6rem; color:var(--gris); font-size:10px; text-align:center; }
+  h2,h3{ break-after:avoid; page-break-after:avoid; }
+  section{ break-inside:avoid-page; }
+  table,.destacado,.nota{ break-inside:avoid; }
+  .salto{ break-before:page; page-break-before:always; }
+</style>
+</head>
+<body>
+
+<header class="portada">
+  <h1>Portal Documental MASCaribe</h1>
+  <div class="sub">Software de gestión de trámites de insolvencia y conciliación<br>de persona natural</div>
+  <div class="meta">Documento de presentación · Fundación MASCaribe · 20 de julio de 2026</div>
+</header>
+
+<section>
+<h2>1 · Resumen ejecutivo</h2>
+<p>La fundación acompaña a deudores que no pueden pagar sus obligaciones para que negocien
+acuerdos con sus acreedores ante un operador habilitado, bajo la ley colombiana
+(Ley 1564 de 2012 y la reforma de la Ley 2445 de 2025). Estos trámites tienen
+<strong>plazos estrictos en días hábiles</strong>: 60 días, ampliables a 90 con prórroga.</p>
+
+<p>Hasta ahora esa operación dependía de correos, carpetas sueltas y control manual de fechas.
+El software la centraliza en <strong>una sola plataforma web</strong> con dos piezas que se complementan:</p>
+
+<table>
+  <tr><th style="width:26%">Componente</th><th>Para qué sirve</th><th style="width:22%">Quién lo usa</th></tr>
+  <tr>
+    <td><strong>Diagnóstico de insolvencia</strong><br><em>(público)</em></td>
+    <td>Página abierta donde una persona calcula en pocos pasos si cumple los requisitos legales
+        para acogerse a la insolvencia, y deja sus datos para ser contactada.</td>
+    <td>Ciudadanos / posibles clientes</td>
+  </tr>
+  <tr>
+    <td><strong>Portal Documental</strong><br><em>(privado)</em></td>
+    <td>Sistema interno donde vive cada trámite: documentos, plazos con semáforo, calendario,
+        chats, notificaciones y auditoría, con permisos por rol.</td>
+    <td>Administración, operadores, deudores y acreedores</td>
+  </tr>
+</table>
+
+<div class="destacado">
+<strong>Valor para la fundación:</strong> capta clientes de forma automática y filtrada (solo entran
+casos que realmente califican), elimina el control manual de plazos legales, deja
+<strong>trazabilidad auditable</strong> de todo lo que pasa en cada expediente y cumple de entrada la
+normativa de protección de datos.
+</div>
+</section>
+
+<section>
+<h2>2 · Módulo público: Diagnóstico de insolvencia</h2>
+<p>Es la puerta de entrada y la cara visible de la fundación. Resuelve una pregunta que hoy consume
+horas de asesoría: <em>¿esta persona califica o no?</em></p>
+
+<h3>2.1 · Consentimiento de datos antes de todo (Habeas Data)</h3>
+<p>Al entrar, un aviso a pantalla completa bloquea el sitio hasta que la persona lea y autorice el
+tratamiento de sus datos. Incluye las políticas de la fundación y la referencia a la
+<strong>Ley 1581 de 2012</strong> y el <strong>Decreto 0042 de 2026</strong> (protección de datos personales)
+y la <strong>Ley 1712 de 2014</strong> (transparencia y acceso a la información). El botón de continuar
+permanece deshabilitado hasta marcar la casilla de autorización, y el consentimiento queda guardado
+en el equipo para no repetirlo en cada visita.</p>
+<div class="nota">
+Cláusula de confidencialidad explícita en el aviso: el tratamiento se hace de manera estrictamente
+confidencial dentro del portal de la fundación, y los datos no se divulgan, comparten ni salen de la
+institución bajo ningún escenario externo.
+</div>
+
+<h3>2.2 · Recolección de la situación económica (4 pasos)</h3>
+<ul>
+  <li><strong>Paso 1 — Perfil:</strong> persona natural no comerciante o pequeño comerciante.</li>
+  <li><strong>Paso 2 — Ingresos:</strong> valor neto, o detalle línea por línea con total en vivo.</li>
+  <li><strong>Paso 3 — Gastos:</strong> igual que ingresos, con <strong>barra de balance</strong>
+      (ingresos − gastos) que cambia de color si el resultado es negativo.</li>
+  <li><strong>Paso 4 — Acreedores:</strong> a quién debe, concepto, monto de capital y
+      <strong>días de mora</strong> por obligación, con total de pasivo en vivo.</li>
+</ul>
+<p>Todos los campos son obligatorios: el sistema no deja avanzar con datos incompletos y marca en rojo
+lo que falta. Los montos se formatean en pesos colombianos automáticamente.</p>
+
+<h3>2.3 · Evaluación legal automática</h3>
+<p>El resultado no es una opinión: aplica los cuatro requisitos de ley sobre los datos ingresados.</p>
+<table>
+  <tr><th style="width:6%">#</th><th>Requisito verificado</th></tr>
+  <tr><td>1</td><td>Deudas con <strong>dos o más acreedores distintos</strong></td></tr>
+  <tr><td>2</td><td><strong>Dos o más obligaciones en mora</strong></td></tr>
+  <tr><td>3</td><td>Esas obligaciones con <strong>90 días o más</strong> de mora</td></tr>
+  <tr><td>4</td><td>La deuda en mora de 90+ días representa <strong>más del 30% del pasivo total</strong></td></tr>
+</table>
+<p>Se muestra cada requisito cumplido o no, con su cifra real (por ejemplo «va en 80,0%»), de modo que
+la persona entiende <em>por qué</em> califica o no. Si no califica, no se le cierra la puerta: se le
+ofrece asesoría en alternativas como negociación directa o conciliación.</p>
+
+<h3>2.4 · Captación del cliente</h3>
+<p>Tras el resultado se piden nombre, correo y teléfono/WhatsApp (validados). Con eso se arma un
+resumen ordenado —perfil, ingresos, gastos, balance, listado de acreedores con su mora y el
+diagnóstico— y se envía a la fundación por <strong>correo</strong>, o se copia al portapapeles como
+respaldo. La fundación recibe el caso ya pre-calificado y con las cifras completas.</p>
+</section>
+
+<section class="salto">
+<h2>3 · Módulo privado: Portal Documental</h2>
+<p>Cada trámite vive en una <strong>carpeta</strong> que reúne sus documentos, plazos, calendario,
+conversaciones e historial. Cada participante entra con su usuario y ve únicamente lo que su rol
+permite.</p>
+
+<h3>3.1 · Quién entra y qué puede hacer</h3>
+<table>
+  <tr><th style="width:17%">Rol</th><th>Alcance dentro del portal</th></tr>
+  <tr><td><strong>Administrador</strong></td>
+      <td>Control total: crea carpetas y usuarios, asigna operadores y partes, inicia el conteo legal,
+      aplica prórroga, pausa/reactiva, da <em>fin de trámite</em> (exclusivo), corrige plazos y semáforos
+      dejando registro de quién y cuándo, revisa la bitácora completa y los consentimientos.</td></tr>
+  <tr><td><strong>Monitor</strong></td>
+      <td>Supervisión en <em>solo lectura</em>: ve todas las carpetas, estados, calendarios y chats,
+      sin crear, editar ni eliminar nada, y sin gestión de usuarios.</td></tr>
+  <tr><td><strong>Operador</strong></td>
+      <td>Gestiona <em>sus</em> trámites asignados: sube y ordena documentos, genera el expediente
+      unificado en PDF, crea y completa procesos con semáforo, inicia conteo y prórrogas,
+      agenda audiencias, y chatea con el deudor y con cada acreedor.</td></tr>
+  <tr><td><strong>Cliente (deudor)</strong></td>
+      <td>Consulta y descarga los documentos de su trámite, ve en qué estado va, revisa el calendario
+      de audiencias, conversa con su operador y recibe notificaciones.</td></tr>
+  <tr><td><strong>Acreedor</strong></td>
+      <td>Ve documentos y audiencias del trámite y conversa con el operador en un
+      <strong>hilo individual</strong>: nunca ve los mensajes de otros acreedores ni la información
+      personal del deudor.</td></tr>
+</table>
+
+<h3>3.2 · Control de plazos legales (el corazón del sistema)</h3>
+<ul>
+  <li>Cada trámite se divide en procesos con plazo en días hábiles (ej.: «Aceptación, 3 días»).
+      El sistema descuenta sábados, domingos y <strong>festivos oficiales de Colombia</strong> y
+      calcula el vencimiento solo.</li>
+  <li>Semáforo calculado <strong>en el servidor</strong>:
+      <span class="sem" style="background:#157039"></span>verde al día ·
+      <span class="sem" style="background:#D98500"></span>naranja por vencer ·
+      <span class="sem" style="background:#B3261E"></span>rojo vencido ·
+      <span class="sem" style="background:#8A9AA1"></span>gris pausado.</li>
+  <li>Conteo legal completo de <strong>60 días hábiles, 90 con prórroga</strong>; la pausa congela el
+      reloj y la reactivación lo reanuda exacto.</li>
+  <li>Un operador <strong>no puede</strong> completar un proceso ya vencido: eso queda reservado a la
+      administración. Los plazos no se pueden burlar desde el navegador.</li>
+</ul>
+
+<h3>3.3 · Documentos, comunicación y control</h3>
+<table>
+  <tr><th style="width:24%">Área</th><th>Qué incluye</th></tr>
+  <tr><td><strong>Documentos</strong></td>
+      <td>PDF, Word, Excel, imágenes, audio y video (hasta 100 MB por archivo), con registro de quién
+      subió qué y cuándo, orden manual, descarga completa en ZIP y expediente unificado en PDF.
+      Biblioteca lateral con las leyes de insolvencia colombianas.</td></tr>
+  <tr><td><strong>Calendarios</strong></td>
+      <td>Audiencias con hora, enlace de reunión y aviso por correo a las partes; y vista mensual de
+      vencimientos con festivos marcados, resumen de vencidos/por vencer/completados y filtros.</td></tr>
+  <tr><td><strong>Comunicación</strong></td>
+      <td>Chat del trámite (canal deudor↔operador y un canal por acreedor) con adjuntos, leído/no
+      leído y tiempo real; chat de soporte entre administración y operadores; llamadas de voz
+      iniciadas solo por la administración.</td></tr>
+  <tr><td><strong>Notificaciones</strong></td>
+      <td>Campana personal con contador y clic que lleva al origen. Avisos automáticos de documento
+      nuevo, mensaje nuevo, cambios de estado, vencimientos, pausas, prórrogas y fin de trámite.</td></tr>
+  <tr><td><strong>Auditoría</strong></td>
+      <td>Bitácora de quién entró, vio, descargó, subió o cambió qué y cuándo, con filtro por carpeta.
+      Constancias descargables en PDF de la actividad de los acreedores y del consentimiento de datos
+      de cada usuario.</td></tr>
+  <tr><td><strong>Usuarios</strong></td>
+      <td>Generador de credenciales, estado En línea/Desconectado, última conexión y restablecimiento
+      seguro de contraseñas (nunca se pueden ver, solo cambiar).</td></tr>
+</table>
+</section>
+
+<section class="salto">
+<h2>4 · Cumplimiento normativo</h2>
+<table>
+  <tr><th style="width:30%">Norma</th><th>Cómo la cumple el software</th></tr>
+  <tr><td><strong>Ley 1564 de 2012</strong> y <strong>Ley 2445 de 2025</strong><br>(régimen de insolvencia)</td>
+      <td>Requisitos de admisión verificados por el diagnóstico; conteo de 60/90 días hábiles y
+      etapas del trámite controlados por el sistema.</td></tr>
+  <tr><td><strong>Ley 1581 de 2012</strong> y <strong>Decreto 0042 de 2026</strong><br>(Habeas Data)</td>
+      <td>Autorización previa, expresa e informada antes de capturar cualquier dato, tanto en el
+      diagnóstico público como en el primer ingreso de clientes y acreedores al portal, con registro
+      auditable y constancia descargable.</td></tr>
+  <tr><td><strong>Ley 1712 de 2014</strong><br>(transparencia)</td>
+      <td>Informada en el aviso de privacidad; el titular puede solicitar en cualquier momento un
+      informe sobre el uso de sus datos.</td></tr>
+</table>
+<div class="destacado">
+<strong>Confidencialidad por diseño:</strong> la información no sale de la institución. Un acreedor
+jamás accede a los datos personales del deudor y un operador solo ve sus propios casos — y eso no
+depende de la pantalla, sino de reglas aplicadas en la base de datos.
+</div>
+</section>
+
+<section>
+<h2>5 · Arquitectura y tecnología</h2>
+<table>
+  <tr><th style="width:22%">Capa</th><th style="width:26%">Tecnología</th><th>Para qué</th></tr>
+  <tr><td>Interfaz</td><td>HTML5, CSS3 y JavaScript puro (sin frameworks)</td>
+      <td>Aplicación de una sola página, servida como sitio estático: carga rápida y mantenimiento sencillo.</td></tr>
+  <tr><td>Backend</td><td>Supabase</td><td>Plataforma que reemplaza al servidor propio (menos costo y mantenimiento).</td></tr>
+  <tr><td>· Base de datos</td><td>PostgreSQL</td>
+      <td>Tablas del negocio y funciones con las reglas legales (días hábiles, semáforo, 60/90 días) y triggers de auditoría.</td></tr>
+  <tr><td>· Seguridad</td><td>Row Level Security + Supabase Auth</td>
+      <td>Autenticación y filtrado de <em>cada</em> consulta según el rol, dentro de la base de datos.</td></tr>
+  <tr><td>· Archivos</td><td>Supabase Storage</td><td>Bucket privado para documentos y adjuntos, con las mismas reglas por carpeta.</td></tr>
+  <tr><td>· Tiempo real</td><td>Supabase Realtime</td><td>Mensajes instantáneos, campana de notificaciones y presencia En línea.</td></tr>
+  <tr><td>· Funciones servidor</td><td>Edge Functions</td><td>Operaciones privilegiadas (p. ej. restablecer contraseñas) sin exponer claves en el navegador.</td></tr>
+  <tr><td>Llamadas de voz</td><td>WebRTC</td><td>Audio directo entre navegadores.</td></tr>
+  <tr><td>Documentos</td><td>pdf-lib y JSZip</td><td>Expediente en PDF, constancias y descarga en ZIP, generados en el propio navegador.</td></tr>
+  <tr><td>Publicación</td><td>GitHub + Netlify</td><td>Cada cambio aprobado se publica solo, con historial completo de versiones.</td></tr>
+</table>
+<div class="nota">
+<strong>Sobre la seguridad de las claves:</strong> la clave que viaja al navegador es pública por diseño
+y, sin un usuario autenticado, no da acceso a nada: todas las reglas reales viven en el servidor. La
+clave privilegiada existe únicamente dentro de las funciones de servidor.
+</div>
+</section>
+
+<section>
+<h2>6 · Dimensión del sistema</h2>
+<div class="cifras">
+  <div class="cifra"><b>5</b><span>roles con permisos distintos</span></div>
+  <div class="cifra"><b>17</b><span>tablas de negocio</span></div>
+  <div class="cifra"><b>68</b><span>reglas de acceso (RLS)</span></div>
+  <div class="cifra"><b>61</b><span>funciones de negocio en servidor</span></div>
+  <div class="cifra"><b>100 MB</b><span>máx. por archivo</span></div>
+</div>
+<p style="font-size:10.5px; color:var(--gris);">Cifras tomadas directamente del código y del esquema
+de base de datos en producción, no estimadas.</p>
+</section>
+
+<section>
+<h2>7 · Estado actual y siguientes pasos</h2>
+<h3>Listo y en funcionamiento</h3>
+<ul>
+  <li>Portal Documental operativo con los cinco roles, control de plazos, chats, notificaciones y auditoría.</li>
+  <li>Diagnóstico público con consentimiento de datos, evaluación legal y captación de casos.</li>
+  <li>Publicación automática: el sitio se actualiza solo al aprobar cambios, con historial de versiones.</li>
+  <li>Depuración reciente del código: se retiró funcionalidad obsoleta para dejar el sistema más liviano y fácil de mantener.</li>
+</ul>
+<h3>Propuestas a decidir por la dirección</h3>
+<ul>
+  <li><strong>Correo institucional de recepción</strong> del diagnóstico y número de WhatsApp oficial
+      para publicarlos en el sitio.</li>
+  <li><strong>Guardar los diagnósticos en la base de datos</strong> (hoy llegan por correo), para medir
+      cuántas personas consultan, cuántas califican y de dónde vienen.</li>
+  <li><strong>Revisión jurídica</strong> de los textos legales del aviso de privacidad antes de la
+      difusión pública.</li>
+  <li><strong>Capacitación</strong> breve a operadores sobre semáforos, prórroga y fin de trámite.</li>
+</ul>
+</section>
+
+<footer>
+Portal Documental MASCaribe · Documento de presentación · 20 de julio de 2026
+</footer>
+
+</body>
+</html>
