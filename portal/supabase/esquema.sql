@@ -2072,7 +2072,8 @@ begin
 
         aviso := 'El trámite «' || new.nombre || '» finalizó. Tienes ' ||
                  public.dias_gracia_cierre() || ' días hábiles (hasta el ' ||
-                 to_char(new.fecha_desactivacion_programada, 'DD/MM/YYYY') ||
+                 to_char(coalesce(new.fecha_desactivacion_programada,
+                     public.sumar_dias_habiles(current_date, public.dias_gracia_cierre())), 'DD/MM/YYYY') ||
                  ') para descargar los documentos de la carpeta. Después de esa fecha ' ||
                  'deberás solicitarlos escribiendo al correo de la fundación.';
 
@@ -2135,5 +2136,54 @@ begin
           and c.fecha_desactivacion_programada is not null
           and public.puede_ver_carpeta(c.id)
         order by c.fecha_desactivacion_programada;
+end;
+$$;
+
+-- ============================================================
+-- 15) DESCARGA POR ARCHIVO: el operador decide qué ven las partes
+-- ============================================================
+-- Cada documento lleva una marca "descargable por las partes". El personal
+-- (admin, operador, monitor) siempre descarga todo; el cliente y el acreedor
+-- solo descargan los archivos marcados como disponibles. La regla se aplica en
+-- Storage, no solo en la interfaz.
+
+alter table public.archivos add column if not exists descargable_partes boolean not null default true;
+
+-- ¿El usuario actual puede descargar el objeto de Storage en esta ruta?
+create or replace function public.puede_descargar_archivo(ruta text)
+returns boolean
+language sql stable security definer set search_path = public
+as $$
+    select public.puede_ver_carpeta(public.carpeta_de_ruta(ruta))
+       and (
+           public.rol_actual() in ('administrador', 'operador', 'monitor')
+           or coalesce(
+               (select a.descargable_partes from public.archivos a where a.ruta_storage = ruta limit 1),
+               true)
+       );
+$$;
+
+-- La descarga de documentos pasa a respetar la marca por archivo
+drop policy if exists "descarga segun carpeta asignada" on storage.objects;
+create policy "descarga segun carpeta asignada" on storage.objects
+    for select using (
+        bucket_id = 'documentos'
+        and public.puede_descargar_archivo(name)
+    );
+
+-- El operador responsable (o el admin) cambia la disponibilidad de un archivo
+create or replace function public.fijar_descarga_partes(archivo bigint, permitir boolean)
+returns void
+language plpgsql security definer set search_path = public
+as $$
+declare
+    c bigint;
+begin
+    select carpeta_id into c from public.archivos where id = archivo;
+    if c is null then raise exception 'Archivo no encontrado'; end if;
+    if not public.puede_subir_a_carpeta(c) then
+        raise exception 'Sin permiso para cambiar la descarga de este archivo';
+    end if;
+    update public.archivos set descargable_partes = permitir where id = archivo;
 end;
 $$;

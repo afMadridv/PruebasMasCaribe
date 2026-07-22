@@ -275,6 +275,7 @@
                 carpeta_id: valor.carpetaId, nombre: valor.nombre,
                 tipo: valor.tipo || '', tamano: valor.tamano || 0,
                 ruta_storage: ruta,
+                descargable_partes: valor.descargablePartes !== false,
                 // se guarda el NOMBRE visible (la identidad real va en subido_por)
                 subido_por: ses._id || null, subido_por_usuario: ses.nombre || ses.usuario || ''
             });
@@ -334,14 +335,21 @@
 
     window.dbArchivosDeCarpeta = async (carpetaId) => {
         const { data, error } = await nube.from('archivos')
-            .select('id, carpeta_id, nombre, tipo, tamano, subido_por_usuario, fecha, orden')
+            .select('id, carpeta_id, nombre, tipo, tamano, subido_por_usuario, fecha, orden, descargable_partes')
             .eq('carpeta_id', carpetaId);
         if (error) fallar(error);
         return data.map(a => ({
             id: a.id, carpetaId: a.carpeta_id, nombre: a.nombre, tipo: a.tipo,
             tamano: a.tamano, subidoPor: a.subido_por_usuario,
-            fecha: Date.parse(a.fecha), orden: a.orden
+            fecha: Date.parse(a.fecha), orden: a.orden,
+            descargablePartes: a.descargable_partes !== false
         }));
+    };
+
+    /* Marca si las partes (cliente/acreedor) pueden descargar un archivo */
+    window.fijarDescargaPartes = async (archivoId, permitir) => {
+        const { error } = await nube.rpc('fijar_descarga_partes', { archivo: archivoId, permitir: !!permitir });
+        if (error) fallar(error);
     };
 
     /* Orden manual de los documentos: solo la columna 'orden', validado en
@@ -501,11 +509,17 @@
        van en paralelo; RLS valida el acceso archivo por archivo. */
     window.descargarBlobsDeCarpeta = async (carpetaId, alProgresar) => {
         const { data, error } = await nube.from('archivos')
-            .select('nombre, ruta_storage').eq('carpeta_id', carpetaId);
+            .select('nombre, ruta_storage, descargable_partes').eq('carpeta_id', carpetaId);
         if (error) fallar(error);
-        const total = (data || []).length;
+        // El personal se lleva todo; cliente y acreedor, solo lo permitido
+        const ses = sesionActual();
+        let filas = data || [];
+        if (ses && (ses.rol === 'cliente' || ses.rol === 'acreedor')) {
+            filas = filas.filter(f => f.descargable_partes !== false);
+        }
+        const total = filas.length;
         let hechos = 0;
-        return Promise.all((data || []).map(async (fila) => {
+        return Promise.all(filas.map(async (fila) => {
             const { data: blob, error: errorBlob } = await nube.storage
                 .from('documentos').download(fila.ruta_storage);
             if (errorBlob) fallar(errorBlob);

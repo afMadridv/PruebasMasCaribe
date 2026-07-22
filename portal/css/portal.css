@@ -8,9 +8,9 @@
     --pt-gris: #536068;           /* texto secundario (sobre blanco) */
     --pt-marca-cian: #00A1B8;      /* color de marca 1 */
     --pt-marca-naranja: #FA9B02;   /* color de marca 2 */
-    --pt-navy-900: #006B7A;       /* cian profundo (estructura) */
-    --pt-navy-800: #00889C;
-    --pt-navy-700: #00A1B8;       /* cian base de encabezado/pestañas/botón */
+    --pt-navy-900: #13232E;       /* slate profundo (estructura) */
+    --pt-navy-800: #1B3140;
+    --pt-navy-700: #264150;       /* slate base de encabezado/pestañas/botón */
     --pt-azul: #FA9B02;           /* acento naranja (hover, enlaces, foco) */
     --pt-azul-600: #D98500;       /* naranja oscuro */
     --pt-azul-claro: #A8E4EE;     /* cian claro (texto sobre el chrome) */
@@ -53,9 +53,9 @@
 html[data-tema="oscuro"]{
     --pt-tinta: #EAF1F4;
     --pt-gris: #AEC0C8;          /* secundario más claro: legible, sin camuflarse */
-    --pt-navy-900: #05343B;
-    --pt-navy-800: #0A4A54;
-    --pt-navy-700: #0E7F91;      /* chrome (cabecera/botones): cian apagado */
+    --pt-navy-900: #0A171E;
+    --pt-navy-800: #12242E;
+    --pt-navy-700: #22404E;      /* chrome (cabecera/botones): slate apagado */
     --pt-azul: #FBAE33;          /* acento naranja (más claro para leer en oscuro) */
     --pt-azul-600: #E79A1A;
     --pt-azul-claro: #8FCAD6;
@@ -252,10 +252,7 @@ button{
     align-items: center;
     justify-content: center;
     padding: 2rem;
-    background:
-        radial-gradient(90rem 50rem at 110% -20%, rgba(92,147,196,.35), transparent 60%),
-        radial-gradient(70rem 45rem at -20% 110%, rgba(27,73,119,.55), transparent 60%),
-        linear-gradient(160deg, var(--pt-navy-900) 0%, var(--pt-navy-700) 55%, var(--pt-azul) 100%);
+    background: #0B141A;   /* fondo sólido oscuro: entrada seria al portal */
 }
 .pt-tarjeta-login{
     width: 100%;
@@ -629,6 +626,30 @@ fieldset.pt-campo{
 .pt-zona-subida p{
     margin: 0 0 1.2rem;
 }
+.pt-check-descarga{
+    display: inline-flex; align-items: center; gap: .5rem;
+    margin-top: .4rem; font-size: .9rem; color: var(--pt-texto-suave, #536068); cursor: pointer;
+}
+.pt-check-descarga input{ width: 1.05rem; height: 1.05rem; cursor: pointer; }
+
+/* Interruptor de descarga por archivo (columna "Descarga") */
+.pt-switch{
+    position: relative; display: inline-block;
+    width: 4.4rem; height: 2.4rem; padding: 0;
+    border: none; border-radius: 999px; cursor: pointer;
+    background-color: var(--pt-borde);
+    transition: background-color var(--pt-rapido);
+}
+.pt-switch:hover{ filter: brightness(.97); }
+.pt-switch:focus-visible{ outline: 2px solid var(--pt-navy-700); outline-offset: 2px; }
+.pt-switch--si{ background-color: var(--pt-verde); }
+.pt-switch__bola{
+    position: absolute; top: .3rem; left: .3rem;
+    width: 1.8rem; height: 1.8rem; border-radius: 50%;
+    background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3);
+    transition: transform var(--pt-rapido);
+}
+.pt-switch--si .pt-switch__bola{ transform: translateX(2rem); }
 
 /* ============ TABLAS ============ */
 .pt-tabla-envoltura{
@@ -679,9 +700,13 @@ fieldset.pt-campo{
 }
 .pt-tabla .pt-celda-acciones{
     display: flex;
-    gap: .6rem;
-    flex-wrap: wrap;
+    gap: .5rem;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: nowrap;      /* Ver · Descargar · Eliminar en una sola línea */
+    white-space: nowrap;
 }
+.pt-tabla .pt-celda-acciones .pt-boton{ flex: 0 0 auto; }
 .pt-icono-archivo{
     color: var(--pt-navy-700);
     margin-right: .8rem;

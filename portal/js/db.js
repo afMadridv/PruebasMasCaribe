@@ -68,6 +68,13 @@ function dbArchivosDeCarpeta(carpetaId) {
     }));
 }
 
+/* Marca si las partes pueden descargar un archivo (modo local) */
+async function fijarDescargaPartes(archivoId, permitir) {
+    const a = await dbObtener('archivos', archivoId);
+    if (!a) return;
+    await dbGuardar('archivos', { ...a, descargablePartes: !!permitir });
+}
+
 async function dbEliminarArchivosDeCarpeta(carpetaId) {
     const archivos = await dbArchivosDeCarpeta(carpetaId);
     for (const a of archivos) {
@@ -260,7 +267,12 @@ async function descargarAdjuntoChat(mensajeId) {
    armar el ZIP. En modo nube, nube.js la reemplaza descargando desde
    Storage en paralelo. */
 async function descargarBlobsDeCarpeta(carpetaId, alProgresar) {
-    const archivos = await dbArchivosDeCarpeta(carpetaId);
+    // El personal se lleva todo; cliente y acreedor, solo lo permitido
+    let archivos = await dbArchivosDeCarpeta(carpetaId);
+    const ses = sesionActual();
+    if (ses && (ses.rol === 'cliente' || ses.rol === 'acreedor')) {
+        archivos = archivos.filter(a => a.descargablePartes !== false);
+    }
     if (alProgresar) alProgresar(archivos.length, archivos.length);
     return archivos.map(a => ({ nombre: a.nombre, blob: a.blob }));
 }

@@ -18,7 +18,7 @@
     <div class="pt-topbar">
     <header class="pt-encabezado">
         <div class="pt-marca">
-            <h1>Portal Mascaribe</h1>
+            <h1>Portal Documental</h1>
         </div>
         <div class="pt-usuario-chip">
             <span id="chip-usuario"></span>
@@ -163,6 +163,10 @@
                            accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.mp3,.mp4">
                 </label>
                 <p class="pt-nota">Permitidos: PDF, Word, Excel, PNG, JPG, MP3, MP4 · máximo 100 MB por archivo</p>
+                <label class="pt-check-descarga">
+                    <input type="checkbox" id="subida-descargable" checked>
+                    Permitir que el cliente y los acreedores descarguen estos documentos
+                </label>
             </div>
 
             <div class="pt-tabla-envoltura">
@@ -171,8 +175,11 @@
                         <tr>
                             <th>Archivo</th>
                             <th>Tamaño</th>
-                            <th>Subido por</th>
+                            <!-- Oculta para cliente y acreedor -->
+                            <th id="th-subido-por">Subido por</th>
                             <th>Fecha</th>
+                            <!-- Solo el personal: interruptor de descarga por archivo -->
+                            <th id="th-descarga" hidden>Descarga</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>

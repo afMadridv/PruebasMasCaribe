@@ -2297,7 +2297,7 @@ async function descargarConstanciaConsentimiento(indice) {
         lineas.push('La aceptacion quedo registrada electronicamente en el Portal Documental');
         lineas.push('al primer ingreso del titular (tabla consentimientos).');
 
-        pagina.drawText('Portal Documental MASCaribe', { x: 50, y: 742, size: 16, font: fuenteNegrita });
+        pagina.drawText('Portal Documental', { x: 50, y: 742, size: 16, font: fuenteNegrita });
         pagina.drawText('Constancia de autorizacion de manejo de datos', { x: 50, y: 720, size: 12, font: fuenteNegrita });
         let y = 690;
         for (const l of lineas) {
@@ -2451,6 +2451,14 @@ async function pintarArchivos() {
         envoltura.parentNode.insertBefore(barra, envoltura);
     }
 
+    // La columna "Descarga" (interruptores) solo la ve el personal de la carpeta
+    const thDescarga = document.getElementById('th-descarga');
+    if (thDescarga) thDescarga.hidden = !puedeGestionarCarpeta(carpetaAbierta);
+
+    // "Subido por" es información interna: el cliente y el acreedor no la ven
+    const thSubidoPor = document.getElementById('th-subido-por');
+    if (thSubidoPor) thSubidoPor.hidden = (ES_CLIENTE || ES_ACREEDOR);
+
     const cuerpo = document.getElementById('lista-archivos');
     cuerpo.innerHTML = _archivosCache.map(filaArchivo).join('');
     document.getElementById('archivos-vacio').hidden = archivos.length > 0;
@@ -2459,26 +2467,44 @@ async function pintarArchivos() {
 
 function filaArchivo(a) {
     const ext = extensionDe(a.nombre);
+    const gestiona = !!(carpetaAbierta && puedeGestionarCarpeta(carpetaAbierta));
+    const descargable = a.descargablePartes !== false;
     let acciones = '';
     if (_editandoOrden) {
         acciones =
             '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="orden-subir" data-id="' + a.id + '" title="Subir">' + icono('flecha-arriba', 14) + '</button> ' +
             '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="orden-bajar" data-id="' + a.id + '" title="Bajar">' + icono('flecha-abajo', 14) + '</button>';
     } else {
-        if (EXTENSIONES_VISTA.includes(ext)) {
-            acciones += '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="ver-archivo" data-id="' + a.id + '">Ver</button> ';
+        // Cliente/acreedor: solo si el operador dejó el archivo disponible
+        if ((ES_CLIENTE || ES_ACREEDOR) && !descargable) {
+            acciones = '<span class="pt-nota">No disponible para descarga</span>';
+        } else {
+            if (EXTENSIONES_VISTA.includes(ext)) {
+                acciones += '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="ver-archivo" data-id="' + a.id + '">Ver</button> ';
+            }
+            acciones += '<button class="pt-boton pt-boton--primario pt-boton--mini" data-accion="descargar-archivo" data-id="' + a.id + '">Descargar</button>';
         }
-        acciones += '<button class="pt-boton pt-boton--primario pt-boton--mini" data-accion="descargar-archivo" data-id="' + a.id + '">Descargar</button>';
-        if (carpetaAbierta && puedeGestionarCarpeta(carpetaAbierta)) {
+        if (gestiona) {
             acciones += ' <button class="pt-boton pt-boton--peligro pt-boton--mini" data-accion="eliminar-archivo" data-id="' + a.id + '">Eliminar</button>';
         }
     }
+
+    // Columna "Descarga": interruptor que decide si las partes pueden bajarlo
+    const celdaDescarga = gestiona
+        ? '<td><button type="button" class="pt-switch' + (descargable ? ' pt-switch--si' : '') + '"' +
+              ' role="switch" aria-checked="' + (descargable ? 'true' : 'false') + '"' +
+              ' data-accion="alternar-descarga-partes" data-id="' + a.id + '"' +
+              ' title="' + (descargable ? 'Las partes pueden descargar este archivo' : 'Las partes no pueden descargar este archivo') + '">' +
+              '<span class="pt-switch__bola"></span></button></td>'
+        : '';
+
     return '<tr data-archivo-id="' + a.id + '"' + (_editandoOrden ? ' draggable="true" class="pt-fila-arrastrable"' : '') + '>' +
         '<td>' + (_editandoOrden ? '<span class="pt-asa-arrastre" title="Arrastrar">' + icono('arrastre', 14) + '</span>' : '') +
             '<span class="pt-icono-archivo">' + iconoArchivo(ext) + '</span>' + escaparHtml(a.nombre) + '</td>' +
         '<td>' + formatoTamano(a.tamano) + '</td>' +
-        '<td>' + escaparHtml(a.subidoPor) + '</td>' +
+        ((ES_CLIENTE || ES_ACREEDOR) ? '' : '<td>' + escaparHtml(a.subidoPor) + '</td>') +
         '<td>' + formatoFecha(a.fecha) + '</td>' +
+        celdaDescarga +
         '<td><div class="pt-celda-acciones">' + acciones + '</div></td>' +
         '</tr>';
 }
@@ -3039,7 +3065,7 @@ async function descargarConstanciaAcreedores() {
             y -= (tam ? tam + 6 : 15);
         };
 
-        nuevaLinea('Portal Documental MASCaribe', true, 16);
+        nuevaLinea('Portal Documental', true, 16);
         nuevaLinea('Constancia de actividad de acreedores en el tramite', true, 12);
         nuevaLinea('');
         nuevaLinea('Tramite: ' + carpetaAbierta.nombre, true);
@@ -3339,6 +3365,10 @@ async function subirArchivos(listaArchivos) {
         }
     }
 
+    // El operador decide si las partes pueden descargar lo que sube ahora
+    const casillaDescarga = document.getElementById('subida-descargable');
+    const descargablePartes = casillaDescarga ? casillaDescarga.checked : true;
+
     // Las subidas van EN PARALELO (antes eran una por una: con varios
     // archivos grandes la espera se multiplicaba)
     let subidos = 0;
@@ -3350,6 +3380,7 @@ async function subirArchivos(listaArchivos) {
                 tipo: archivo.type || 'application/octet-stream',
                 tamano: archivo.size,
                 blob: archivo,
+                descargablePartes: descargablePartes,
                 subidoPor: sesion.nombre || sesion.usuario,
                 fecha: Date.now()
             });
@@ -3363,6 +3394,20 @@ async function subirArchivos(listaArchivos) {
     if (subidos > 0) avisar(subidos + ' archivo(s) subido(s) correctamente.');
     if (rechazados.length > 0) avisar('No se subió: ' + rechazados.join(', '), 'error');
     await pintarArchivos();
+}
+
+/* Cambia si el cliente/acreedor puede descargar un archivo (solo personal) */
+async function alternarDescargaPartes(id) {
+    if (!carpetaAbierta || !puedeGestionarCarpeta(carpetaAbierta)) return;
+    const archivo = (_archivosCache || []).find(a => String(a.id) === String(id));
+    const permitir = !(archivo && archivo.descargablePartes !== false);
+    try {
+        await fijarDescargaPartes(id, permitir);
+        avisar(permitir ? 'Las partes ya pueden descargar este archivo.' : 'Las partes ya no pueden descargar este archivo.');
+        await pintarArchivos();
+    } catch (e) {
+        avisar((e && e.message) || 'No se pudo cambiar la descarga del archivo.', 'error');
+    }
 }
 
 async function descargarArchivo(id) {
@@ -3510,8 +3555,11 @@ async function descargarCarpetaZip() {
         const archivos = await descargarBlobsDeCarpeta(carpetaAbierta.id, (hechos, total) => {
             boton.textContent = 'Descargando ' + hechos + '/' + total + '…';
         });
+        // El personal se lleva la carpeta completa; las partes, solo lo permitido
         if (archivos.length === 0) {
-            avisar('Esta carpeta no tiene documentos para descargar.', 'error');
+            avisar((ES_CLIENTE || ES_ACREEDOR)
+                ? 'Ningún documento de esta carpeta está disponible para descarga.'
+                : 'Esta carpeta no tiene documentos para descargar.', 'error');
             return;
         }
 
@@ -4172,6 +4220,7 @@ function conectarEventos() {
             case 'eliminar-carpeta':  eliminarCarpeta(id); break;
             case 'ver-archivo':       verArchivo(id); break;
             case 'descargar-archivo': descargarArchivo(id); break;
+            case 'alternar-descarga-partes': alternarDescargaPartes(id); break;
             case 'eliminar-archivo':  eliminarArchivo(id); break;
             case 'alternar-usuario':  alternarUsuario(boton.dataset.usuario); break;
             case 'eliminar-usuario':  eliminarUsuario(boton.dataset.usuario); break;

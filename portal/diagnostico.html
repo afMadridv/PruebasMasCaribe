@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Diagnóstico y calculadora de insolvencia — Fundación MASCaribe</title>
+<title>Diagnóstico de insolvencia</title>
 <meta name="description" content="Calcula en pocos pasos si cumples los requisitos legales para acogerte a la Ley de Insolvencia de Persona Natural No Comerciante en Colombia.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,8 +19,8 @@
         <p>Antes de continuar, lee y autoriza el manejo de tu información conforme a la ley colombiana.</p>
       </div>
       <div class="modal__cuerpo" id="priv-cuerpo" tabindex="0">
-        <h3>Políticas de la Fundación MASCaribe</h3>
-        <p>La Fundación MASCaribe recolecta y trata tus datos personales con la única
+        <h3>Políticas de tratamiento de datos</h3>
+        <p>Este portal recolecta y trata tus datos personales con la única
            finalidad de brindarte acompañamiento en tu proceso de insolvencia económica y
            orientarte sobre las alternativas legales disponibles. Los datos que ingreses
            (ingresos, gastos, acreedores y datos de contacto) se usan exclusivamente para
@@ -46,9 +46,9 @@
           divulgados, compartidos ni saldrán de la institución bajo ningún escenario externo.
         </div>
 
-        <p>Al autorizar, declaras haber leído y comprendido estas condiciones y aceptas que la
-           Fundación MASCaribe trate tus datos conforme a lo aquí señalado. Puedes ejercer tus
-           derechos escribiendo a los canales de contacto de la fundación.</p>
+        <p>Al autorizar, declaras haber leído y comprendido estas condiciones y aceptas que el
+           portal trate tus datos conforme a lo aquí señalado. Puedes ejercer tus
+           derechos escribiendo a los canales de contacto de la entidad.</p>
       </div>
       <div class="modal__pie">
         <label class="check" for="priv-acepto">
@@ -62,13 +62,13 @@
 
   <!-- Calculadora paso a paso -->
   <header class="barra">
-    <div>
-      <h1>Fundación MASCaribe</h1>
-      <small>Diagnóstico y calculadora de insolvencia · Persona natural</small>
+    <div class="barra__marca">
+      <h1>Diagnóstico de insolvencia</h1>
+      <small>Persona natural · Colombia</small>
     </div>
     <nav aria-label="Navegación principal">
-      <a href="diagnostico.html" class="activo">Inicio</a>
-      <a href="index.html">Portal</a>
+      <a href="diagnostico.html" class="activo">Diagnóstico</a>
+      <a href="index.html">Portal Documental</a>
     </nav>
   </header>
 
@@ -573,7 +573,7 @@ function plantilla(ev){
     const l = estado.lead;
     const bal = totalIngresos() - totalGastos();
     const L = [];
-    L.push('SOLICITUD DE ASESORÍA DE INSOLVENCIA — Fundación MASCaribe');
+    L.push('SOLICITUD DE ASESORÍA DE INSOLVENCIA');
     L.push('');
     L.push('Nombre: ' + l.nombre);
     L.push('Correo: ' + l.correo);
