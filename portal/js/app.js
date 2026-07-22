@@ -2475,13 +2475,13 @@ function filaArchivo(a) {
             '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="orden-subir" data-id="' + a.id + '" title="Subir">' + icono('flecha-arriba', 14) + '</button> ' +
             '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="orden-bajar" data-id="' + a.id + '" title="Bajar">' + icono('flecha-abajo', 14) + '</button>';
     } else {
-        // Cliente/acreedor: solo si el operador dejó el archivo disponible
+        // Ver siempre está disponible; la descarga es la que se restringe
+        if (EXTENSIONES_VISTA.includes(ext)) {
+            acciones += '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="ver-archivo" data-id="' + a.id + '">Ver</button> ';
+        }
         if ((ES_CLIENTE || ES_ACREEDOR) && !descargable) {
-            acciones = '<span class="pt-nota">No disponible para descarga</span>';
+            acciones += '<span class="pt-nota" title="El operador no habilitó la descarga de este documento">Solo lectura</span>';
         } else {
-            if (EXTENSIONES_VISTA.includes(ext)) {
-                acciones += '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="ver-archivo" data-id="' + a.id + '">Ver</button> ';
-            }
             acciones += '<button class="pt-boton pt-boton--primario pt-boton--mini" data-accion="descargar-archivo" data-id="' + a.id + '">Descargar</button>';
         }
         if (gestiona) {
@@ -3411,6 +3411,14 @@ async function alternarDescargaPartes(id) {
 }
 
 async function descargarArchivo(id) {
+    // El cliente y el acreedor solo bajan los documentos habilitados
+    if (ES_CLIENTE || ES_ACREEDOR) {
+        const enLista = (_archivosCache || []).find(a => String(a.id) === String(id));
+        if (enLista && enLista.descargablePartes === false) {
+            avisar('Este documento es de solo lectura: puedes verlo, pero no descargarlo.', 'error');
+            return;
+        }
+    }
     const archivo = await dbObtener('archivos', id);
     if (!archivo) return;
     const url = URL.createObjectURL(archivo.blob);

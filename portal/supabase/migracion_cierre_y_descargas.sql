@@ -132,36 +132,26 @@ end;
 $$;
 
 -- ============================================================
--- 15) DESCARGA POR ARCHIVO: el operador decide qué ven las partes
+-- 15) DESCARGA POR ARCHIVO: el operador decide qué se puede bajar
 -- ============================================================
--- Cada documento lleva una marca "descargable por las partes". El personal
--- (admin, operador, monitor) siempre descarga todo; el cliente y el acreedor
--- solo descargan los archivos marcados como disponibles. La regla se aplica en
--- Storage, no solo en la interfaz.
+-- Cada documento lleva una marca "descargable por las partes". El cliente y el
+-- acreedor SIEMPRE pueden abrir y leer los documentos de su carpeta; la marca
+-- solo decide si además pueden descargarlos (botón "Descargar" y ZIP).
+-- Por eso Storage sigue permitiendo la lectura a quien ya tiene acceso a la
+-- carpeta: sin leer los bytes no se puede mostrar el documento en pantalla.
 
 alter table public.archivos add column if not exists descargable_partes boolean not null default true;
 
--- ¿El usuario actual puede descargar el objeto de Storage en esta ruta?
-create or replace function public.puede_descargar_archivo(ruta text)
-returns boolean
-language sql stable security definer set search_path = public
-as $$
-    select public.puede_ver_carpeta(public.carpeta_de_ruta(ruta))
-       and (
-           public.rol_actual() in ('administrador', 'operador', 'monitor')
-           or coalesce(
-               (select a.descargable_partes from public.archivos a where a.ruta_storage = ruta limit 1),
-               true)
-       );
-$$;
-
--- La descarga de documentos pasa a respetar la marca por archivo
+-- Lectura de documentos: quien tiene acceso a la carpeta puede abrirlos
 drop policy if exists "descarga segun carpeta asignada" on storage.objects;
 create policy "descarga segun carpeta asignada" on storage.objects
     for select using (
         bucket_id = 'documentos'
-        and public.puede_descargar_archivo(name)
+        and public.puede_ver_carpeta(public.carpeta_de_ruta(name))
     );
+
+-- Ya no se usa: la marca se aplica en el portal, no en Storage
+drop function if exists public.puede_descargar_archivo(text);
 
 -- El operador responsable (o el admin) cambia la disponibilidad de un archivo
 create or replace function public.fijar_descarga_partes(archivo bigint, permitir boolean)
