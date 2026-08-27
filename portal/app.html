@@ -10,18 +10,55 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://hheyihgktcswvxiscvdm.supabase.co" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Krub:wght@400;500;600;700&family=Lora:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/portal.css?v=41">
+    <link rel="stylesheet" href="css/portal.css?v=42">
+    <link rel="stylesheet" href="css/diseno.css?v=42">
 </head>
-<body>
-    <!-- Barra superior UNIFICADA (marca + sesión + pestañas): un solo bloque
-         fijo que baja completo con el scroll, sin separarse. -->
-    <div class="pt-topbar">
-    <header class="pt-encabezado">
-        <div class="pt-marca">
-            <h1>Portal Documental</h1>
+<body class="pt-app">
+  <div class="pt-marco">
+
+    <!-- Navegación lateral: reemplaza las pestañas superiores.
+         Los botones conservan sus IDs y su clase .activa, así que la
+         lógica de roles y de vista activa de app.js no cambia. -->
+    <aside class="pt-lateral" id="lateral">
+        <div class="pt-lateral__marca">
+            <i aria-hidden="true"></i>
+            <strong>Portal<br>Documental</strong>
         </div>
-        <div class="pt-usuario-chip">
-            <span id="chip-usuario"></span>
+
+        <nav class="pt-lateral__nav" aria-label="Secciones del portal">
+            <button id="pestana-carpetas" class="activa" data-accion="ver-carpetas">
+                Carpetas <span class="pt-nav-num" id="nav-num-carpetas" hidden></span>
+            </button>
+            <button id="pestana-estados" data-accion="ver-estados" hidden>
+                Estados <span class="pt-nav-num" id="nav-num-estados" hidden></span>
+            </button>
+            <button id="pestana-calendario" data-accion="ver-calendario-vencimientos" hidden>Calendario</button>
+            <button id="pestana-usuarios" data-accion="ver-usuarios" hidden>Usuarios</button>
+            <button id="pestana-notificaciones" data-accion="ver-notificaciones" hidden>Actividad</button>
+        </nav>
+
+        <div class="pt-almacen" id="almacen-caja" hidden>
+            <div class="pt-almacen__tit">Almacenamiento</div>
+            <div class="pt-almacen__barra"><i id="almacen-barra" style="width:0%"></i></div>
+            <div class="pt-almacen__txt" id="almacen-txt">—</div>
+        </div>
+
+        <div class="pt-lateral__yo">
+            <span class="pt-avatar" id="mi-avatar"></span>
+            <div>
+                <b id="mi-nombre"></b>
+                <small id="mi-rol"></small>
+            </div>
+        </div>
+    </aside>
+    <div class="pt-lateral-tapa" id="lateral-tapa" data-accion="cerrar-lateral" hidden></div>
+
+    <div class="pt-principal">
+        <header class="pt-cabecera">
+            <button class="pt-boton pt-boton--mini pt-lateral-abrir" data-accion="abrir-lateral"
+                    aria-label="Abrir menú" title="Menú">☰</button>
+            <span class="pt-cabecera__hueco"><span id="chip-usuario" hidden></span></span>
+
             <!-- Campana de notificaciones (todos los roles) -->
             <div class="pt-campana-envoltura">
                 <button class="pt-boton pt-boton--mini pt-campana" data-accion="campana-abrir"
@@ -41,17 +78,7 @@
                     aria-label="Cambiar a tema oscuro" title="Cambiar a tema oscuro"></button>
             <button class="pt-boton pt-boton--mini" data-accion="salir-sitio">Sitio principal</button>
             <button class="pt-boton pt-boton--mini" data-accion="salir">Cerrar sesión</button>
-        </div>
-    </header>
-
-    <nav class="pt-pestanas">
-        <button id="pestana-carpetas" class="activa" data-accion="ver-carpetas">Carpetas</button>
-        <button id="pestana-estados" data-accion="ver-estados" hidden>Estados</button>
-        <button id="pestana-calendario" data-accion="ver-calendario-vencimientos" hidden>Calendario</button>
-        <button id="pestana-usuarios" data-accion="ver-usuarios" hidden>Usuarios</button>
-        <button id="pestana-notificaciones" data-accion="ver-notificaciones" hidden>Notificaciones</button>
-    </nav>
-    </div><!-- /pt-topbar -->
+        </header>
 
     <main class="pt-contenido">
 
@@ -59,18 +86,21 @@
         <section id="vista-carpetas">
             <div class="pt-barra-seccion">
                 <h2>Carpetas de procesos</h2>
-                <button id="boton-nueva-carpeta" class="pt-boton pt-boton--primario" data-accion="nueva-carpeta" hidden>+ Nueva carpeta</button>
+                <div class="pt-barra-seccion__acciones">
+                    <label class="pt-buscador">
+                        <span data-icono="buscar" data-icono-tam="16"></span>
+                        <input type="search" id="buscador-carpetas" placeholder="Buscar carpeta u operador…" maxlength="80">
+                    </label>
+                    <button id="boton-nueva-carpeta" class="pt-boton pt-boton--primario" data-accion="nueva-carpeta" hidden>+ Nueva carpeta</button>
+                </div>
             </div>
             <!-- Secciones Activas / Desactivadas (solo administrador). Lo llena el controlador. -->
             <div id="sub-pestanas-carpetas" class="pt-sub-pestanas" hidden></div>
-            <!-- Buscador de carpetas/trámites -->
-            <label class="pt-buscador">
-                <span data-icono="buscar" data-icono-tam="16"></span>
-                <input type="search" id="buscador-carpetas" placeholder="Buscar carpeta u operador…" maxlength="80">
-            </label>
+            <!-- Panorama: cómo va todo antes de leer una sola fila -->
+            <div class="pt-panorama" id="panorama-carpetas" hidden></div>
             <div class="pt-carpetas-cuerpo">
                 <div class="pt-carpetas-principal">
-                    <div id="lista-carpetas" class="pt-grid-carpetas"></div>
+                    <div id="lista-carpetas" class="pt-tabla-tarjeta"></div>
                     <div id="carpetas-vacio" class="pt-vacio" hidden></div>
                 </div>
             </div>
@@ -89,14 +119,15 @@
         <section id="vista-estados" hidden>
             <div class="pt-barra-seccion">
                 <h2>Estados de los trámites</h2>
-                <button class="pt-boton pt-boton--fantasma" data-accion="refrescar-estados"><span data-icono="refrescar" data-icono-tam="15"></span> Actualizar</button>
+                <div class="pt-barra-seccion__acciones">
+                    <label class="pt-buscador">
+                        <span data-icono="buscar" data-icono-tam="16"></span>
+                        <input type="search" id="buscador-estados" placeholder="Buscar trámite u operador…" maxlength="80">
+                    </label>
+                    <button class="pt-boton pt-boton--fantasma" data-accion="refrescar-estados"><span data-icono="refrescar" data-icono-tam="15"></span> Actualizar</button>
+                </div>
             </div>
-            <p class="pt-nota" id="estados-nota" style="margin-bottom:1.6rem;"></p>
-            <!-- Buscador de trámites (filtra activos e inactivos) -->
-            <label class="pt-buscador">
-                <span data-icono="buscar" data-icono-tam="16"></span>
-                <input type="search" id="buscador-estados" placeholder="Buscar trámite u operador…" maxlength="80">
-            </label>
+            <p class="pt-nota" id="estados-nota"></p>
             <div id="contenido-estados"></div>
         </section>
 
@@ -122,8 +153,16 @@
                 </div>
             </div>
             <div class="pt-detalle-cabecera">
+                <nav class="pt-migas" aria-label="Ruta">
+                    <button data-accion="ver-carpetas">Carpetas</button>
+                    <span>/</span>
+                    <strong id="migas-carpeta"></strong>
+                </nav>
                 <h2 id="detalle-nombre"></h2>
                 <span id="detalle-estado"></span>
+
+                <!-- Cuatro cifras del expediente: lo llena mostrarDetalleCarpeta -->
+                <div class="pt-detalle-cifras" id="detalle-cifras" hidden></div>
 
                 <!-- Resumen del estado del trámite (semáforo por días hábiles).
                      Se gestiona desde la pestaña "Estados"; aquí solo se muestra. -->
@@ -155,6 +194,11 @@
             <div id="sub-pestanas-carpeta" class="pt-sub-pestanas"></div>
 
             <div id="panel-archivos">
+            <div class="pt-barra-archivos">
+                <span class="pt-nota" id="archivos-resumen"></span>
+                <button id="boton-subir" class="pt-boton pt-boton--primario pt-boton--mini"
+                        data-accion="alternar-subida" hidden>+ Subir archivos</button>
+            </div>
             <div id="zona-subida" class="pt-zona-subida" hidden>
                 <p><span data-icono="adjunto" data-icono-tam="20"></span> Arrastra archivos aquí, o</p>
                 <label class="pt-boton pt-boton--primario">
@@ -266,40 +310,11 @@
                 </div>
             </div>
             <div id="panel-usuarios-gestion">
-            <form id="form-usuario" class="pt-form-usuario">
-                <label class="pt-campo">
-                    <span>Usuario</span>
-                    <input type="text" id="nuevo-usuario" required maxlength="30" pattern="[a-z0-9._-]+"
-                           title="Solo minúsculas, números, punto, guion y guion bajo">
-                </label>
-                <label class="pt-campo">
-                    <span>Nombre completo</span>
-                    <input type="text" id="nuevo-nombre" required maxlength="80">
-                </label>
-                <label class="pt-campo">
-                    <span>Contraseña</span>
-                    <input type="text" id="nueva-clave" required minlength="8" maxlength="50">
-                </label>
-                <div class="pt-campo" style="align-self:end;">
-                    <button type="button" class="pt-boton pt-boton--fantasma" data-accion="generar-credenciales"
-                            title="Asigna un usuario y una contraseña aleatorios"><span data-icono="dado" data-icono-tam="16"></span> Generar credenciales</button>
-                </div>
-                <label class="pt-campo">
-                    <span>Rol</span>
-                    <select id="nuevo-rol">
-                        <option value="cliente">Cliente</option>
-                        <option value="acreedor">Acreedor</option>
-                        <option value="operador">Operador</option>
-                        <option value="monitor">Monitor (solo lectura)</option>
-                        <option value="administrador">Administrador</option>
-                    </select>
-                </label>
-                <label class="pt-campo" id="campo-nuevo-correo" style="grid-column:1/-1;">
-                    <span>Correo electrónico (para avisos y notificaciones del trámite)</span>
-                    <input type="email" id="nuevo-correo" required maxlength="120" placeholder="nombre@ejemplo.com">
-                </label>
-                <button type="submit" class="pt-boton pt-boton--primario">Crear usuario</button>
-            </form>
+            <div class="pt-barra-archivos">
+                <span class="pt-nota" id="usuarios-resumen"></span>
+                <button class="pt-boton pt-boton--primario pt-boton--mini"
+                        data-accion="abrir-cajon-usuario">+ Nuevo usuario</button>
+            </div>
 
             <!-- Buscador + filtro por rol + exportar Excel -->
             <div class="pt-usuarios-barra">
@@ -342,7 +357,7 @@
         <!-- ===== VISTA: CENTRO DE NOTIFICACIONES (solo administrador) ===== -->
         <section id="vista-notificaciones" hidden>
             <div class="pt-barra-seccion">
-                <h2>Centro de notificaciones</h2>
+                <h2>Actividad del portal</h2>
                 <button class="pt-boton pt-boton--fantasma" data-accion="refrescar-notificaciones"><span data-icono="refrescar" data-icono-tam="15"></span> Actualizar</button>
             </div>
             <p class="pt-nota" style="margin-bottom:1.6rem;">Registro de ingresos y de toda acción sobre carpetas y archivos. Elige la categoría:</p>
@@ -359,6 +374,54 @@
             <div id="notificaciones-vacio" class="pt-vacio" hidden></div>
         </section>
     </main>
+    </div><!-- /pt-principal -->
+  </div><!-- /pt-marco -->
+
+
+    <!-- Panel lateral: alta de usuario. El formulario ya no ocupa media
+         pantalla; la lista de personas es lo que se ve al entrar. -->
+    <div class="pt-cajon-tapa" id="cajon-usuario-tapa" data-accion="cerrar-cajon-usuario" hidden></div>
+    <aside class="pt-cajon" id="cajon-usuario" aria-label="Nuevo usuario">
+        <div class="pt-cajon__cab">
+            <h3>Nuevo usuario</h3>
+            <button class="pt-cajon__cerrar" data-accion="cerrar-cajon-usuario"
+                    aria-label="Cerrar">&times;</button>
+        </div>
+            <form id="form-usuario" class="pt-form-usuario">
+                <label class="pt-campo">
+                    <span>Usuario</span>
+                    <input type="text" id="nuevo-usuario" required maxlength="30" pattern="[a-z0-9._-]+"
+                           title="Solo minúsculas, números, punto, guion y guion bajo">
+                </label>
+                <label class="pt-campo">
+                    <span>Nombre completo</span>
+                    <input type="text" id="nuevo-nombre" required maxlength="80">
+                </label>
+                <label class="pt-campo">
+                    <span>Contraseña</span>
+                    <input type="text" id="nueva-clave" required minlength="8" maxlength="50">
+                </label>
+                <div class="pt-campo" style="align-self:end;">
+                    <button type="button" class="pt-boton pt-boton--fantasma" data-accion="generar-credenciales"
+                            title="Asigna un usuario y una contraseña aleatorios"><span data-icono="dado" data-icono-tam="16"></span> Generar credenciales</button>
+                </div>
+                <label class="pt-campo">
+                    <span>Rol</span>
+                    <select id="nuevo-rol">
+                        <option value="cliente">Cliente</option>
+                        <option value="acreedor">Acreedor</option>
+                        <option value="operador">Operador</option>
+                        <option value="monitor">Monitor (solo lectura)</option>
+                        <option value="administrador">Administrador</option>
+                    </select>
+                </label>
+                <label class="pt-campo" id="campo-nuevo-correo" style="grid-column:1/-1;">
+                    <span>Correo electrónico (para avisos y notificaciones del trámite)</span>
+                    <input type="email" id="nuevo-correo" required maxlength="120" placeholder="nombre@ejemplo.com">
+                </label>
+                <button type="submit" class="pt-boton pt-boton--primario">Crear usuario</button>
+            </form>
+    </aside>
 
     <!-- ===== MODAL: CREAR / EDITAR CARPETA ===== -->
     <div id="modal-carpeta" class="pt-modal" hidden>
@@ -742,13 +805,13 @@
     <div id="toast" class="pt-toast"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.1"></script>
-    <script src="js/diasHabiles.js?v=41"></script>
-    <script src="js/db.js?v=41"></script>
-    <script src="js/auth.js?v=17"></script>
-    <script src="js/config.js?v=17"></script>
-    <script src="js/iconos.js?v=19"></script>
-    <script src="js/tema.js?v=18"></script>
-    <script src="js/nube.js?v=41"></script>
-    <script src="js/app.js?v=41"></script>
+    <script src="js/diasHabiles.js?v=42"></script>
+    <script src="js/db.js?v=42"></script>
+    <script src="js/auth.js?v=42"></script>
+    <script src="js/config.js?v=42"></script>
+    <script src="js/iconos.js?v=42"></script>
+    <script src="js/tema.js?v=42"></script>
+    <script src="js/nube.js?v=42"></script>
+    <script src="js/app.js?v=42"></script>
 </body>
 </html>

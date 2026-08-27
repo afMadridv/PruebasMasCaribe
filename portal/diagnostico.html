@@ -4,11 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Diagnóstico de insolvencia</title>
+<!-- Aplica el tema guardado ANTES de pintar, para que no parpadee -->
+<script>(function(){try{if(localStorage.getItem("portal_tema")==="oscuro")document.documentElement.dataset.tema="oscuro";}catch(e){}})();</script>
 <meta name="description" content="Calcula en pocos pasos si cumples los requisitos legales para acogerte a la Ley de Insolvencia de Persona Natural No Comerciante en Colombia.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Krub:wght@400;500;600;700&family=Lora:wght@600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/sitio.css">
 </head>
 <body>
   <!-- Modal de consentimiento de datos -->
@@ -66,10 +69,14 @@
       <h1>Diagnóstico de insolvencia</h1>
       <small>Persona natural · Colombia</small>
     </div>
-    <nav aria-label="Navegación principal">
-      <a href="diagnostico.html" class="activo">Diagnóstico</a>
-      <a href="index.html">Portal Documental</a>
-    </nav>
+    <div class="barra__acciones">
+      <nav aria-label="Navegación principal">
+        <a href="diagnostico.html" class="activo">Diagnóstico</a>
+        <a href="index.html">Portal Documental</a>
+      </nav>
+      <button class="tema-boton" id="btn-tema" type="button"
+              aria-label="Cambiar de tema" title="Cambiar de tema"></button>
+    </div>
   </header>
 
   <div class="tarjeta">
@@ -83,6 +90,41 @@
   <p class="pie">Este diagnóstico es orientativo y no constituye asesoría jurídica.
      Basado en el régimen de insolvencia de persona natural no comerciante (Ley 1564 de 2012 y normas concordantes).
      <a href="index.html">Ingresar al portal</a></p>
+
+  <footer class="pie-sitio">
+    <div class="pie-sitio__caja">
+      <div>
+        <h4>Fundación MASCaribe</h4>
+        <p>Acompañamiento en insolvencia de persona natural no comerciante
+           y en conciliación, conforme al marco legal colombiano.</p>
+        <p id="pie-contacto"></p>
+      </div>
+      <div>
+        <h4>Marco legal</h4>
+        <ul>
+          <li>Ley 1116 de 2006</li>
+          <li>Ley 1564 de 2012</li>
+          <li>Ley 2445 de 2025</li>
+          <li>Ley 1581 de 2012 · Habeas Data</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="privacidad.html">Política de tratamiento de datos</a></li>
+          <li><a href="terminos.html">Términos de uso</a></li>
+          <li><a href="privacidad.html#derechos">Ejercer mis derechos</a></li>
+          <li><a href="index.html">Portal Documental</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="pie-sitio__linea">
+      <span>&copy; <span id="pie-anio"></span> Fundación MASCaribe. Todos los derechos reservados.</span>
+      <span>Software desarrollado por
+        <a href="https://TU-PORTAFOLIO.com" target="_blank" rel="noopener noreferrer">Andrés Madrid</a>
+      </span>
+    </div>
+  </footer>
 
 <script>
 // Correo de la fundación al que se envía el diagnóstico
@@ -599,6 +641,32 @@ function plantilla(ev){
     L.push('Quiero agendar una cita para recibir orientación. ¡Gracias!');
     return L.join('\n');
 }
+
+// ---- Pie de pagina ----
+document.getElementById('pie-anio').textContent = new Date().getFullYear();
+document.getElementById('pie-contacto').innerHTML =
+    'Contacto: <a href="mailto:' + CONTACTO.correo + '">' + CONTACTO.correo + '</a>';
+
+// ---- Interruptor de tema (mismo almacen que el portal: 'portal_tema') ----
+(function temaSitio(){
+    const SOL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+    const LUNA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+    const boton = document.getElementById('btn-tema');
+    const pintar = () => {
+        const oscuro = document.documentElement.dataset.tema === 'oscuro';
+        boton.innerHTML = oscuro ? SOL : LUNA;
+        boton.title = oscuro ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro';
+        boton.setAttribute('aria-label', boton.title);
+    };
+    boton.addEventListener('click', () => {
+        const oscuro = document.documentElement.dataset.tema === 'oscuro';
+        if (oscuro) delete document.documentElement.dataset.tema;
+        else document.documentElement.dataset.tema = 'oscuro';
+        try { localStorage.setItem('portal_tema', oscuro ? 'claro' : 'oscuro'); } catch (e) {}
+        pintar();
+    });
+    pintar();
+})();
 
 // ---- Arranque ----
 render();

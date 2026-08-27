@@ -1,0 +1,172 @@
+/* ============================================================
+   SITIO PRINCIPAL — mismo lenguaje visual que el portal
+   ============================================================
+   Se carga DESPUÉS de style.css. Lleva el diagnóstico público a
+   la misma escala, formas y tema claro/oscuro del Portal
+   Documental, sin cambiar su lógica ni su paleta de marca.
+
+   Aquí 1rem = 16px (style.css no reduce la raíz, a diferencia
+   de portal.css). Los valores van en rem tal cual.
+   ============================================================ */
+
+/* ---- Tema oscuro: mismos valores que el portal ---- */
+:root{
+    --superficie: var(--blanco);
+    --superficie-2: #EDF4F4;
+    --navy-900: #13232E;
+    --azul-claro: #A8E4EE;
+}
+html[data-tema="oscuro"]{
+    --tinta: #EAF1F4;
+    --gris: #AEC0C8;
+    --fondo: #0D171C;
+    --blanco: #18272F;
+    --superficie: #18272F;
+    --superficie-2: #213440;
+    --borde: #38505C;
+    --navy-900: #0A171E;
+    --azul-claro: #8FCAD6;
+    --verde-suave: #14361F;
+    --verde-borde: #1E5233;
+    --ambar-suave: #3A2A0C;
+    --sombra: 0 10px 24px rgba(0,0,0,.5), 0 2px 8px rgba(0,0,0,.35);
+    color-scheme: dark;
+}
+html[data-tema="oscuro"] body{ background: var(--fondo); color: var(--tinta); }
+
+/* ---- Barra superior: chrome oscuro como el portal ---- */
+.barra{
+    background: var(--navy-900);
+    border-bottom: none;
+    padding: 1rem 1.6rem;
+    gap: 1rem;
+}
+.barra__marca{ display: flex; align-items: center; gap: .7rem; }
+/* Cuadro cian de la marca, igual que en el portal */
+.barra__marca::before{
+    content: '';
+    width: 26px; height: 26px;
+    flex: 0 0 auto;
+    border-radius: 12px;
+    background: var(--cian);
+}
+.barra__marca h1{ font-size: 1.06rem; letter-spacing: 0; }
+.barra__marca small{ font-size: .68rem; }
+.barra nav a{
+    font-size: .82rem;
+    padding: .45rem .9rem;
+    border-radius: 12px;
+}
+
+/* Interruptor de tema, a la derecha de la navegación */
+.barra__acciones{ display: flex; align-items: center; gap: .5rem; }
+.tema-boton{
+    width: 34px; height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 12px;
+    background: transparent;
+    color: rgba(255,255,255,.8);
+    cursor: pointer;
+    transition: all .18s var(--curva);
+}
+.tema-boton:hover{ background: rgba(255,255,255,.1); color: #fff; }
+.tema-boton svg{ width: 17px; height: 17px; }
+
+/* ---- Tarjeta: borde en vez de sombra pesada ---- */
+.tarjeta{
+    background: var(--superficie);
+    border: 1px solid var(--borde);
+    border-radius: 22px;
+    box-shadow: none;
+    padding: 2rem;
+}
+
+/* ---- Escala tipográfica del portal ---- */
+.paso__num{ font-size: .63rem; letter-spacing: .09em; }
+.paso__preg{ font-size: 1.32rem; }
+.paso__ayuda{ font-size: .84rem; }
+
+/* ---- Controles a la altura del portal ---- */
+.btn{
+    min-height: 2.75rem;
+    padding: .55rem 1.2rem;
+    font-size: .84rem;
+    border-radius: 14px;
+}
+.fila input, .fila select, .campo-neto input, .lead input{
+    min-height: 2.75rem;
+    padding: .55rem .85rem;
+    font-size: .84rem;
+    border-radius: 14px;
+    background: var(--superficie);
+    color: var(--tinta);
+}
+.fila .quitar{ border-radius: 12px; }
+.btn-add{ border-radius: 14px; font-size: .82rem; }
+.opcion{ border-radius: 16px; }
+.toggle{ border-radius: 14px; }
+.toggle button{ border-radius: 11px; font-size: .8rem; }
+
+/* ---- Barras de totales y resultado ---- */
+.total{ border-radius: 14px; background: var(--superficie-2); font-size: .88rem; }
+.criterios{ border-radius: 16px; background: var(--superficie-2); }
+.resultado__ico{ width: 4.6rem; height: 4.6rem; }
+.resultado h2{ font-size: 1.4rem; }
+.resultado p{ font-size: .88rem; }
+
+/* ---- Modal de privacidad ---- */
+.modal{ border-radius: 20px; background: var(--superficie); }
+.modal__cab, .modal__pie{ background: var(--superficie-2); }
+.confidencial{ border-radius: 14px; }
+
+/* ============================================================
+   PIE DE PÁGINA — avisos legales y crédito de autoría
+   ============================================================ */
+.pie-sitio{
+    align-self: stretch;
+    margin: 3rem -1.4rem -2.4rem;
+    padding: 2.2rem 1.6rem 1.8rem;
+    background: var(--navy-900);
+    color: var(--azul-claro);
+    font-size: .8rem;
+    line-height: 1.6;
+}
+.pie-sitio__caja{
+    max-width: 68rem;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    gap: 2rem;
+}
+.pie-sitio h4{
+    font-family: var(--titulos);
+    font-size: .92rem;
+    color: #fff;
+    margin-bottom: .7rem;
+    font-weight: 600;
+}
+.pie-sitio p{ color: var(--azul-claro); margin-bottom: .5rem; }
+.pie-sitio ul{ list-style: none; }
+.pie-sitio li{ margin-bottom: .4rem; }
+.pie-sitio a{ color: var(--azul-claro); text-decoration: none; }
+.pie-sitio a:hover{ color: #fff; text-decoration: underline; }
+.pie-sitio__linea{
+    max-width: 68rem;
+    margin: 1.6rem auto 0;
+    padding-top: 1.1rem;
+    border-top: 1px solid rgba(255,255,255,.14);
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    font-size: .74rem;
+    opacity: .85;
+}
+
+@media (max-width: 720px){
+    .pie-sitio__caja{ grid-template-columns: 1fr; gap: 1.4rem; }
+    .barra__marca h1{ font-size: .95rem; }
+}

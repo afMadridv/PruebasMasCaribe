@@ -10,30 +10,70 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://hheyihgktcswvxiscvdm.supabase.co" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Krub:wght@400;500;600;700&family=Lora:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/portal.css?v=41">
+    <link rel="stylesheet" href="css/portal.css?v=42">
+    <link rel="stylesheet" href="css/diseno.css?v=42">
 </head>
 <body class="pt-cuerpo-login">
-    <div class="pt-tarjeta-login">
-        <h1>Portal Documental</h1>
-        <div id="mensaje-error" class="pt-error" hidden></div>
+    <div class="pt-ingreso">
 
-        <form id="form-login">
-            <label class="pt-campo">
-                <span>Usuario</span>
-                <input type="text" id="campo-usuario" autocomplete="username" required autofocus>
-            </label>
-            <label class="pt-campo">
-                <span>Contraseña</span>
-                <div class="pt-campo-clave">
-                    <input type="password" id="campo-clave" autocomplete="current-password" required>
-                    <button type="button" id="ver-clave" class="pt-ver-clave" data-icono="ver" data-icono-tam="20"
-                            aria-label="Mostrar contraseña" aria-pressed="false"></button>
+        <!-- Panel de marca: qué es el portal y quién puede entrar -->
+        <aside class="pt-ingreso__marca">
+            <div class="pt-ingreso__logo">
+                <i aria-hidden="true"></i>
+                <span>Portal Documental</span>
+            </div>
+
+            <div class="pt-ingreso__centro">
+                <h1>Expedientes de insolvencia, en un solo lugar</h1>
+                <p>Carpetas, plazos en días hábiles y trazabilidad de cada archivo.
+                   Acceso restringido a operadores, monitores y partes autorizadas.</p>
+                <div class="pt-leyes-chips">
+                    <span>Ley 1116 de 2006</span>
+                    <span>Ley 1564 de 2012</span>
+                    <span>Ley 2445 de 2025</span>
                 </div>
-            </label>
-            <button type="submit" id="boton-entrar" class="pt-boton pt-boton--primario" style="width: 100%;">Ingresar</button>
-        </form>
+            </div>
 
-        <button type="button" id="olvide-clave" class="pt-enlace-olvide">¿Olvidaste tu contraseña?</button>
+            <p class="pt-ingreso__estado"><i aria-hidden="true"></i>Servicio operativo</p>
+        </aside>
+
+        <!-- Panel del formulario -->
+        <main class="pt-ingreso__forma">
+            <button class="pt-tema-flotante" data-accion="alternar-tema" data-icono-tam="20"
+                    aria-label="Cambiar a tema oscuro" title="Cambiar a tema oscuro"></button>
+
+            <div class="pt-ingreso__caja">
+                <h2>Ingresar al portal</h2>
+                <p class="pt-nota">Usa las credenciales entregadas por el operador.</p>
+
+                <div id="mensaje-error" class="pt-error" hidden></div>
+
+                <form id="form-login">
+                    <label class="pt-campo">
+                        <span>Usuario</span>
+                        <input type="text" id="campo-usuario" autocomplete="username" required autofocus>
+                    </label>
+
+                    <div class="pt-campo">
+                        <div class="pt-campo__fila">
+                            <span>Contraseña</span>
+                            <button type="button" id="olvide-clave" class="pt-enlace-olvide">¿Olvidaste tu contraseña?</button>
+                        </div>
+                        <div class="pt-campo-clave">
+                            <input type="password" id="campo-clave" autocomplete="current-password" required>
+                            <button type="button" id="ver-clave" class="pt-ver-clave" data-icono="ver" data-icono-tam="20"
+                                    aria-label="Mostrar contraseña" aria-pressed="false"></button>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="boton-entrar" class="pt-boton pt-boton--primario" style="width: 100%;">Ingresar</button>
+                </form>
+
+                <div class="pt-ingreso__pie">
+                    <a href="diagnostico.html">&larr; Volver al sitio principal</a>
+                </div>
+            </div>
+        </main>
     </div>
 
     <!-- Modal nativo <dialog>: la solicitud llega a la campana del administrador -->
@@ -54,18 +94,14 @@
             </div>
         </form>
     </dialog>
-    <a class="pt-volver-tienda" href="diagnostico.html">&larr; Volver al sitio principal</a>
-
-    <button class="pt-tema-flotante" data-accion="alternar-tema" data-icono-tam="20"
-            aria-label="Cambiar a tema oscuro" title="Cambiar a tema oscuro"></button>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.1"></script>
-    <script src="js/db.js?v=41"></script>
-    <script src="js/auth.js?v=41"></script>
-    <script src="js/config.js?v=41"></script>
-    <script src="js/iconos.js?v=41"></script>
-    <script src="js/tema.js?v=41"></script>
-    <script src="js/nube.js?v=41"></script>
-    <script src="js/login.js?v=41"></script>
+    <script src="js/db.js?v=42"></script>
+    <script src="js/auth.js?v=42"></script>
+    <script src="js/config.js?v=42"></script>
+    <script src="js/iconos.js?v=42"></script>
+    <script src="js/tema.js?v=42"></script>
+    <script src="js/nube.js?v=42"></script>
+    <script src="js/login.js?v=42"></script>
 </body>
 </html>
