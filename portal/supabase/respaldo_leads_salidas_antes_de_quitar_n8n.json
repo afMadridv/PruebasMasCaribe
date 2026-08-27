@@ -1,0 +1,52 @@
+{
+    "exportado": "2026-08-20T01:35:28.125637+00:00",
+    "motivo": "respaldo antes de eliminar las tablas y funciones de n8n",
+    "nota": "Contenido de public.leads y public.salidas justo antes de eliminarlas. Se conserva por si hiciera falta recuperar el contacto capturado.",
+    "leads": [
+        {
+            "id": 3,
+            "nombre": "ANDES",
+            "correo": "amxd100@gmail.com",
+            "telefono": "3003191838",
+            "apto": true,
+            "detalle": true,
+            "acreedores_distintos": 2,
+            "obligaciones_mora": 2,
+            "en_mora_90": 2,
+            "pct_mora": 100.00,
+            "total_deudas": 325000000.00,
+            "monto_en_mora": 325000000.00,
+            "criterios": [
+                { "ok": true, "txt": "Dos o más acreedores distintos (tienes 2)" },
+                { "ok": true, "txt": "Dos o más obligaciones en mora (tienes 2)" },
+                { "ok": true, "txt": "Esas obligaciones con 90 días o más de mora (tienes 2)" },
+                { "ok": true, "txt": "La mora de 90+ días supera el 30% del total (va en 100.0%)" }
+            ],
+            "resumen": "SOLICITUD DE ASESORÍA DE INSOLVENCIA\n\nNombre: ANDES\nCorreo: amxd100@gmail.com\nTeléfono/WhatsApp: 3003191838\nPerfil: Pequeño Comerciante\n\nRESUMEN ECONÓMICO\nTotal ingresos: $ 5.000.000\nTotal gastos: $ 3.500.000\nBalance: $ 1.500.000\nTotal deudas: $ 325.000.000\n\nACREEDORES\n- hh (hh): $ 205.000.000 · 99 días de mora\n- hhh (ff): $ 120.000.000 · 160 días de mora\n\nDIAGNÓSTICO: APTO para la Ley de Insolvencia\n\nQuiero agendar una cita para recibir orientación. ¡Gracias!",
+            "estado": "nuevo",
+            "notas": "",
+            "huella": null,
+            "contactado_por": null,
+            "fecha_contacto": null,
+            "creado": "2026-08-12T16:55:45.022467+00:00"
+        }
+    ],
+    "salidas": [
+        {
+            "id": 1,
+            "tipo": "cierre-descarga-15",
+            "carga": {
+                "ref": "1",
+                "cierre": "2026-09-03",
+                "carpeta": "Conciliación — Caso de práctica (Exp. 002-2026)",
+                "dias_restantes": 15
+            },
+            "carpeta_id": 1,
+            "estado": "pendiente",
+            "intentos": 0,
+            "error": null,
+            "creado": "2026-08-12T18:27:57.112952+00:00",
+            "procesado": null
+        }
+    ]
+}
