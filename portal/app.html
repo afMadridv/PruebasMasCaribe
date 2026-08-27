@@ -21,8 +21,9 @@
          lógica de roles y de vista activa de app.js no cambia. -->
     <aside class="pt-lateral" id="lateral">
         <div class="pt-lateral__marca">
-            <i aria-hidden="true"></i>
             <strong>Portal<br>Documental</strong>
+            <button class="pt-lateral__plegar" data-accion="plegar-lateral"
+                    aria-label="Ocultar el menú" title="Ocultar el menú">&laquo;</button>
         </div>
 
         <nav class="pt-lateral__nav" aria-label="Secciones del portal">
@@ -56,7 +57,7 @@
     <div class="pt-principal">
         <header class="pt-cabecera">
             <button class="pt-boton pt-boton--mini pt-lateral-abrir" data-accion="abrir-lateral"
-                    aria-label="Abrir menú" title="Menú">☰</button>
+                    aria-label="Mostrar el menú" title="Menú">☰</button>
             <span class="pt-cabecera__hueco"><span id="chip-usuario" hidden></span></span>
 
             <!-- Campana de notificaciones (todos los roles) -->
@@ -249,15 +250,14 @@
             <div id="panel-audiencias" hidden></div>
             <div id="panel-recordatorios" hidden></div>
             <div id="panel-notif-carpeta" hidden></div>
-              </div>
 
-              <!-- ===== COLUMNA DERECHA: CALENDARIO DE AUDIENCIAS =====
-                   Lo ven todos los de la carpeta (deudor y acreedores en solo
-                   lectura); marcar días solo lo puede el admin/operador. -->
-              <aside class="pt-lateral-cal" id="pt-lateral-cal" hidden>
-                <h3><span data-icono="calendario" data-icono-tam="18"></span> Calendario</h3>
+            <!-- Calendario de audiencias: una pestaña más, no una columna.
+                 Lo ven todos los de la carpeta (deudor y acreedores en solo
+                 lectura); marcar días solo lo puede el admin/operador. -->
+            <div class="pt-panel-cal" id="panel-calendario" hidden>
                 <div id="calendario-audiencias" class="pt-calendario"></div>
-              </aside>
+            </div>
+              </div>
             </div>
 
             <!-- ===== CHATS DEL TRÁMITE (cliente↔operador y acreedor↔operador) ===== -->

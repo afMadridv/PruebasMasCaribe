@@ -280,9 +280,11 @@ function pintarEncabezado() {
     document.getElementById('boton-nueva-carpeta').hidden = !ES_ADMIN;
 }
 
-/* ============ BARRA LATERAL EN PANTALLAS ANGOSTAS ============
+/* ============ BARRA LATERAL ============
    Debajo de 900 px la columna se sale de pantalla y se abre por
-   encima del contenido, con una tapa que la cierra al tocarla. */
+   encima del contenido, con una tapa que la cierra al tocarla.
+   En escritorio se pliega para ganar ancho, sobre todo dentro de
+   una carpeta, y la elección se recuerda entre sesiones. */
 function alternarLateral(abrir) {
     const lateral = document.getElementById('lateral');
     const tapa = document.getElementById('lateral-tapa');
@@ -291,6 +293,35 @@ function alternarLateral(abrir) {
     lateral.classList.toggle('abierta', visible);
     tapa.hidden = !visible;
 }
+
+const LATERAL_PLEGADO = 'portal_lateral_plegado';
+
+function plegarLateral(plegar) {
+    const marco = document.querySelector('.pt-marco');
+    if (!marco) return;
+    const oculto = plegar === undefined
+        ? !marco.classList.contains('pt-marco--plegado')
+        : plegar;
+    marco.classList.toggle('pt-marco--plegado', oculto);
+    // Al desplegar se cierra también el cajón de móvil, para no dejar
+    // las dos formas de la barra activas a la vez
+    if (!oculto) alternarLateral(false);
+    try { localStorage.setItem(LATERAL_PLEGADO, oculto ? '1' : '0'); } catch (e) {}
+}
+
+/* El botón ☰ sirve para las dos formas de la barra: cajón en móvil,
+   despliegue en escritorio. */
+function mostrarLateral() {
+    if (window.matchMedia('(max-width: 900px)').matches) alternarLateral(true);
+    else plegarLateral(false);
+}
+
+// Estado guardado, antes de que el usuario vea la pantalla
+try {
+    if (localStorage.getItem(LATERAL_PLEGADO) === '1') {
+        document.addEventListener('DOMContentLoaded', () => plegarLateral(true));
+    }
+} catch (e) {}
 
 /* Menú «⋯» de una fila: solo uno abierto a la vez. Se cierra al
    hacer clic fuera (ver el listener de cierre más abajo). */
@@ -751,7 +782,7 @@ async function abrirCarpeta(id) {
     _subPanelCarpeta = 'archivos';
     _editandoOrden = false;     // el modo de reordenar no se arrastra entre carpetas
     montarSubPestanasCarpeta(carpeta);
-    prepararCalendarioLateral(carpeta); // calendario de audiencias (columna derecha)
+    prepararCalendarioLateral(carpeta); // datos del calendario de audiencias
     quitarAdjuntoChat(); // adjunto pendiente de otra carpeta no debe arrastrarse
     _chatCarpetaMin = true;   // el chat flotante arranca minimizado en cada carpeta
     _acreedorDestino = '';
@@ -2977,7 +3008,10 @@ function montarSubPestanasCarpeta(carpeta) {
         // Notificaciones de la carpeta: también el monitor (solo lectura)
         ((puedeGestionarCarpeta(carpeta) || ES_MONITOR)
             ? tab('notificaciones', 'ingreso', 'Notificaciones')
-            : '');
+            : '') +
+        // El calendario lo ve todo el que entra a la carpeta; el deudor y
+        // los acreedores en solo lectura
+        tab('calendario', 'calendario', 'Calendario');
 
     // Con una sola pestaña (cliente/acreedor) la barra no hace falta
     const varias = (pestañas.match(/<button/g) || []).length > 1;
@@ -2988,11 +3022,11 @@ function montarSubPestanasCarpeta(carpeta) {
     mostrarSubPanelCarpeta(_subPanelCarpeta);
 }
 
-const PANELES_CARPETA = ['archivos', 'audiencias', 'recordatorios', 'notificaciones'];
+const PANELES_CARPETA = ['archivos', 'audiencias', 'recordatorios', 'notificaciones', 'calendario'];
 
 function mostrarSubPanelCarpeta(panel) {
     document.getElementById('panel-archivos').hidden = (panel !== 'archivos');
-    for (const p of ['audiencias', 'recordatorios', 'notificaciones']) {
+    for (const p of ['audiencias', 'recordatorios', 'notificaciones', 'calendario']) {
         const el = document.getElementById('panel-' + (p === 'notificaciones' ? 'notif-carpeta' : p));
         if (el) el.hidden = (panel !== p);
     }
@@ -3003,6 +3037,7 @@ function pintarPanelDeCarpeta(panel, carpeta) {
     if (panel === 'audiencias') pintarAudiencias(carpeta);
     else if (panel === 'recordatorios') pintarRecordatorios(carpeta);
     else if (panel === 'notificaciones') pintarNotifCarpeta(carpeta);
+    else if (panel === 'calendario') pintarCalendario();
 }
 
 function cambiarSubPestanaCarpeta(panel) {
@@ -3459,18 +3494,17 @@ async function pintarAudiencias(carpeta) {
         '<div class="pt-audiencias-lista">' +
             (lista || '<p class="pt-nota">Todavía no hay audiencias marcadas.</p>') +
         '</div>';
-    pintarCalendario(); // el calendario vive en la columna derecha, siempre al día
+    pintarCalendario(); // el mes queda al día aunque se esté viendo otra pestaña
 }
 
-/* Columna derecha: muestra el calendario al abrir la carpeta. Lo ven TODOS
-   los de la carpeta (el deudor y los acreedores en solo lectura, para conocer
-   las fechas de su trámite); marcar o notificar solo puede el personal. */
+/* Carga los datos del calendario de audiencias al abrir la carpeta. Lo ven
+   TODOS los de la carpeta (el deudor y los acreedores en solo lectura, para
+   conocer las fechas de su trámite); marcar o notificar solo puede el
+   personal. Quién lo muestra es la pestaña, no esta función. */
 async function prepararCalendarioLateral(carpeta) {
-    const aside = document.getElementById('pt-lateral-cal');
-    if (!aside) return;
-    aside.hidden = false;
     const cont = document.getElementById('calendario-audiencias');
-    if (cont) cont.innerHTML = '';
+    if (!cont) return;
+    cont.innerHTML = '';
     const hoy = new Date();
     _mesCalendario = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
     try {
@@ -5009,7 +5043,8 @@ function conectarEventos() {
             case 'cerrar-cajon-usuario': alternarCajonUsuario(false); break;
 
             // Barra lateral en pantallas angostas
-            case 'abrir-lateral':     alternarLateral(true); break;
+            case 'abrir-lateral':     mostrarLateral(); break;
+            case 'plegar-lateral':    plegarLateral(true); break;
             case 'cerrar-lateral':    alternarLateral(false); break;
 
             // Menú «⋯» de acciones secundarias de una carpeta

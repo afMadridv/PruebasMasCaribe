@@ -83,12 +83,6 @@ body.pt-cuerpo-login{
     position: relative;
     z-index: 1;
 }
-.pt-ingreso__logo i{
-    width: 30px; height: 30px;
-    border-radius: 14px;
-    background: var(--pt-marca-cian);
-    flex: 0 0 auto;
-}
 .pt-ingreso__logo span{
     font-family: var(--pt-fuente-titulos);
     font-size: 1.696rem;
@@ -230,6 +224,12 @@ body.pt-app{
     grid-template-columns: 216px minmax(0, 1fr);
     min-height: 100vh;
 }
+/* Barra plegada: la columna desaparece y el contenido ocupa todo.
+   Se oculta con display:none en vez de deslizarla, porque una barra
+   trasladada fuera del marco crea desplazamiento horizontal. */
+.pt-marco--plegado{ grid-template-columns: minmax(0, 1fr); }
+.pt-marco--plegado > .pt-lateral,
+.pt-marco--plegado > .pt-lateral-tapa{ display: none; }
 
 /* ---- Columna lateral ---- */
 .pt-lateral{
@@ -250,11 +250,30 @@ body.pt-app{
     gap: 0.96rem;
     padding: 0 0.64rem;
 }
-.pt-lateral__marca i{
-    width: 24px; height: 24px;
-    border-radius: 11px;
-    background: var(--pt-marca-cian);
+/* Botón de plegar: discreto hasta que se pasa por encima. Se queda
+   pegado al borde derecho de la barra. */
+.pt-lateral__plegar{
+    margin-left: auto;
     flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: none;
+    color: var(--pt-gris);
+    font: inherit;
+    font-size: 1.28rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background var(--pt-rapido), color var(--pt-rapido), border-color var(--pt-rapido);
+}
+.pt-lateral__plegar:hover{
+    background: var(--pt-superficie-2);
+    border-color: var(--pt-borde);
+    color: var(--pt-tinta);
 }
 .pt-lateral__marca strong{
     font-family: var(--pt-fuente-titulos);
@@ -399,11 +418,24 @@ body.pt-app{
 }
 .pt-cabecera__hueco{ margin-right: auto; }
 
-/* Botón que abre la barra lateral en móvil */
+/* Botón ☰: en móvil abre el cajón; en escritorio solo aparece
+   cuando la barra está plegada, para poder traerla de vuelta. */
 .pt-lateral-abrir{ display: none; }
+.pt-marco--plegado .pt-lateral-abrir{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
 
 @media (max-width: 900px){
-    .pt-marco{ grid-template-columns: 1fr; }
+    .pt-marco,
+    .pt-marco--plegado{ grid-template-columns: 1fr; }
+    /* Debajo de 900px la barra es un cajón: el pliegue de escritorio
+       no debe impedir abrirlo. La barra vuelve a ser flex, no block:
+       es una columna con gap. */
+    .pt-marco--plegado > .pt-lateral{ display: flex; }
+    .pt-marco--plegado > .pt-lateral-tapa{ display: block; }
+    .pt-lateral__plegar{ display: none; }
     .pt-lateral{
         position: fixed;
         z-index: calc(var(--pt-z-modal) - 1);

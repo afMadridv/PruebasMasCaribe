@@ -827,19 +827,10 @@ fieldset.pt-campo{
    (lo activa el controlador solo en esa vista). */
 .pt-contenido--ancha{ max-width: 152rem; }
 
-/* Tres columnas: leyes (izquierda) · contenido (centro) · calendario (derecha).
-   Si la columna derecha no existe (cliente/acreedor), el centro usa su espacio. */
-.pt-carpeta-cuerpo{
-    display: flex;
-    gap: 1.8rem;
-    align-items: flex-start;
-    flex-wrap: wrap;
-}
-.pt-carpeta-principal{
-    flex: 1 1 460px;
-    min-width: 0;
-    order: 2;
-}
+/* El detalle de la carpeta es una sola columna: el calendario de
+   audiencias dejó de ser barra derecha y es una pestaña más. */
+.pt-carpeta-cuerpo{ display: block; }
+.pt-carpeta-principal{ min-width: 0; }
 .pt-leyes{
     flex: 0 0 280px;
     order: 1;
@@ -850,40 +841,14 @@ fieldset.pt-campo{
     position: sticky;
     top: 1.6rem;
 }
-/* Columna derecha: calendario de audiencias (solo personal de la carpeta) */
-.pt-lateral-cal{
-    flex: 0 0 310px;
-    order: 3;
-    position: sticky;
-    top: 1.6rem;
-    background-color: var(--pt-superficie);
-    border-radius: 1.4rem;
-    box-shadow: var(--pt-sombra-1);
-    padding: 1.8rem;
-}
-.pt-lateral-cal > h3{
-    display: flex;
-    align-items: center;
-    gap: .6rem;
-    margin: 0 0 .4rem;
-    font-family: var(--pt-fuente-titulos);
-    color: var(--pt-navy-700);
-    font-size: 1.7rem;
-}
-.pt-lateral-cal .pt-calendario{
-    margin-top: 1.2rem;
+/* Panel del calendario de audiencias, dentro de las pestañas de la
+   carpeta. El mes no se estira a todo el ancho: a partir de cierto
+   tamaño las celdas dejan de leerse como calendario. */
+.pt-panel-cal .pt-calendario{
+    max-width: 52rem;
     border: none;
     box-shadow: none;
     padding: 0;
-}
-html[data-tema="oscuro"] .pt-lateral-cal > h3{ color: #DCE7EB; }
-/* En pantallas medianas el calendario baja a lo ancho, debajo del contenido */
-@media (max-width: 1250px){
-    .pt-lateral-cal{
-        flex-basis: 100%;
-        position: static;
-    }
-    .pt-lateral-cal .pt-calendario{ max-width: 36rem; }
 }
 .pt-leyes > h3{
     display: flex;
