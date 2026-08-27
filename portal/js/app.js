@@ -360,6 +360,55 @@ function alternarCajonUsuario(abrir) {
     }
 }
 
+/* ============ CACHÉ DE NAVEGACIÓN ============
+   Cada clic en el menú volvía a pedir al servidor los mismos
+   conjuntos (carpetas, procesos, perfiles), así que volver a una
+   sección ya vista costaba otra vuelta completa de red y la pantalla
+   se quedaba en blanco mientras tanto.
+
+   Ahora se pinta al instante con lo último que se vio y la consulta
+   sigue por detrás; si el servidor trae algo distinto, se repinta.
+   La copia guardada nunca se usa sola: en cada navegación se
+   revalida, así que como mucho se ve el estado anterior el tiempo
+   que tarde la respuesta. */
+const _cacheDatos = new Map();
+
+function cacheLeer(clave) {
+    const e = _cacheDatos.get(clave);
+    return e ? e.valor : undefined;
+}
+
+/* Pide al servidor, guarda y dice si el resultado cambió.
+   La comparación es por JSON: los conjuntos son planos y salen
+   siempre del mismo mapeador, así que el orden de claves es estable. */
+async function cacheRefrescar(clave, traer) {
+    const valor = await traer();
+    const texto = JSON.stringify(valor);
+    const antes = _cacheDatos.get(clave);
+    const cambio = !antes || antes.texto !== texto;
+    _cacheDatos.set(clave, { valor, texto });
+    return { valor, cambio };
+}
+
+function cacheOlvidar() { _cacheDatos.clear(); }
+
+/* Toda acción que no sea de lectura cambia los datos, así que tira la
+   caché. Se envuelve registrarActividad porque ya se llama en cada
+   punto que escribe; envolverla evita tener que acordarse de
+   invalidar en treinta sitios distintos. */
+const ACCIONES_DE_LECTURA = new Set([
+    'ingreso', 'abrir-carpeta', 'ver-archivo', 'descargar-archivo',
+    'descargar-zip', 'exportar-estados', 'exportar-usuarios',
+    'generar-expediente', 'constancia-acreedores', 'llamada-soporte'
+]);
+if (typeof window.registrarActividad === 'function') {
+    const _registrarOriginal = window.registrarActividad;
+    window.registrarActividad = function (accion, objetivo, carpetaId) {
+        if (!ACCIONES_DE_LECTURA.has(accion)) cacheOlvidar();
+        return _registrarOriginal(accion, objetivo, carpetaId);
+    };
+}
+
 /* ============ NAVEGACIÓN ENTRE VISTAS ============ */
 function mostrarVista(idVista) {
     // Al cambiar de sección en móvil, la barra lateral se cierra sola
@@ -393,15 +442,31 @@ async function mostrarVistaCarpetas() {
     mostrarVista('vista-carpetas');
     carpetaAbierta = null;
 
-    // Todo en paralelo. El nº de documentos y el peso YA vienen cacheados en
-    // cada carpeta (columnas total_archivos / peso_total_mb, actualizadas por
-    // trigger al subir/eliminar): ya no se descargan TODOS los metadatos de
+    // Primero con lo guardado, para que la sección aparezca ya
+    const cTodas = cacheLeer('carpetas'), cProc = cacheLeer('procesos');
+    const hayCopia = !!(cTodas && cProc);
+    if (hayCopia) aplicarCarpetas(cTodas, cProc, cacheLeer('usuarios'));
+    else document.getElementById('lista-carpetas').innerHTML = esqueletoFilas(4);
+
+    // El nº de documentos y el peso YA vienen cacheados en cada carpeta
+    // (columnas total_archivos / peso_total_mb, actualizadas por trigger
+    // al subir/eliminar): ya no se descargan TODOS los metadatos de
     // archivos solo para contar.
-    const [todas, procesos, usuarios] = await Promise.all([
-        dbTodos('carpetas'),
-        procesosTodos().catch(() => []),
-        ES_SUPERVISION ? dbTodos('usuarios') : Promise.resolve(null)
+    const [rTodas, rProc, rUsu] = await Promise.all([
+        cacheRefrescar('carpetas', () => dbTodos('carpetas')),
+        cacheRefrescar('procesos', () => procesosTodos().catch(() => [])),
+        ES_SUPERVISION
+            ? cacheRefrescar('usuarios', () => dbTodos('usuarios'))
+            : Promise.resolve({ valor: null, cambio: false })
     ]);
+    if (!hayCopia || rTodas.cambio || rProc.cambio || rUsu.cambio) {
+        aplicarCarpetas(rTodas.valor, rProc.valor, rUsu.valor);
+    }
+}
+
+/* Vuelca un conjunto de datos en la vista de carpetas. Se usa dos
+   veces por navegación: con la copia guardada y con la del servidor. */
+function aplicarCarpetas(todas, procesos, usuarios) {
     if (usuarios) {
         nombrePorUsuario = {};
         for (const u of usuarios) nombrePorUsuario[u.usuario] = u.nombre;
@@ -417,6 +482,14 @@ async function mostrarVistaCarpetas() {
 
     pintarLateral(visibles, procesos);
     pintarCarpetasSegunFiltro();
+}
+
+/* Filas grises mientras llega la primera respuesta: la sección
+   aparece con su forma en vez de quedarse vacía. */
+function esqueletoFilas(n) {
+    return '<div class="pt-esqueleto">' +
+        Array.from({ length: n }, () => '<div class="pt-esqueleto__fila"></div>').join('') +
+        '</div>';
 }
 
 /* Contadores de la barra lateral y barra de almacenamiento.
@@ -914,8 +987,9 @@ async function mostrarVistaEstados() {
         ? 'Semáforos de todos los trámites por días hábiles colombianos (lun–vie, sin festivos). ' +
           (ES_ADMIN ? 'Puedes corregir tiempos y estados: la corrección queda registrada.' : 'Vista de solo lectura.')
         : 'Aquí controlas la etapa de los trámites que tienes a cargo. Los plazos corren en días hábiles colombianos (lun–vie, sin festivos).';
-    document.getElementById('contenido-estados').innerHTML =
-        '<p class="pt-nota" style="padding:1.5rem 0;">Cargando estados…</p>';
+    if (!cacheLeer('carpetas')) {
+        document.getElementById('contenido-estados').innerHTML = esqueletoFilas(4);
+    }
     await cargarYPintarEstados();
     detenerAutoRefrescoEstados();
     _autoRefrescoEstados = setInterval(() => {
@@ -923,13 +997,32 @@ async function mostrarVistaEstados() {
     }, 5 * 60 * 1000);
 }
 
+/* Vuelca carpetas y procesos en las variables de la vista Estados */
+function aplicarEstados(carpetas, procesos) {
+    _estadosCarpetas = carpetas.filter(puedeVerCarpeta).sort((a, b) => b.fecha - a.fecha);
+    _estadosProcesos = {};
+    for (const p of procesos) (_estadosProcesos[p.carpetaId] = _estadosProcesos[p.carpetaId] || []).push(p);
+}
+
 async function cargarYPintarEstados() {
+    // Copia guardada primero: el tablero aparece sin esperar a la red
+    const cCarp = cacheLeer('carpetas'), cProc = cacheLeer('procesos');
+    const hayCopia = !!(cCarp && cProc);
+    if (hayCopia) { aplicarEstados(cCarp, cProc); pintarEstados(); }
+
     try {
-        const [carpetas, procesos] = await Promise.all([dbTodos('carpetas'), procesosTodos()]);
-        _estadosCarpetas = carpetas.filter(puedeVerCarpeta).sort((a, b) => b.fecha - a.fecha);
-        _estadosProcesos = {};
-        for (const p of procesos) (_estadosProcesos[p.carpetaId] = _estadosProcesos[p.carpetaId] || []).push(p);
+        const [rCarp, rProc] = await Promise.all([
+            cacheRefrescar('carpetas', () => dbTodos('carpetas')),
+            cacheRefrescar('procesos', () => procesosTodos())
+        ]);
+        // Si el servidor trae lo mismo, no se repinta: repintar hace
+        // perder el menú abierto y la posición de la página
+        if (hayCopia && !rCarp.cambio && !rProc.cambio) return;
+        aplicarEstados(rCarp.valor, rProc.valor);
     } catch (e) {
+        // Con una copia ya pintada no se borra la pantalla: se avisa y
+        // se deja lo último que se sabe, que es mejor que nada
+        if (hayCopia) { avisar('No se pudo actualizar: se muestra lo último que se cargó.', 'error'); return; }
         document.getElementById('contenido-estados').innerHTML =
             '<div class="pt-vacio">' + escaparHtml((e && e.message) || 'No se pudieron cargar los estados.') + '</div>';
         return;
@@ -1621,19 +1714,35 @@ let _filtroCalTramite = '';    // '' = todos los trámites
 async function mostrarVistaCalendarioVenc() {
     if (!ES_SUPERVISION && !ES_OPERADOR) return;
     mostrarVista('vista-calendario');
-    document.getElementById('contenido-calendario-venc').innerHTML =
-        '<p class="pt-nota" style="padding:1.5rem 0;">Cargando calendario…</p>';
-    try {
-        const [carpetas, procesos, recordatorios] = await Promise.all([
-            dbTodos('carpetas'),
-            procesosTodos(),
-            ES_OPERADOR ? recordatoriosMios().catch(() => []) : Promise.resolve([])
-        ]);
-        _estadosCarpetas = carpetas.filter(puedeVerCarpeta);
+    // El mes se dibuja ya con lo guardado y se corrige cuando llegue el servidor
+    const cCarp = cacheLeer('carpetas'), cProc = cacheLeer('procesos');
+    const hayCopia = !!(cCarp && cProc);
+    if (hayCopia) {
+        _estadosCarpetas = cCarp.filter(puedeVerCarpeta);
         _estadosProcesos = {};
-        for (const p of procesos) (_estadosProcesos[p.carpetaId] = _estadosProcesos[p.carpetaId] || []).push(p);
-        _recordatoriosCalCache = recordatorios || [];
+        for (const p of cProc) (_estadosProcesos[p.carpetaId] = _estadosProcesos[p.carpetaId] || []).push(p);
+        _recordatoriosCalCache = cacheLeer('recordatorios') || [];
+        if (!_mesCalVenc) { const h = new Date(); _mesCalVenc = new Date(h.getFullYear(), h.getMonth(), 1); }
+        pintarCalendarioVenc();
+    } else {
+        document.getElementById('contenido-calendario-venc').innerHTML = esqueletoFilas(3);
+    }
+
+    try {
+        const [rCarp, rProc, rRec] = await Promise.all([
+            cacheRefrescar('carpetas', () => dbTodos('carpetas')),
+            cacheRefrescar('procesos', () => procesosTodos()),
+            ES_OPERADOR
+                ? cacheRefrescar('recordatorios', () => recordatoriosMios().catch(() => []))
+                : Promise.resolve({ valor: [], cambio: false })
+        ]);
+        if (hayCopia && !rCarp.cambio && !rProc.cambio && !rRec.cambio) return;
+        _estadosCarpetas = rCarp.valor.filter(puedeVerCarpeta);
+        _estadosProcesos = {};
+        for (const p of rProc.valor) (_estadosProcesos[p.carpetaId] = _estadosProcesos[p.carpetaId] || []).push(p);
+        _recordatoriosCalCache = rRec.valor || [];
     } catch (e) {
+        if (hayCopia) { avisar('No se pudo actualizar: se muestra lo último que se cargó.', 'error'); return; }
         document.getElementById('contenido-calendario-venc').innerHTML =
             '<div class="pt-vacio">' + escaparHtml((e && e.message) || 'No se pudo cargar el calendario.') + '</div>';
         return;
@@ -4619,8 +4728,18 @@ let _busquedaUsuarios = '';     // texto del buscador
 async function mostrarVistaUsuarios() {
     if (!ES_ADMIN) return;
     mostrarVista('vista-usuarios');
-    _usuariosCache = await dbTodos('usuarios');
-    _usuariosCache.sort((a, b) => a.usuario.localeCompare(b.usuario));
+
+    const guardados = cacheLeer('usuarios');
+    if (guardados) aplicarUsuarios(guardados);
+    else document.getElementById('lista-usuarios').innerHTML = esqueletoFilas(5);
+
+    const { valor, cambio } = await cacheRefrescar('usuarios', () => dbTodos('usuarios'));
+    if (!guardados || cambio) aplicarUsuarios(valor);
+}
+
+function aplicarUsuarios(usuarios) {
+    // slice(): ordenar in situ mutaría la copia guardada en la caché
+    _usuariosCache = usuarios.slice().sort((a, b) => a.usuario.localeCompare(b.usuario));
     const resumen = document.getElementById('usuarios-resumen');
     if (resumen) {
         const activas = _usuariosCache.filter(u => u.activo !== false).length;

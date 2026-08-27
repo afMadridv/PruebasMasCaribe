@@ -1686,3 +1686,37 @@ body.pt-app .pt-buscador:focus-within{ border-color: var(--pt-marca-cian); }
 @media (max-width: 620px){
     .pt-subcarpeta-barra{ margin-left: 0; width: 100%; }
 }
+
+
+/* ============================================================
+   12) ESQUELETO DE CARGA
+   ------------------------------------------------------------
+   Solo aparece la primera vez que se entra a una sección, cuando
+   todavía no hay copia guardada de los datos. En las siguientes
+   navegaciones se pinta directamente con la caché.
+
+   Da la forma de lo que viene en vez de dejar el hueco vacío, que
+   es lo que hacía parecer que el portal se había colgado.
+   ============================================================ */
+.pt-esqueleto{
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    padding: 0.8rem 0;
+}
+.pt-esqueleto__fila{
+    height: 6.4rem;
+    border-radius: 16px;
+    background: var(--pt-superficie-2);
+    animation: pt-latido 1.4s ease-in-out infinite;
+}
+/* El desfase evita que las filas parpadeen todas a la vez */
+.pt-esqueleto__fila:nth-child(2){ animation-delay: .12s; }
+.pt-esqueleto__fila:nth-child(3){ animation-delay: .24s; }
+.pt-esqueleto__fila:nth-child(4){ animation-delay: .36s; }
+.pt-esqueleto__fila:nth-child(5){ animation-delay: .48s; }
+
+@keyframes pt-latido{
+    0%, 100%{ opacity: 1; }
+    50%{ opacity: .55; }
+}
