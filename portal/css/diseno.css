@@ -1,0 +1,1322 @@
+/* ============================================================
+   NOTA SOBRE LAS UNIDADES
+   ------------------------------------------------------------
+   portal.css fija html{font-size:62.5%}, es decir 1rem = 10px.
+   Los valores de este archivo ya vienen convertidos a esa base:
+   para leerlos en pixeles, multiplica por 10 (1.352rem = 13.5px).
+   ============================================================ */
+/* ============================================================
+   PORTAL DOCUMENTAL — Rediseño de pantallas (2026-08)
+   ============================================================
+   Se carga DESPUÉS de portal.css y solo cambia la ESTRUCTURA de
+   las pantallas: menos densidad, más panorama.
+
+   No define colores propios: usa los tokens --pt-* que ya existen,
+   así el tema claro/oscuro sigue funcionando con el mismo
+   interruptor de siempre (tema.js).
+
+   Pantallas: ingreso · carpetas · estados · calendario ·
+              detalle de carpeta · usuarios y actividad
+   ============================================================ */
+
+
+/* ============================================================
+   0) CAMPOS — borde coherente con el tema
+   ------------------------------------------------------------
+   En oscuro el borde de los campos se estaba resolviendo al valor
+   del tema claro (#E2EAEC), demasiado brillante sobre superficie
+   oscura. Se fija al token de borde, que es lo que pide el diseño.
+   ============================================================ */
+html[data-tema="oscuro"] .pt-campo input,
+html[data-tema="oscuro"] .pt-campo select,
+html[data-tema="oscuro"] .pt-campo textarea,
+html[data-tema="oscuro"] .pt-chat-entrada textarea{
+    border-color: var(--pt-borde);
+}
+html[data-tema="oscuro"] .pt-campo input:focus,
+html[data-tema="oscuro"] .pt-campo select:focus,
+html[data-tema="oscuro"] .pt-campo textarea:focus{
+    border-color: var(--pt-marca-cian);
+}
+
+
+/* ============================================================
+   1) INGRESO — panel partido
+   ------------------------------------------------------------
+   La marca y el estado del servicio a la izquierda, el formulario
+   a la derecha. Un solo foco, sin caja flotando en el vacío.
+   ============================================================ */
+body.pt-cuerpo-login{
+    display: block;
+    padding: 0;
+    margin: 0;
+    min-height: 100vh;
+    background: var(--pt-fondo);
+}
+
+.pt-ingreso{
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    min-height: 100vh;
+}
+
+/* ---- Panel de marca (siempre oscuro: es el chrome de la casa) ---- */
+.pt-ingreso__marca{
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 3.2rem;
+    padding: 5.44rem 5.76rem;
+    background: var(--pt-navy-900);
+    color: var(--pt-blanco);
+    overflow: hidden;
+}
+/* Halo cian muy tenue: da profundidad sin ruido */
+.pt-ingreso__marca::after{
+    content: '';
+    position: absolute;
+    width: 460px; height: 460px;
+    right: -170px; top: -140px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,161,184,.16), transparent 68%);
+    pointer-events: none;
+}
+.pt-ingreso__logo{
+    display: flex;
+    align-items: center;
+    gap: 1.12rem;
+    position: relative;
+    z-index: 1;
+}
+.pt-ingreso__logo i{
+    width: 30px; height: 30px;
+    border-radius: 14px;
+    background: var(--pt-marca-cian);
+    flex: 0 0 auto;
+}
+.pt-ingreso__logo span{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 1.696rem;
+    font-weight: 600;
+    color: var(--pt-blanco);
+}
+.pt-ingreso__centro{ position: relative; z-index: 1; }
+.pt-ingreso__centro h1{
+    font-family: var(--pt-fuente-titulos);
+    font-size: clamp(3.04rem, 3.2vw, 4rem);
+    line-height: 1.12;
+    font-weight: 600;
+    color: var(--pt-blanco);
+    margin-bottom: 1.6rem;
+    max-width: 12ch;
+}
+.pt-ingreso__centro p{
+    font-size: 1.4rem;
+    line-height: 1.65;
+    color: var(--pt-azul-claro);
+    max-width: 42ch;
+    margin-bottom: 2.4rem;
+}
+.pt-leyes-chips{ display: flex; flex-wrap: wrap; gap: 0.8rem; }
+.pt-leyes-chips span{
+    font-size: 1.104rem;
+    padding: 0.672rem 1.28rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.22);
+    color: var(--pt-azul-claro);
+    white-space: nowrap;
+}
+.pt-ingreso__estado{
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-size: 1.152rem;
+    color: var(--pt-azul-claro);
+}
+.pt-ingreso__estado i{
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #35C46B;
+    flex: 0 0 auto;
+}
+
+/* ---- Panel del formulario (sigue el tema) ---- */
+.pt-ingreso__forma{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2.4rem;
+    padding: 5.44rem clamp(2.56rem, 5vw, 7.04rem);
+    background: var(--pt-fondo);
+}
+.pt-ingreso__caja{ width: 100%; max-width: 48rem; margin: 0 auto; }
+.pt-ingreso__caja h2{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 2.208rem;
+    font-weight: 600;
+    margin-bottom: 0.48rem;
+}
+.pt-ingreso__caja > p.pt-nota{ margin-bottom: 2.56rem; }
+
+/* El formulario reutiliza .pt-campo de portal.css; solo se ajusta el ritmo */
+.pt-ingreso__caja #form-login{ display: flex; flex-direction: column; gap: 1.68rem; }
+.pt-ingreso__caja #boton-entrar{ margin-top: 0.48rem; }
+
+/* Etiqueta + enlace "olvidé" en la misma línea */
+.pt-campo__fila{
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1.6rem;
+}
+.pt-campo__fila .pt-enlace-olvide{
+    margin: 0;
+    font-size: 1.216rem;
+    padding: 0;
+}
+
+.pt-ingreso__pie{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.6rem;
+    flex-wrap: wrap;
+    margin-top: 3.04rem;
+    padding-top: 1.76rem;
+    border-top: 1px solid var(--pt-borde);
+    font-size: 1.248rem;
+}
+.pt-ingreso__pie a{ color: var(--pt-gris); text-decoration: none; }
+.pt-ingreso__pie a:hover{ color: var(--pt-azul); text-decoration: underline; }
+
+/* El interruptor de tema va anclado a la esquina del panel derecho */
+body.pt-cuerpo-login .pt-tema-flotante{
+    position: absolute;
+    top: 2.4rem;
+    right: 2.4rem;
+    bottom: auto;
+    left: auto;
+}
+.pt-ingreso__forma{ position: relative; }
+
+/* En pantallas angostas el panel de marca se vuelve una cabecera corta */
+@media (max-width: 860px){
+    .pt-ingreso{ grid-template-columns: 1fr; min-height: 100vh; }
+    .pt-ingreso__marca{
+        padding: 3.2rem 2.56rem 2.88rem;
+        gap: 1.92rem;
+    }
+    .pt-ingreso__marca::after{ width: 300px; height: 300px; right: -120px; top: -120px; }
+    .pt-ingreso__centro h1{ font-size: 2.4rem; max-width: none; }
+    .pt-ingreso__centro p{ display: none; }
+    .pt-ingreso__estado{ display: none; }
+    .pt-ingreso__forma{ padding: 3.52rem 2.56rem 4.8rem; justify-content: flex-start; }
+}
+
+
+/* ============================================================
+   2) SHELL DE LA APLICACIÓN — navegación lateral
+   ------------------------------------------------------------
+   Las pestañas superiores pasan a una columna izquierda fija.
+   Gana ancho útil para las tablas y deja sitio para el panorama.
+   Los botones conservan sus IDs y su clase .activa: la lógica de
+   roles de app.js sigue funcionando sin tocarla.
+   ============================================================ */
+body.pt-app{
+    margin: 0;
+    padding: 0;
+    background: var(--pt-fondo);
+    min-height: 100vh;
+}
+.pt-marco{
+    display: grid;
+    grid-template-columns: 216px minmax(0, 1fr);
+    min-height: 100vh;
+}
+
+/* ---- Columna lateral ---- */
+.pt-lateral{
+    display: flex;
+    flex-direction: column;
+    gap: 2.24rem;
+    padding: 2.4rem 1.6rem;
+    background: var(--pt-superficie);
+    border-right: 1px solid var(--pt-borde);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+}
+.pt-lateral__marca{
+    display: flex;
+    align-items: center;
+    gap: 0.96rem;
+    padding: 0 0.64rem;
+}
+.pt-lateral__marca i{
+    width: 24px; height: 24px;
+    border-radius: 11px;
+    background: var(--pt-marca-cian);
+    flex: 0 0 auto;
+}
+.pt-lateral__marca strong{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 1.488rem;
+    font-weight: 600;
+    line-height: 1.15;
+    color: var(--pt-tinta);
+}
+
+/* Navegación: los <button> ya existían, aquí solo cambian de forma */
+.pt-lateral__nav{
+    display: flex;
+    flex-direction: column;
+    gap: 0.352rem;
+}
+.pt-lateral__nav button{
+    display: flex;
+    align-items: center;
+    gap: 0.96rem;
+    width: 100%;
+    min-height: 36px;
+    padding: 0.8rem 1.12rem;
+    border: none;
+    border-radius: 14px;
+    background: transparent;
+    color: var(--pt-gris);
+    font: inherit;
+    font-size: 1.352rem;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--pt-rapido), color var(--pt-rapido);
+}
+.pt-lateral__nav button:hover{
+    background: var(--pt-superficie-2);
+    color: var(--pt-tinta);
+}
+.pt-lateral__nav button.activa{
+    background: var(--pt-navy-700);
+    color: var(--pt-blanco);
+    font-weight: 600;
+}
+.pt-lateral__nav button[hidden]{ display: none; }
+/* Contador a la derecha del enlace (nº de carpetas, nº por vencer…) */
+.pt-lateral__nav button .pt-nav-num{
+    margin-left: auto;
+    font-size: 1.152rem;
+    font-weight: 600;
+    color: var(--pt-gris);
+    background: var(--pt-superficie-2);
+    border-radius: 999px;
+    padding: 0.16rem 0.72rem;
+    min-width: 2.16rem;
+    text-align: center;
+}
+.pt-lateral__nav button.activa .pt-nav-num{
+    background: rgba(255,255,255,.16);
+    color: var(--pt-blanco);
+}
+
+/* Tarjeta de almacenamiento */
+.pt-almacen{
+    margin-top: auto;
+    padding: 1.28rem 1.36rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: 16px;
+}
+.pt-almacen__tit{
+    font-size: 1.008rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--pt-gris);
+    margin-bottom: 0.8rem;
+}
+.pt-almacen__barra{
+    height: 5px;
+    border-radius: 3px;
+    background: var(--pt-superficie-2);
+    overflow: hidden;
+    margin-bottom: 0.72rem;
+}
+.pt-almacen__barra i{
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    background: var(--pt-marca-cian);
+    transition: width var(--pt-normal);
+}
+.pt-almacen__txt{ font-size: 1.168rem; color: var(--pt-gris); }
+
+/* Persona conectada */
+.pt-lateral__yo{
+    display: flex;
+    align-items: center;
+    gap: 0.88rem;
+    padding: 0.16rem 0.48rem;
+}
+.pt-avatar{
+    width: 28px; height: 28px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--pt-navy-700);
+    color: var(--pt-blanco);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.056rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+.pt-lateral__yo div{ min-width: 0; }
+.pt-lateral__yo b{
+    display: block;
+    font-size: 1.264rem;
+    font-weight: 600;
+    color: var(--pt-tinta);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pt-lateral__yo small{
+    display: block;
+    font-size: 0.992rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--pt-gris);
+}
+
+/* ---- Columna de contenido ---- */
+.pt-principal{ min-width: 0; display: flex; flex-direction: column; }
+.pt-cabecera{
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.8rem;
+    padding: 1.44rem clamp(1.6rem, 2.4vw, 3.04rem);
+    border-bottom: 1px solid var(--pt-borde);
+    position: sticky;
+    top: 0;
+    z-index: var(--pt-z-encabezado);
+    background: var(--pt-fondo);
+}
+.pt-cabecera__hueco{ margin-right: auto; }
+
+/* Botón que abre la barra lateral en móvil */
+.pt-lateral-abrir{ display: none; }
+
+@media (max-width: 900px){
+    .pt-marco{ grid-template-columns: 1fr; }
+    .pt-lateral{
+        position: fixed;
+        z-index: calc(var(--pt-z-modal) - 1);
+        width: 216px;
+        transform: translateX(-100%);
+        transition: transform var(--pt-normal);
+        box-shadow: var(--pt-sombra-3);
+    }
+    .pt-lateral.abierta{ transform: none; }
+    .pt-lateral-abrir{
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .pt-lateral-tapa{
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.45);
+        z-index: calc(var(--pt-z-modal) - 2);
+    }
+    .pt-lateral-tapa[hidden]{ display: none; }
+}
+
+
+/* ============================================================
+   3) FRANJA DE PANORAMA — 4 cifras sobre la lista
+   ------------------------------------------------------------
+   Responde «cómo va todo» antes de leer una sola fila.
+   ============================================================ */
+.pt-panorama{
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.44rem;
+    margin-bottom: 2.24rem;
+}
+.pt-panorama__caja{
+    padding: 1.52rem 1.76rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: 18px;
+    background: var(--pt-superficie);
+    min-width: 0;
+}
+.pt-panorama__tit{
+    font-size: 1.008rem;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--pt-gris);
+    margin-bottom: 0.56rem;
+}
+.pt-panorama__num{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 2.64rem;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--pt-tinta);
+}
+.pt-panorama__pie{
+    font-size: 1.152rem;
+    color: var(--pt-gris);
+    margin-top: 0.32rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pt-panorama__num--alerta{ color: var(--pt-rojo); }
+.pt-panorama__num--aviso{ color: var(--pt-ambar); }
+
+@media (max-width: 1100px){ .pt-panorama{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width: 560px){ .pt-panorama{ grid-template-columns: 1fr; } }
+
+
+/* ============================================================
+   4) LISTA DE CARPETAS — filas en vez de tarjetas
+   ------------------------------------------------------------
+   Tres columnas de tarjetas con cuatro botones cada una se
+   vuelven una lista escaneable con UNA acción primaria; el resto
+   se repliega en el menú «⋯».
+   ============================================================ */
+.pt-tabla-tarjeta{
+    border: 1px solid var(--pt-borde);
+    border-radius: 22px;
+    background: var(--pt-superficie);
+    /* Sin overflow:hidden. Recortaba el menú «⋯» de las filas: con
+       una sola carpeta el menú caía entero fuera y parecía que no
+       abría. Las esquinas se redondean fila por fila. */
+    overflow: visible;
+}
+.pt-tabla-tarjeta > :first-child{
+    border-top-left-radius: 21px;
+    border-top-right-radius: 21px;
+}
+.pt-tabla-tarjeta > :last-child{
+    border-bottom-left-radius: 21px;
+    border-bottom-right-radius: 21px;
+}
+.pt-filas__cab,
+.pt-fila-carpeta{
+    display: grid;
+    grid-template-columns: minmax(0, 2.4fr) minmax(0, 1.9fr) minmax(0, 1.1fr) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1.6rem;
+    padding: 1.36rem 1.92rem;
+}
+.pt-filas__cab{
+    font-size: 1.008rem;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--pt-gris);
+    border-bottom: 1px solid var(--pt-borde);
+    background: var(--pt-superficie-2);
+}
+.pt-fila-carpeta{
+    border-bottom: 1px solid var(--pt-borde);
+    transition: background var(--pt-rapido);
+}
+.pt-fila-carpeta:last-child{ border-bottom: none; }
+.pt-fila-carpeta:hover{ background: var(--pt-superficie-2); }
+.pt-fila-carpeta--inactiva{ opacity: .62; }
+
+.pt-fila__nombre{
+    font-weight: 600;
+    font-size: 1.44rem;
+    color: var(--pt-tinta);
+    display: flex;
+    align-items: center;
+    gap: 0.72rem;
+    margin-bottom: 0.288rem;
+}
+.pt-fila__sub,
+.pt-fila__col{
+    font-size: 1.224rem;
+    color: var(--pt-gris);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pt-fila__col b{ display: block; color: var(--pt-tinta); font-weight: 600; }
+.pt-fila__acciones{
+    display: flex;
+    align-items: center;
+    gap: 0.56rem;
+    justify-self: end;
+}
+
+/* Menú «⋯» de acciones secundarias */
+.pt-menu{ position: relative; }
+.pt-menu__boton{
+    width: 30px; height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--pt-borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--pt-gris);
+    cursor: pointer;
+    font-size: 1.6rem;
+    line-height: 1;
+    transition: all var(--pt-rapido);
+}
+.pt-menu__boton:hover{ color: var(--pt-tinta); border-color: var(--pt-azul); }
+.pt-menu__lista{
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.48rem);
+    z-index: var(--pt-z-encabezado);
+    min-width: 17.6rem;
+    padding: 0.48rem;
+    background: var(--pt-superficie);
+    border: 1px solid var(--pt-borde);
+    border-radius: 14px;
+    box-shadow: var(--pt-sombra-2);
+}
+.pt-menu__lista[hidden]{ display: none; }
+.pt-menu__lista button{
+    display: block;
+    width: 100%;
+    padding: 0.8rem 1.04rem;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--pt-tinta);
+    font: inherit;
+    font-size: 1.28rem;
+    text-align: left;
+    cursor: pointer;
+}
+.pt-menu__lista button:hover{ background: var(--pt-superficie-2); }
+.pt-menu__lista button.pt-menu__peligro{ color: var(--pt-rojo); }
+
+/* En pantallas medianas la fila se pliega a dos líneas */
+@media (max-width: 980px){
+    .pt-filas__cab{ display: none; }
+    .pt-fila-carpeta{
+        grid-template-columns: minmax(0, 1fr) auto;
+        row-gap: 0.72rem;
+    }
+    .pt-fila__col{ grid-column: 1; }
+    .pt-fila__acciones{ grid-row: 1; grid-column: 2; }
+}
+
+
+/* ============================================================
+   5) ESTADOS — tablero por urgencia
+   ------------------------------------------------------------
+   El semáforo deja de ser una columna y pasa a ser la estructura
+   de la pantalla: cada trámite cae en el grupo que le toca.
+   El reloj 60/90 del trámite se dibuja como anillo.
+   ============================================================ */
+.pt-tablero{ display: flex; flex-direction: column; gap: 2.4rem; }
+
+.pt-grupo__cab{
+    display: flex;
+    align-items: center;
+    gap: 0.96rem;
+    margin-bottom: 1.12rem;
+}
+.pt-grupo__punto{
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+}
+.pt-grupo__punto--rojo{ background: var(--pt-rojo); }
+.pt-grupo__punto--naranja{ background: var(--pt-ambar); }
+.pt-grupo__punto--verde{ background: var(--pt-verde); }
+.pt-grupo__punto--gris{ background: var(--pt-gris); }
+.pt-grupo__tit{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--pt-tinta);
+}
+.pt-grupo__num{
+    font-size: 1.152rem;
+    font-weight: 600;
+    color: var(--pt-gris);
+    background: var(--pt-superficie-2);
+    border-radius: 999px;
+    padding: 0.16rem 0.8rem;
+}
+.pt-grupo__lista{ display: flex; flex-direction: column; gap: 0.96rem; }
+.pt-grupo__vacio{
+    padding: 1.44rem 1.76rem;
+    border: 1px dashed var(--pt-borde);
+    border-radius: 16px;
+    font-size: 1.28rem;
+    color: var(--pt-gris);
+}
+
+/* ---- Tarjeta de trámite ---- */
+.pt-tramite{
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1.76rem;
+    padding: 1.44rem 1.84rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: 18px;
+    background: var(--pt-superficie);
+    transition: border-color var(--pt-rapido);
+}
+.pt-tramite:hover{ border-color: var(--pt-azul); }
+.pt-tramite__nombre{
+    font-weight: 600;
+    font-size: 1.44rem;
+    color: var(--pt-tinta);
+    margin-bottom: 0.24rem;
+}
+.pt-tramite__linea{ font-size: 1.224rem; color: var(--pt-gris); }
+.pt-tramite__linea strong{ color: var(--pt-tinta); font-weight: 600; }
+.pt-tramite__acciones{ display: flex; align-items: center; gap: 0.56rem; }
+
+/* ---- Anillo del conteo 60/90 ---- */
+.pt-anillo{ position: relative; width: 52px; height: 52px; flex: 0 0 auto; }
+.pt-anillo svg{ transform: rotate(-90deg); display: block; }
+.pt-anillo__pista{ stroke: var(--pt-superficie-2); }
+.pt-anillo__arco{ transition: stroke-dashoffset var(--pt-normal); }
+.pt-anillo__arco--verde{ stroke: var(--pt-verde); }
+.pt-anillo__arco--naranja{ stroke: var(--pt-ambar); }
+.pt-anillo__arco--rojo{ stroke: var(--pt-rojo); }
+.pt-anillo__arco--gris{ stroke: var(--pt-gris); }
+.pt-anillo__txt{
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.056rem;
+    font-weight: 700;
+    color: var(--pt-tinta);
+    letter-spacing: -.02em;
+}
+
+/* ---- Pie del tablero ---- */
+.pt-tablero__pie{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.6rem;
+    flex-wrap: wrap;
+    padding: 1.36rem 1.92rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: 18px;
+    background: var(--pt-superficie-2);
+    font-size: 1.224rem;
+    color: var(--pt-gris);
+}
+.pt-tablero__pie .pt-acciones{ display: flex; gap: 0.72rem; }
+
+@media (max-width: 620px){
+    .pt-tramite{ grid-template-columns: auto minmax(0,1fr); row-gap: 0.96rem; }
+    .pt-tramite__acciones{ grid-column: 1 / -1; justify-content: flex-end; }
+}
+
+
+/* ============================================================
+   6) DETALLE DE CARPETA — cabecera compacta y cifras
+   ------------------------------------------------------------
+   Los documentos son la pantalla, no el formulario de subida:
+   la zona de carga se repliega detrás de un botón y la cabecera
+   resume el expediente en cuatro cifras.
+   ============================================================ */
+.pt-detalle-cifras{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3.04rem;
+    padding: 1.44rem 0 0.32rem;
+    margin-bottom: 1.44rem;
+    border-bottom: 1px solid var(--pt-borde);
+}
+.pt-cifra__num{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 2.272rem;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--pt-tinta);
+}
+.pt-cifra__tit{
+    font-size: 0.976rem;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--pt-gris);
+    margin-top: 0.192rem;
+}
+.pt-cifra__num--alerta{ color: var(--pt-rojo); }
+.pt-cifra__num--aviso{ color: var(--pt-ambar); }
+
+/* Migas de pan sobre el título */
+.pt-migas{
+    display: flex;
+    align-items: center;
+    gap: 0.64rem;
+    font-size: 1.184rem;
+    color: var(--pt-gris);
+    margin-bottom: 0.56rem;
+}
+.pt-migas button{
+    border: none;
+    background: none;
+    padding: 0;
+    font: inherit;
+    color: var(--pt-gris);
+    cursor: pointer;
+    text-decoration: none;
+}
+.pt-migas button:hover{ color: var(--pt-azul); text-decoration: underline; }
+.pt-migas span{ opacity: .5; }
+
+/* La zona de carga aparece solo al pedirla */
+.pt-zona-subida[hidden]{ display: none; }
+.pt-barra-archivos{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.6rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.44rem;
+}
+
+
+/* ============================================================
+   7) USUARIOS — crear usuario en panel lateral
+   ------------------------------------------------------------
+   El formulario de alta ocupaba media pantalla encima de la
+   tabla. Ahora se abre como panel lateral: la lista de personas
+   es lo que se ve al entrar.
+   ============================================================ */
+.pt-cajon{
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: var(--pt-z-modal);
+    width: min(48rem, 100%);
+    height: 100vh;
+    overflow-y: auto;
+    padding: 2.56rem;
+    background: var(--pt-superficie);
+    border-left: 1px solid var(--pt-borde);
+    box-shadow: var(--pt-sombra-3);
+    transform: translateX(100%);
+    transition: transform var(--pt-normal);
+}
+.pt-cajon.abierto{ transform: none; }
+.pt-cajon__cab{
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.6rem;
+    margin-bottom: 1.92rem;
+}
+.pt-cajon__cab h3{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 1.84rem;
+    font-weight: 600;
+    margin: 0;
+}
+.pt-cajon__cerrar{
+    width: 30px; height: 30px;
+    flex: 0 0 auto;
+    border: 1px solid var(--pt-borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--pt-gris);
+    font-size: 1.68rem;
+    line-height: 1;
+    cursor: pointer;
+}
+.pt-cajon__cerrar:hover{ color: var(--pt-tinta); border-color: var(--pt-azul); }
+.pt-cajon-tapa{
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--pt-z-modal) - 1);
+    background: rgba(0,0,0,.45);
+}
+.pt-cajon-tapa[hidden]{ display: none; }
+
+/* Dentro del cajón el formulario se apila en una columna */
+.pt-cajon .pt-form-usuario{
+    display: flex;
+    flex-direction: column;
+    gap: 1.44rem;
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: none;
+    box-shadow: none;
+}
+.pt-cajon .pt-form-usuario .pt-campo{ align-self: stretch; }
+
+
+/* ============================================================
+   8) CALENDARIO — mes + agenda al lado
+   ------------------------------------------------------------
+   El mes deja de ser una rejilla que hay que interrogar: la
+   columna derecha responde «qué sigue» sin hacer clic.
+   ============================================================ */
+.pt-cal-marco{
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 32rem;
+    gap: 2.24rem;
+    align-items: start;
+}
+.pt-agenda{
+    position: sticky;
+    top: 7.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.6rem;
+}
+.pt-agenda__caja{
+    padding: 1.6rem 1.76rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: 18px;
+    background: var(--pt-superficie);
+}
+.pt-agenda__tit{
+    font-size: 1.008rem;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--pt-gris);
+    margin-bottom: 1.12rem;
+}
+.pt-agenda__item{
+    display: grid;
+    grid-template-columns: 4.16rem minmax(0, 1fr);
+    gap: 1.12rem;
+    padding: 0.96rem 0;
+    border-top: 1px solid var(--pt-borde);
+}
+.pt-agenda__item:first-of-type{ border-top: none; padding-top: 0; }
+.pt-agenda__fecha{ text-align: center; line-height: 1.1; }
+.pt-agenda__dia{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 1.84rem;
+    font-weight: 600;
+    color: var(--pt-tinta);
+}
+.pt-agenda__mes{
+    font-size: 0.928rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--pt-gris);
+}
+.pt-agenda__que{
+    font-size: 1.264rem;
+    font-weight: 600;
+    color: var(--pt-tinta);
+    margin-bottom: 0.16rem;
+}
+.pt-agenda__det{ font-size: 1.152rem; color: var(--pt-gris); }
+.pt-agenda__plazo{
+    display: inline-block;
+    margin-top: 0.32rem;
+    font-size: 1.056rem;
+    font-weight: 600;
+    padding: 0.16rem 0.72rem;
+    border-radius: 999px;
+    background: var(--pt-superficie-2);
+    color: var(--pt-gris);
+}
+.pt-agenda__plazo--rojo{ background: var(--pt-rojo-suave); color: var(--pt-rojo); }
+.pt-agenda__plazo--naranja{ background: var(--pt-ambar-suave); color: var(--pt-ambar); }
+.pt-agenda__vacio{ font-size: 1.248rem; color: var(--pt-gris); }
+
+@media (max-width: 1050px){
+    .pt-cal-marco{ grid-template-columns: 1fr; }
+    .pt-agenda{ position: static; }
+}
+
+
+/* ============================================================
+   9) DENSIDAD Y ESCALA — el tema, aplicado a TODO el programa
+   ------------------------------------------------------------
+   Lo anterior cambió la estructura de las pantallas; esto ajusta
+   el ritmo tipográfico y la altura de los controles a la escala
+   del diseño, incluidos los componentes que ya existían
+   (encabezados, sub-pestañas, buscadores, botones, tablas,
+   modales, leyes, chats).
+
+   Medidas tomadas del propio diseño:
+     título de pantalla ...... 25px Lora 600
+     nota bajo el título ..... 13px Krub
+     etiqueta de sección ..... 10px Krub 500, ls .8px, mayúsculas
+     cifra grande ............ 20–26px Krub 600  (Krub, no Lora)
+     botón ................... 12.5–13px 600 · alto 34 · r 14
+     sub-pestaña ............. 12px · alto 28
+     buscador / campo ........ 12.5px · alto 36 · r 14
+     nav lateral ............. 13.5px · alto 36 · r 14
+
+   Todo va bajo body.pt-app para no encoger la pantalla de
+   ingreso, que en el diseño usa controles más grandes (46px).
+   ============================================================ */
+
+/* ---- Lienzo ---- */
+body.pt-app .pt-contenido{
+    padding: 2.4rem clamp(1.6rem, 2.4vw, 3.04rem) 4.8rem;
+    max-width: none;
+    /* portal.css trae "margin: 0 auto". Dentro de un contenedor flex el
+       margen automático CANCELA el estirado: la vista se encogía a su
+       contenido y quedaba centrada con un hueco a la izquierda. */
+    margin: 0;
+    width: 100%;
+}
+
+/* ---- Encabezado de pantalla ---- */
+body.pt-app .pt-barra-seccion{
+    align-items: center;
+    gap: 1.6rem;
+    margin-bottom: 0.8rem;
+}
+body.pt-app .pt-barra-seccion h2,
+body.pt-app .pt-contenido > section > h2{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 2.496rem;      /* 25px */
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -.005em;
+}
+body.pt-app .pt-detalle-cabecera h2{
+    font-size: 2.4rem;
+    line-height: 1.15;
+}
+body.pt-app .pt-contenido .pt-nota{
+    font-size: 1.28rem;        /* 13px */
+    line-height: 1.5;
+}
+body.pt-app #estados-nota{ margin-bottom: 1.76rem !important; }
+
+/* ---- Sub-pestañas (Activas / Desactivadas, pestañas de carpeta) ---- */
+body.pt-app .pt-sub-pestanas{
+    gap: 0.48rem;
+    margin: 1.44rem 0 1.76rem;
+    border-bottom: 1px solid var(--pt-borde);
+    padding-bottom: 0.88rem;
+}
+body.pt-app .pt-sub-pestanas button{
+    min-height: 28px;
+    padding: 0.48rem 1.2rem;
+    font-size: 1.2rem;       /* 12px */
+    font-weight: 500;
+    border-radius: 999px;
+    border: none;
+    background: transparent;
+    color: var(--pt-gris);
+}
+body.pt-app .pt-sub-pestanas button svg{ width: 14px; height: 14px; }
+body.pt-app .pt-sub-pestanas button.activa{
+    background: var(--pt-navy-700);
+    color: var(--pt-blanco);
+    font-weight: 600;
+}
+
+/* ---- Buscador ---- */
+body.pt-app .pt-buscador{
+    max-width: 38.4rem;
+    margin: 0 0 1.76rem;
+}
+body.pt-app .pt-buscador input{
+    height: 36px;
+    padding: 0 1.28rem 0 3.36rem;
+    font-size: 1.248rem;       /* 12.5px */
+    border-radius: 14px;
+}
+body.pt-app .pt-buscador > span[data-icono]{ left: 1.12rem; }
+
+/* ---- Botones ---- */
+body.pt-app .pt-boton{
+    min-height: 34px;
+    padding: 0.72rem 1.52rem;
+    font-size: 1.296rem;       /* 13px */
+    font-weight: 600;
+    border-radius: 14px;
+}
+body.pt-app .pt-boton--mini{
+    min-height: 28px;
+    padding: 0.48rem 1.12rem;
+    font-size: 1.2rem;
+    border-radius: 12px;
+}
+body.pt-app .pt-boton svg{ width: 15px; height: 15px; }
+body.pt-app .pt-boton--mini svg{ width: 13px; height: 13px; }
+
+/* ---- Campos ---- */
+body.pt-app .pt-campo input,
+body.pt-app .pt-campo select,
+body.pt-app .pt-campo textarea{
+    min-height: 36px;
+    padding: 0.72rem 1.2rem;
+    font-size: 1.296rem;
+    border-radius: 14px;
+}
+body.pt-app .pt-campo textarea{ min-height: 7.2rem; }
+body.pt-app .pt-campo > span,
+body.pt-app .pt-campo > legend{
+    font-size: 1.152rem;
+    font-weight: 500;
+    margin-bottom: 0.48rem;
+}
+
+/* ---- Tablas ---- */
+body.pt-app .pt-tabla{ font-size: 1.28rem; }
+body.pt-app .pt-tabla th{
+    font-size: 1rem;      /* 10px */
+    font-weight: 500;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--pt-gris);
+    padding: 0.96rem 1.2rem;
+}
+body.pt-app .pt-tabla td{ padding: 0.96rem 1.2rem; }
+body.pt-app .pt-tabla-envoltura{ border-radius: 18px; }
+
+/* ---- Cifras: Krub, no Lora (así están en el diseño) ---- */
+.pt-panorama__num{
+    font-family: var(--pt-fuente-texto);
+    font-size: 2.592rem;      /* 26px */
+    font-weight: 600;
+    letter-spacing: -.01em;
+}
+.pt-cifra__num{
+    font-family: var(--pt-fuente-texto);
+    font-size: 2rem;      /* 20px */
+    font-weight: 600;
+}
+.pt-anillo__txt{ font-size: 1.048rem; }
+.pt-agenda__dia{ font-family: var(--pt-fuente-texto); font-size: 1.68rem; }
+
+/* Nombre de trámite en el tablero: Lora, como en el diseño */
+.pt-tramite__nombre{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 1.352rem;      /* 13.5px */
+}
+.pt-grupo__tit{ font-size: 1.2rem; font-weight: 600; font-family: var(--pt-fuente-texto); }
+.pt-grupo__num{ font-size: 1.088rem; }
+.pt-tramite__acciones .pt-boton{ border-radius: 22px; }
+
+/* Nombre de carpeta en la fila: Lora */
+.pt-fila__nombre{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 1.352rem;
+}
+
+/* ---- Leyes de insolvencia: mismo ritmo que el resto ---- */
+body.pt-app .pt-leyes{
+    margin-top: 2.88rem;
+    padding: 1.92rem 2.08rem;
+    border-radius: 18px;
+}
+body.pt-app .pt-leyes > h3{
+    font-size: 1.52rem;
+    gap: 0.8rem;
+    margin-bottom: 0.48rem;
+}
+body.pt-app .pt-leyes > h3 svg{ width: 16px; height: 16px; }
+body.pt-app .pt-ley__txt strong{ font-size: 1.296rem; }
+body.pt-app .pt-ley__txt span{ font-size: 1.184rem; }
+
+/* ---- Modales ---- */
+body.pt-app .pt-modal__caja{ border-radius: 20px; }
+body.pt-app .pt-modal__caja h3{ font-size: 1.76rem; }
+
+/* ---- Cabecera superior: más discreta ---- */
+body.pt-app .pt-cabecera .pt-boton{
+    min-height: 30px;
+    font-size: 1.224rem;
+    font-weight: 500;
+    border-radius: 12px;
+}
+
+
+/* ---- Ingreso: controles a la altura del diseño (46px) ----
+   La pantalla de ingreso usa controles más grandes que la
+   aplicación: es un solo foco, no una herramienta densa. */
+body.pt-cuerpo-login .pt-campo input{
+    min-height: 4.6rem;          /* 46px */
+    padding: 0 1.4rem;
+    font-size: 1.4rem;           /* 14px */
+    border-radius: 1.6rem;       /* 16px */
+}
+body.pt-cuerpo-login .pt-campo-clave input{ padding-right: 4.4rem; }
+body.pt-cuerpo-login #boton-entrar{
+    min-height: 4.6rem;
+    font-size: 1.45rem;          /* 14.5px */
+    font-weight: 600;
+    border-radius: 1.6rem;
+}
+body.pt-cuerpo-login .pt-campo > span{
+    font-size: 1.1rem;           /* 11px */
+    font-weight: 500;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--pt-gris);
+    margin-bottom: .6rem;
+}
+.pt-leyes-chips span{ line-height: 1; padding: .8rem 1.2rem; }
+
+
+/* ============================================================
+   10) AJUSTES VISUALES — pulido tras revisar en pantalla
+   ============================================================ */
+
+/* ---- Filtros en línea (Actividad, Calendario) ----
+   Eran una caja con borde que competía con el contenido. Ahora
+   son una fila de controles discretos, como el resto del tema. */
+body.pt-app .pt-calv-filtros{
+    background: none;
+    border: none;
+    padding: 0;
+    gap: 1.2rem;
+    margin-bottom: 1.2rem !important;
+}
+body.pt-app .pt-calv-filtros label{
+    display: inline-flex;
+    align-items: center;
+    gap: .6rem;
+    font-size: 1.2rem;
+    color: var(--pt-gris);
+}
+body.pt-app .pt-calv-filtros select{
+    min-height: 3.2rem;
+    padding: .3rem 2.4rem .3rem .9rem;
+    font-size: 1.248rem;
+    border-radius: 1.2rem;
+    border: 1px solid var(--pt-borde);
+    background-color: var(--pt-superficie);
+    color: var(--pt-tinta);
+}
+
+/* ---- Resumen del calendario: cifras, no párrafo ---- */
+body.pt-app .pt-calv-resumen{
+    gap: 2.4rem;
+    padding: 1.1rem 1.4rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: 1.8rem;
+    font-size: 1.248rem;
+    box-shadow: none;
+}
+body.pt-app .pt-calv-resumen strong{
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin-left: .2rem;
+}
+
+/* ---- Calendario: celdas más compactas y legibles ---- */
+body.pt-app .pt-calv__semana span{
+    font-size: .96rem;
+    font-weight: 500;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--pt-gris);
+}
+body.pt-app .pt-calv__rejilla{ gap: .5rem; }
+body.pt-app .pt-calv__rejilla > *{
+    min-height: 5.6rem;
+    border-radius: 1.2rem;
+    font-size: 1.28rem;
+}
+
+/* ---- Registro de actividad: filas más juntas ---- */
+body.pt-app .pt-notif-lista > *{ font-size: 1.328rem; }
+body.pt-app .pt-notif-lista li,
+body.pt-app .pt-notif-lista .pt-notif{
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+/* ---- Leyes de insolvencia: rejilla más apretada ---- */
+body.pt-app .pt-leyes__lista{ gap: .8rem; }
+body.pt-app .pt-leyes__lista a{
+    padding: .9rem 1.1rem;
+    border-radius: 1.4rem;
+}
+
+/* ---- Burbuja de soporte: que no tape el contenido ---- */
+body.pt-app .pt-soporte-burbuja{
+    width: 4.4rem;
+    height: 4.4rem;
+    right: 1.6rem;
+    bottom: 1.6rem;
+    box-shadow: var(--pt-sombra-2);
+}
+body.pt-app .pt-contenido{ padding-bottom: 8rem; }
+
+/* ---- Insignia de estado en la fila: más discreta ---- */
+.pt-fila__nombre .pt-insignia{
+    font-size: .96rem;
+    padding: .15rem .6rem;
+    letter-spacing: .04em;
+}
+
+/* ---- Cabecera superior: separarla del contenido ---- */
+body.pt-app .pt-cabecera{ gap: .8rem; }
+body.pt-app .pt-cabecera .pt-campana{ margin-right: .4rem; }
+
+/* Fila del título: buscador y acción primaria a la derecha */
+body.pt-app .pt-barra-seccion__acciones{
+    display: flex;
+    align-items: center;
+    gap: .8rem;
+    flex-wrap: wrap;
+}
+body.pt-app .pt-barra-seccion__acciones .pt-buscador{
+    margin: 0;
+    width: 26rem;
+    max-width: 100%;
+}
+@media (max-width: 720px){
+    body.pt-app .pt-barra-seccion__acciones{ width: 100%; }
+    body.pt-app .pt-barra-seccion__acciones .pt-buscador{ flex: 1 1 100%; width: auto; }
+}
+
+/* ---- Buscador: un solo control de 36px, no una píldora con un
+   campo dentro. La envoltura ES el control; el input va desnudo. ---- */
+body.pt-app .pt-buscador{
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    min-height: 3.6rem;
+    height: 3.6rem;
+    padding: 0 1.2rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: 1.4rem;
+    background: var(--pt-superficie);
+    box-shadow: none;
+}
+body.pt-app .pt-buscador > span[data-icono]{
+    position: static;
+    display: inline-flex;
+    color: var(--pt-gris);
+    flex: 0 0 auto;
+}
+body.pt-app .pt-buscador input{
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+    border-radius: 0;
+    font-size: 1.248rem;
+    color: var(--pt-tinta);
+}
+body.pt-app .pt-buscador input:focus{ outline: none; box-shadow: none; }
+body.pt-app .pt-buscador:focus-within{ border-color: var(--pt-marca-cian); }
+
+/* El menú «⋯» se abre hacia arriba si no cabe debajo */
+.pt-menu__lista--arriba{
+    top: auto;
+    bottom: calc(100% + .3rem);
+}

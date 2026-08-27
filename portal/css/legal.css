@@ -1,0 +1,79 @@
+/* ============================================================
+   PÁGINAS LEGALES — política de datos y términos de uso
+   ============================================================
+   Documentos largos: columna estrecha, buen interlineado y
+   jerarquía clara. Hereda tokens de style.css + sitio.css.
+   ============================================================ */
+.legal{
+    width: 100%;
+    max-width: 52rem;
+    margin: 0 auto;
+    padding: 2.4rem 0 3rem;
+    color: var(--tinta);
+    line-height: 1.7;
+    font-size: .92rem;
+}
+.legal h2{
+    font-family: var(--titulos);
+    font-size: 1.16rem;
+    font-weight: 600;
+    margin: 2.2rem 0 .7rem;
+    padding-bottom: .5rem;
+    border-bottom: 1px solid var(--borde);
+}
+.legal h3{
+    font-family: var(--texto);
+    font-size: .95rem;
+    font-weight: 600;
+    margin: 1.2rem 0 .4rem;
+}
+.legal p{ margin-bottom: .9rem; }
+.legal ul{ margin: 0 0 1rem 1.1rem; }
+.legal li{ margin-bottom: .4rem; }
+.legal code{
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: .84em;
+    background: var(--superficie-2);
+    padding: .1rem .35rem;
+    border-radius: 6px;
+}
+.legal__fecha{ color: var(--gris); font-size: .84rem; }
+.legal__nota{
+    background: var(--ambar-suave);
+    border-left: 3px solid var(--ambar);
+    border-radius: 0 12px 12px 0;
+    padding: .8rem 1rem;
+    font-size: .86rem;
+}
+.legal__aviso{
+    background: var(--ambar-suave);
+    color: var(--ambar);
+    border: 1px solid var(--ambar);
+    border-radius: 14px;
+    padding: .9rem 1.1rem;
+    margin-bottom: 1.6rem;
+    font-size: .88rem;
+}
+.legal__tabla{
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 1.2rem;
+    font-size: .88rem;
+}
+.legal__tabla th,
+.legal__tabla td{
+    text-align: left;
+    vertical-align: top;
+    padding: .6rem .8rem;
+    border-bottom: 1px solid var(--borde);
+}
+.legal__tabla th{
+    width: 34%;
+    font-weight: 600;
+    color: var(--gris);
+    font-size: .84rem;
+}
+.legal__volver{ margin-top: 2.4rem; }
+.legal__volver a{ color: var(--cian-prof); font-weight: 600; text-decoration: none; }
+.legal__volver a:hover{ text-decoration: underline; }
+html[data-tema="oscuro"] .legal__volver a{ color: var(--cian); }

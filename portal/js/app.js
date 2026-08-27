@@ -243,10 +243,26 @@ function pintarLeyes() {
         '</a>').join('');
 }
 
+/* Iniciales para el avatar de la barra lateral: «Oscar Prieto» → OP */
+function inicialesDe(nombre) {
+    const partes = String(nombre || '').trim().split(/\s+/).filter(Boolean);
+    if (!partes.length) return '—';
+    return (partes[0][0] + (partes.length > 1 ? partes[partes.length - 1][0] : '')).toUpperCase();
+}
+
 function pintarEncabezado() {
     const chip = document.getElementById('chip-usuario');
-    chip.innerHTML = escaparHtml(sesion.nombre) +
-        ' <span class="pt-insignia pt-insignia--rol">' + escaparHtml(ETIQUETAS_ROL[sesion.rol] || sesion.rol) + '</span>';
+    if (chip) {
+        chip.innerHTML = escaparHtml(sesion.nombre) +
+            ' <span class="pt-insignia pt-insignia--rol">' + escaparHtml(ETIQUETAS_ROL[sesion.rol] || sesion.rol) + '</span>';
+    }
+    // Persona conectada, al pie de la barra lateral
+    const avatar = document.getElementById('mi-avatar');
+    const nombre = document.getElementById('mi-nombre');
+    const rol = document.getElementById('mi-rol');
+    if (avatar) avatar.textContent = inicialesDe(sesion.nombre || sesion.usuario);
+    if (nombre) nombre.textContent = sesion.nombre || sesion.usuario;
+    if (rol) rol.textContent = ETIQUETAS_ROL[sesion.rol] || sesion.rol;
     // Estados: personal (operador gestiona los suyos) y supervisión (admin/monitor ven todo)
     document.getElementById('pestana-estados').hidden = !(ES_PERSONAL || ES_MONITOR);
     // Calendario: supervisión (todo) y operador (sus carpetas + recordatorios)
@@ -256,8 +272,60 @@ function pintarEncabezado() {
     document.getElementById('boton-nueva-carpeta').hidden = !ES_ADMIN;
 }
 
+/* ============ BARRA LATERAL EN PANTALLAS ANGOSTAS ============
+   Debajo de 900 px la columna se sale de pantalla y se abre por
+   encima del contenido, con una tapa que la cierra al tocarla. */
+function alternarLateral(abrir) {
+    const lateral = document.getElementById('lateral');
+    const tapa = document.getElementById('lateral-tapa');
+    if (!lateral || !tapa) return;
+    const visible = abrir === undefined ? !lateral.classList.contains('abierta') : abrir;
+    lateral.classList.toggle('abierta', visible);
+    tapa.hidden = !visible;
+}
+
+/* Menú «⋯» de una fila: solo uno abierto a la vez. Se cierra al
+   hacer clic fuera (ver el listener de cierre más abajo). */
+function alternarMenuFila(idLista) {
+    const lista = document.getElementById(idLista);
+    if (!lista) return;
+    const abrir = lista.hidden;
+    document.querySelectorAll('.pt-menu__lista').forEach(m => {
+        m.hidden = true;
+        m.classList.remove('pt-menu__lista--arriba');
+    });
+    lista.hidden = !abrir;
+    if (!abrir) return;
+    // Si no cabe debajo, se abre hacia arriba
+    const caja = lista.getBoundingClientRect();
+    if (caja.bottom > window.innerHeight - 8) {
+        lista.classList.add('pt-menu__lista--arriba');
+    }
+}
+
+function cerrarMenusFila() {
+    document.querySelectorAll('.pt-menu__lista').forEach(m => { m.hidden = true; });
+}
+
+/* Panel lateral de alta de usuario */
+function alternarCajonUsuario(abrir) {
+    const cajon = document.getElementById('cajon-usuario');
+    const tapa = document.getElementById('cajon-usuario-tapa');
+    if (!cajon || !tapa) return;
+    const visible = abrir === undefined ? !cajon.classList.contains('abierto') : abrir;
+    cajon.classList.toggle('abierto', visible);
+    tapa.hidden = !visible;
+    if (visible) {
+        const primero = document.getElementById('nuevo-usuario');
+        if (primero) primero.focus();
+    }
+}
+
 /* ============ NAVEGACIÓN ENTRE VISTAS ============ */
 function mostrarVista(idVista) {
+    // Al cambiar de sección en móvil, la barra lateral se cierra sola
+    alternarLateral(false);
+    alternarCajonUsuario(false);
     for (const id of ['vista-carpetas', 'vista-carpeta', 'vista-estados', 'vista-calendario', 'vista-usuarios', 'vista-notificaciones']) {
         const el = document.getElementById(id);
         if (el) el.hidden = (id !== idVista);
@@ -308,7 +376,39 @@ async function mostrarVistaCarpetas() {
     for (const p of procesos) (_procesosPorCarpeta[p.carpetaId] = _procesosPorCarpeta[p.carpetaId] || []).push(p);
     _carpetasVisibles = visibles;
 
+    pintarLateral(visibles, procesos);
     pintarCarpetasSegunFiltro();
+}
+
+/* Contadores de la barra lateral y barra de almacenamiento.
+   Todo sale de datos que ya se descargaron: no hay consultas extra. */
+const ALMACEN_TOPE_MB = 50;   // cupo del bucket 'documentos'
+
+function pintarLateral(carpetas, procesos) {
+    const activas = carpetas.filter(c => c.activa);
+    const num = (id, valor) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = valor;
+        el.hidden = !valor;
+    };
+    num('nav-num-carpetas', activas.length);
+
+    // Estados: procesos sin completar que ya vencieron o vencen hoy/mañana
+    const porAtender = (procesos || []).filter(p =>
+        !p.completado && !p.pausado && (p.semaforo === 'rojo' || p.semaforo === 'naranja')).length;
+    num('nav-num-estados', porAtender);
+
+    // Almacenamiento: suma del peso cacheado de cada carpeta visible
+    const caja = document.getElementById('almacen-caja');
+    if (!caja) return;
+    if (!ES_SUPERVISION) { caja.hidden = true; return; }
+    const usadoMb = carpetas.reduce((s, c) => s + (Number(c.pesoTotalMb) || 0), 0);
+    const pct = Math.min(100, Math.round((usadoMb / ALMACEN_TOPE_MB) * 100));
+    caja.hidden = false;
+    document.getElementById('almacen-barra').style.width = pct + '%';
+    document.getElementById('almacen-txt').textContent =
+        usadoMb.toFixed(1) + ' MB de ' + ALMACEN_TOPE_MB + ' MB';
 }
 
 /* Pinta la lista de carpetas según el filtro activo. Solo el administrador ve
@@ -338,7 +438,15 @@ function pintarCarpetasSegunFiltro() {
         : _carpetasVisibles;
     mostradas = filtrarPorBusqueda(mostradas, _busquedaCarpetas);
 
-    lista.innerHTML = mostradas.map(c => tarjetaCarpeta(c, _conteoArchivos[c.id] || 0)).join('');
+    pintarPanoramaCarpetas(mostradas);
+    lista.innerHTML = mostradas.length
+        ? '<div class="pt-filas__cab">' +
+              '<span>Carpeta</span><span>Proceso</span>' +
+              (ES_SUPERVISION ? '<span>Operador</span>' : '<span></span>') +
+              '<span>Contenido</span><span></span>' +
+          '</div>' +
+          mostradas.map(c => filaCarpeta(c, _conteoArchivos[c.id] || 0)).join('')
+        : '';
     vacio.hidden = mostradas.length > 0;
     vacio.textContent = ES_SUPERVISION
         ? (_filtroCarpetas === 'desactivadas'
@@ -355,37 +463,97 @@ function cambiarFiltroCarpetas(filtro) {
     pintarCarpetasSegunFiltro();
 }
 
-function tarjetaCarpeta(c, totalArchivos) {
-    const estado = c.activa
-        ? '<span class="pt-insignia pt-insignia--activa">Activa</span>'
-        : '<span class="pt-insignia pt-insignia--inactiva">Desactivada</span>';
-    const asignados = (c.asignados || []).length;
-    const operadores = c.operadores || [];
+/* Panorama de la lista: cuatro cifras que resumen el estado general.
+   Todo sale de datos ya cargados; no hay consultas extra. */
+function pintarPanoramaCarpetas(mostradas) {
+    const caja = document.getElementById('panorama-carpetas');
+    if (!caja) return;
+    if (!mostradas.length) { caja.hidden = true; return; }
 
-    let acciones = '<button class="pt-boton pt-boton--primario pt-boton--mini" data-accion="abrir-carpeta" data-id="' + c.id + '">Abrir</button>';
-    if (ES_ADMIN) {
-        acciones +=
-            ' <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="editar-carpeta" data-id="' + c.id + '">Editar</button>' +
-            ' <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="alternar-carpeta" data-id="' + c.id + '">' + (c.activa ? 'Desactivar' : 'Activar') + '</button>' +
-            ' <button class="pt-boton pt-boton--peligro pt-boton--mini" data-accion="eliminar-carpeta" data-id="' + c.id + '">Eliminar</button>';
+    const sinProcesos = mostradas.filter(c => !(_procesosPorCarpeta[c.id] || []).length).length;
+    const docs = mostradas.reduce((n, c) => n + (_conteoArchivos[c.id] || 0), 0);
+    const mb = mostradas.reduce((n, c) => n + (Number(c.pesoTotalMb) || 0), 0);
+    const personas = mostradas.reduce((n, c) => n + (c.asignados || []).length, 0);
+
+    // Procesos por vencer o vencidos entre las carpetas mostradas
+    let porVencer = 0, vencidos = 0, proxima = null;
+    for (const c of mostradas) {
+        for (const p of (_procesosPorCarpeta[c.id] || [])) {
+            if (p.completado || p.pausado || c.pausado) continue;
+            if (p.semaforo === 'rojo') vencidos++;
+            else if (p.semaforo === 'naranja') porVencer++;
+            if (p.fechaVencimientoHabil && (!proxima || p.fechaVencimientoHabil < proxima)) {
+                proxima = p.fechaVencimientoHabil;
+            }
+        }
     }
 
-    // Estado del trámite en la tarjeta: proceso actual + semáforo por días hábiles
-    const etapaHtml = '<p class="pt-carpeta__etapa">' +
-        resumenSemaforoCarpeta(c, _procesosPorCarpeta[c.id] || []) + '</p>';
+    const caja1 = (tit, num, pie, clase) =>
+        '<div class="pt-panorama__caja">' +
+            '<div class="pt-panorama__tit">' + tit + '</div>' +
+            '<div class="pt-panorama__num' + (clase ? ' ' + clase : '') + '">' + num + '</div>' +
+            '<div class="pt-panorama__pie">' + pie + '</div>' +
+        '</div>';
 
-    return '<article class="pt-carpeta' + (c.activa ? '' : ' pt-carpeta--inactiva') + '">' +
-        '<div class="pt-carpeta__cab">' + icono('carpeta') + ((ES_PERSONAL || ES_MONITOR) ? estado : '') + '</div>' +
-        '<h3 class="pt-carpeta__nombre">' + escaparHtml(c.nombre) + '</h3>' +
-        etapaHtml +
-        // Las notas internas solo las ve el personal (y el monitor, en lectura)
-        ((ES_PERSONAL || ES_MONITOR) ? '<p class="pt-carpeta__descripcion">' + escaparHtml(c.descripcion || '') + '</p>' : '') +
-        '<p class="pt-carpeta__datos">' + totalArchivos + ' documento(s)' +
-            (ES_SUPERVISION ? ' · ' + (c.pesoTotalMb || 0).toFixed(2) + ' MB' : '') +
-            ((ES_PERSONAL || ES_MONITOR) ? ' · ' + asignados + ' persona(s) asignada(s)' : '') +
-            (ES_SUPERVISION ? ' · Operador: ' + (operadores.length ? operadores.map(o => escaparHtml(nombreDe(o))).join(', ') : 'sin asignar') : '') + '</p>' +
-        '<div class="pt-carpeta__acciones">' + acciones + '</div>' +
-        '</article>';
+    caja.hidden = false;
+    caja.innerHTML =
+        caja1('Carpetas', mostradas.length,
+              sinProcesos ? sinProcesos + ' sin procesos definidos' : 'todas con trámite definido') +
+        caja1('Por vencer', porVencer + vencidos,
+              proxima ? 'próximo: ' + escaparHtml(formatoFechaDia(proxima)) : 'sin vencimientos cercanos',
+              vencidos ? 'pt-panorama__num--alerta' : (porVencer ? 'pt-panorama__num--aviso' : '')) +
+        caja1('Documentos', docs,
+              ES_SUPERVISION ? mb.toFixed(1) + ' MB en total' : 'en tus carpetas') +
+        caja1('Personas asignadas', personas, 'clientes y acreedores');
+}
+
+/* Una carpeta = una fila escaneable. La acción primaria («Abrir») queda
+   siempre visible; las de administración se repliegan en el menú «⋯». */
+function filaCarpeta(c, totalArchivos) {
+    const operadores = c.operadores || [];
+    const asignados = (c.asignados || []).length;
+
+    const estado = c.activa ? '' :
+        ' <span class="pt-insignia pt-insignia--inactiva">Desactivada</span>';
+
+    let menu = '';
+    if (ES_ADMIN) {
+        menu =
+            '<div class="pt-menu">' +
+                '<button class="pt-menu__boton" data-accion="menu-carpeta" data-id="' + c.id + '" ' +
+                        'aria-label="Más acciones" title="Más acciones">⋯</button>' +
+                '<div class="pt-menu__lista" id="menu-carpeta-' + c.id + '" hidden>' +
+                    '<button data-accion="editar-carpeta" data-id="' + c.id + '">Editar carpeta</button>' +
+                    '<button data-accion="alternar-carpeta" data-id="' + c.id + '">' +
+                        (c.activa ? 'Desactivar' : 'Activar') + '</button>' +
+                    '<button class="pt-menu__peligro" data-accion="eliminar-carpeta" data-id="' + c.id + '">Eliminar</button>' +
+                '</div>' +
+            '</div>';
+    }
+
+    return '<div class="pt-fila-carpeta' + (c.activa ? '' : ' pt-fila-carpeta--inactiva') + '">' +
+        '<div>' +
+            '<div class="pt-fila__nombre">' + escaparHtml(c.nombre) + estado + '</div>' +
+            ((ES_PERSONAL || ES_MONITOR) && c.descripcion
+                ? '<div class="pt-fila__sub">' + escaparHtml(c.descripcion) + '</div>'
+                : '<div class="pt-fila__sub">creada ' + escaparHtml(formatoFecha(c.fecha)) + '</div>') +
+        '</div>' +
+        '<div class="pt-fila__col">' + resumenSemaforoCarpeta(c, _procesosPorCarpeta[c.id] || []) + '</div>' +
+        '<div class="pt-fila__col">' +
+            (ES_SUPERVISION
+                ? (operadores.length ? escaparHtml(operadores.map(o => nombreDe(o)).join(', ')) : 'sin asignar')
+                : '') +
+        '</div>' +
+        '<div class="pt-fila__col">' +
+            '<b>' + totalArchivos + ' doc' + (totalArchivos === 1 ? '' : 's') + '</b>' +
+            (ES_SUPERVISION ? (c.pesoTotalMb || 0).toFixed(2) + ' MB · ' : '') +
+            ((ES_PERSONAL || ES_MONITOR) ? asignados + ' persona' + (asignados === 1 ? '' : 's') : '') +
+        '</div>' +
+        '<div class="pt-fila__acciones">' +
+            '<button class="pt-boton pt-boton--primario pt-boton--mini" data-accion="abrir-carpeta" data-id="' + c.id + '">Abrir</button>' +
+            menu +
+        '</div>' +
+    '</div>';
 }
 
 /* ============ SEMÁFORO: HELPERS COMPARTIDOS ============ */
@@ -551,7 +719,16 @@ async function abrirCarpeta(id) {
     // Notas internas del operador: las ve el personal (y el monitor, en lectura)
     document.getElementById('zona-notas').hidden = !(ES_PERSONAL || ES_MONITOR);
     document.getElementById('detalle-descripcion').textContent = carpeta.descripcion || 'Sin notas internas todavía.';
-    document.getElementById('zona-subida').hidden = !puedeGestionarCarpeta(carpeta);
+    // La zona de carga arranca replegada: los documentos son la pantalla,
+    // no el formulario de subida. El boton solo aparece a quien puede subir.
+    const puedeSubir = puedeGestionarCarpeta(carpeta);
+    document.getElementById('zona-subida').hidden = true;
+    const botonSubir = document.getElementById('boton-subir');
+    if (botonSubir) {
+        botonSubir.hidden = !puedeSubir;
+        botonSubir.textContent = '+ Subir archivos';
+    }
+    document.getElementById('migas-carpeta').textContent = carpeta.nombre;
     document.getElementById('boton-editar-descripcion').hidden = !puedeGestionarCarpeta(carpeta);
     document.getElementById('form-descripcion').hidden = true;
     // Generar expediente: solo administrador y operador responsable
@@ -570,6 +747,65 @@ async function abrirCarpeta(id) {
 
     await pintarArchivos();
     await pintarChats();
+}
+
+/* Cuatro cifras del expediente, bajo el titulo de la carpeta.
+   Se llaman despues de cargar los archivos, que es cuando ya se
+   conocen el numero de documentos y el peso. */
+function pintarCifrasDetalle(carpeta, archivos) {
+    const caja = document.getElementById('detalle-cifras');
+    if (!caja || !carpeta) return;
+
+    const docs = (archivos || []).length;
+    const mb = (archivos || []).reduce(function (n, a) { return n + (Number(a.tamano) || 0); }, 0) / 1048576;
+    const personas = (carpeta.asignados || []).length + (carpeta.operadores || []).length;
+
+    // Dias habiles restantes del proceso actual (el mismo dato del semaforo)
+    const procesos = _procesosPorCarpeta[carpeta.id] || [];
+    const actual = procesoActualDe(procesos);
+    let plazoNum = '—', plazoTit = 'Sin plazo activo', clase = '';
+    if (actual && !carpeta.pausado) {
+        const s = semaforoEfectivo(actual, carpeta.pausado);
+        if (s.diasRestantes !== null) {
+            if (s.diasRestantes < 0) {
+                plazoNum = Math.abs(s.diasRestantes);
+                plazoTit = 'Dias habiles de atraso';
+                clase = 'pt-cifra__num--alerta';
+            } else {
+                plazoNum = s.diasRestantes;
+                plazoTit = s.diasRestantes === 1 ? 'Dia habil restante' : 'Dias habiles restantes';
+                clase = s.diasRestantes <= 1 ? 'pt-cifra__num--aviso' : '';
+            }
+        }
+    } else if (carpeta.pausado) {
+        plazoTit = 'Tramite en pausa';
+    } else if (carpeta.finalizado) {
+        plazoTit = 'Tramite finalizado';
+    }
+
+    const cifra = function (num, tit, cl) {
+        return '<div>' +
+            '<div class="pt-cifra__num' + (cl ? ' ' + cl : '') + '">' + num + '</div>' +
+            '<div class="pt-cifra__tit">' + tit + '</div>' +
+        '</div>';
+    };
+
+    caja.hidden = false;
+    caja.innerHTML =
+        cifra(docs, docs === 1 ? 'Documento' : 'Documentos') +
+        cifra(mb.toFixed(2), 'MB') +
+        cifra(personas, personas === 1 ? 'Persona' : 'Personas') +
+        cifra(plazoNum, plazoTit, clase);
+}
+
+/* Muestra u oculta la zona de carga (boton "+ Subir archivos") */
+function alternarZonaSubida() {
+    const zona = document.getElementById('zona-subida');
+    const boton = document.getElementById('boton-subir');
+    if (!zona) return;
+    zona.hidden = !zona.hidden;
+    if (boton) boton.textContent = zona.hidden ? '+ Subir archivos' : 'Cerrar zona de carga';
+    if (!zona.hidden) zona.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 /* ============ RESUMEN DEL SEMÁFORO EN EL DETALLE DE LA CARPETA ============
@@ -623,6 +859,7 @@ async function pintarSemaforoDetalle(carpeta) {
 let _estadosCarpetas = [];        // carpetas visibles en la vista Estados
 let _estadosProcesos = {};        // carpetaId → procesos
 let _autoRefrescoEstados = null;  // temporizador de recarga (5 min)
+let _vistaEstados = 'tablero';    // 'tablero' por urgencia | 'tabla' clasica
 
 function detenerAutoRefrescoEstados() {
     if (_autoRefrescoEstados) { clearInterval(_autoRefrescoEstados); _autoRefrescoEstados = null; }
@@ -693,11 +930,141 @@ function pintarEstados() {
                 icono('desactivar', 17) + ' Desactivados (' + desactivados.length + ')</button>' +
         '</div>';
     cont.innerHTML = subTabs + (lista.length
-        ? tablaEstadosGlobal(lista)
+        ? (_vistaEstados === 'tabla'
+            ? tablaEstadosGlobal(lista) + pieTablero(activos, desactivados)
+            : tableroEstados(lista) + pieTablero(activos, desactivados))
         : '<div class="pt-vacio">' + (_busquedaEstados
             ? 'Sin resultados para la búsqueda.'
             : (_filtroEstados === 'desactivados'
                 ? 'No hay trámites desactivados.' : 'No hay trámites activos.')) + '</div>');
+}
+
+/* ---- Tablero por urgencia (administrador y monitor) ----
+   Cada tramite cae en el grupo que le corresponde segun el semaforo
+   que YA calculo el servidor. Aqui no se recalcula nada: solo se
+   agrupa y se pinta. */
+
+/* Grupo al que pertenece un tramite */
+function grupoDeTramite(c) {
+    const procesos = _estadosProcesos[c.id] || [];
+    if (c.finalizado) return 'completados';
+    if (c.pausado) return 'pausados';
+    const actual = procesoActualDe(procesos);
+    if (!actual) return procesos.length ? 'completados' : 'encurso';
+    const s = semaforoEfectivo(actual, c.pausado);
+    if (s.color === 'rojo') return 'vencidos';
+    if (s.color === 'naranja') return 'porvencer';
+    return 'encurso';
+}
+
+/* Anillo del conteo 60/90 del tramite completo. Devuelve el SVG.
+   Los dias habiles transcurridos se calculan con la misma aritmetica
+   del resto del portal (diasHabiles.js). */
+function anilloTramite(c) {
+    const total = c.diasHabilesTramite || 60;
+    let usados = null;
+    if (c.fechaInicioTramite) {
+        try { usados = contarDiasHabiles(c.fechaInicioTramite, fechaISOLocalHabil()); } catch (e) { usados = null; }
+    }
+    let color = 'gris', etiqueta = '-/' + total, frac = 0;
+    if (usados !== null) {
+        usados = Math.max(0, Math.min(usados, total));
+        frac = total ? usados / total : 0;
+        etiqueta = usados + '/' + total;
+        color = c.finalizado ? 'verde' : c.pausado ? 'gris'
+              : frac >= 1 ? 'rojo' : frac >= 0.85 ? 'naranja' : 'verde';
+    }
+    const R = 22, C = 2 * Math.PI * R;
+    const offset = C * (1 - frac);
+    return '<div class="pt-anillo" title="' + etiqueta + ' dias habiles del tramite">' +
+        '<svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true">' +
+            '<circle class="pt-anillo__pista" cx="26" cy="26" r="' + R + '" fill="none" stroke-width="5"></circle>' +
+            '<circle class="pt-anillo__arco pt-anillo__arco--' + color + '" cx="26" cy="26" r="' + R + '" fill="none" ' +
+                'stroke-width="5" stroke-linecap="round" stroke-dasharray="' + C.toFixed(1) + '" ' +
+                'stroke-dashoffset="' + offset.toFixed(1) + '"></circle>' +
+        '</svg>' +
+        '<span class="pt-anillo__txt">' + etiqueta + '</span>' +
+    '</div>';
+}
+
+/* Una tarjeta de tramite dentro del tablero */
+function tarjetaTramiteTablero(c) {
+    const procesos = _estadosProcesos[c.id] || [];
+    const actual = procesoActualDe(procesos);
+    const operadores = (c.operadores || []).map(o => nombreDe(o)).join(', ');
+
+    let linea;
+    if (c.finalizado) {
+        linea = 'Finalizado' + (c.fechaFinTramite ? ' el ' + escaparHtml(formatoFechaDia(c.fechaFinTramite)) : '');
+    } else if (c.pausado) {
+        linea = 'Tramite en pausa: el reloj esta detenido';
+    } else if (!actual) {
+        linea = procesos.length ? 'Todos los procesos completados' : 'Sin procesos definidos todavia';
+    } else {
+        const s = semaforoEfectivo(actual, c.pausado);
+        const d = s.diasRestantes;
+        linea = 'Vence ' + escaparHtml(formatoVencimiento(actual.fechaVencimiento)) +
+            (d === null ? '' : ' · ' + (d < 0
+                ? Math.abs(d) + ' dia(s) habil(es) de atraso'
+                : d + ' dia(s) habil(es)'));
+    }
+
+    const proceso = actual ? 'Proceso: ' + escaparHtml(actual.nombre) : '';
+
+    return '<article class="pt-tramite">' +
+        anilloTramite(c) +
+        '<div>' +
+            '<div class="pt-tramite__nombre">' + escaparHtml(c.nombre) + '</div>' +
+            '<div class="pt-tramite__linea">' + (operadores ? escaparHtml(operadores) + ' · ' : '') + linea + '</div>' +
+            (proceso ? '<div class="pt-tramite__linea">' + proceso + '</div>' : '') +
+        '</div>' +
+        '<div class="pt-tramite__acciones">' +
+            '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="abrir-carpeta" data-id="' + c.id + '">Ver detalle</button>' +
+        '</div>' +
+    '</article>';
+}
+
+/* El tablero completo, en orden de urgencia */
+function tableroEstados(carpetas) {
+    const grupos = { vencidos: [], porvencer: [], encurso: [], pausados: [], completados: [] };
+    for (const c of carpetas) grupos[grupoDeTramite(c)].push(c);
+
+    const def = [
+        ['vencidos',    'Vencidos',    'rojo',    'Ningun tramite vencido sin completar'],
+        ['porvencer',   'Por vencer',  'naranja', 'Nada por vencer en los proximos dias habiles'],
+        ['encurso',     'En curso',    'verde',   'Sin tramites en curso'],
+        ['pausados',    'Pausados',    'gris',    'Ningun tramite en pausa'],
+        ['completados', 'Completados', 'verde',   'Todavia no hay tramites completados']
+    ];
+
+    return '<div class="pt-tablero">' + def.map(function (d) {
+        const clave = d[0], titulo = d[1], color = d[2], vacio = d[3];
+        const lista = grupos[clave];
+        // Los grupos vacios de pausados y completados no ocupan espacio
+        if (!lista.length && (clave === 'pausados' || clave === 'completados')) return '';
+        return '<section>' +
+            '<div class="pt-grupo__cab">' +
+                '<span class="pt-grupo__punto pt-grupo__punto--' + color + '"></span>' +
+                '<span class="pt-grupo__tit">' + titulo + '</span>' +
+                '<span class="pt-grupo__num">' + lista.length + '</span>' +
+            '</div>' +
+            (lista.length
+                ? '<div class="pt-grupo__lista">' + lista.map(tarjetaTramiteTablero).join('') + '</div>'
+                : '<div class="pt-grupo__vacio">' + vacio + '</div>') +
+        '</section>';
+    }).join('') + '</div>';
+}
+
+/* Pie del tablero: resumen y conmutador tablero/tabla */
+function pieTablero(activos, desactivados) {
+    return '<div class="pt-tablero__pie">' +
+        '<span>' + activos.length + ' tramite(s) activo(s) · ' + desactivados.length + ' desactivado(s)</span>' +
+        '<span class="pt-acciones">' +
+            '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="alternar-vista-estados">' +
+                (_vistaEstados === 'tabla' ? 'Ver como tablero' : 'Ver como tabla') +
+            '</button>' +
+        '</span>' +
+    '</div>';
 }
 
 /* ---- Tabla global (administrador y monitor) ---- */
@@ -1164,6 +1531,64 @@ function colorVencimiento(c, p) {
     return semaforoEfectivo(p, c.pausado).color;
 }
 
+/* Agenda «qué sigue»: los próximos vencimientos sin completar,
+   ordenados por fecha. Responde la pregunta sin hacer clic en el mes.
+   Usa los mismos datos ya cargados; no consulta nada extra. */
+function agendaProximos(carpetas) {
+    const hoy = fechaISOLocalHabil();
+    const items = [];
+
+    for (const c of (carpetas || [])) {
+        if (c.pausado || c.finalizado) continue;
+        for (const p of (_estadosProcesos[c.id] || [])) {
+            if (p.completado || p.pausado || !p.fechaVencimiento) continue;
+            items.push({
+                fecha: p.fechaVencimiento,
+                que: p.nombre,
+                carpeta: c.nombre,
+                operadores: (c.operadores || []).map(function (o) { return nombreDe(o); }).join(', '),
+                color: semaforoEfectivo(p, c.pausado).color,
+                dias: semaforoEfectivo(p, c.pausado).diasRestantes
+            });
+        }
+    }
+
+    items.sort(function (a, b) { return a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0; });
+    const proximos = items.slice(0, 8);
+
+    const MES_CORTO = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    const filas = proximos.map(function (it) {
+        const partes = String(it.fecha).split('-');
+        const dia = partes[2] || '--';
+        const mes = MES_CORTO[Number(partes[1]) - 1] || '';
+        let plazo = '', clase = '';
+        if (it.dias !== null && it.dias !== undefined) {
+            if (it.dias < 0) { plazo = Math.abs(it.dias) + ' d. de atraso'; clase = ' pt-agenda__plazo--rojo'; }
+            else if (it.dias <= 1) { plazo = it.dias + ' día hábil'; clase = ' pt-agenda__plazo--naranja'; }
+            else { plazo = it.dias + ' días hábiles'; }
+        }
+        return '<div class="pt-agenda__item">' +
+            '<div class="pt-agenda__fecha">' +
+                '<div class="pt-agenda__dia">' + dia + '</div>' +
+                '<div class="pt-agenda__mes">' + mes + '</div>' +
+            '</div>' +
+            '<div>' +
+                '<div class="pt-agenda__que">' + escaparHtml(it.que) + '</div>' +
+                '<div class="pt-agenda__det">' + escaparHtml(it.carpeta) +
+                    (it.operadores ? ' · ' + escaparHtml(it.operadores) : '') + '</div>' +
+                (plazo ? '<span class="pt-agenda__plazo' + clase + '">' + plazo + '</span>' : '') +
+            '</div>' +
+        '</div>';
+    }).join('');
+
+    return '<aside class="pt-agenda">' +
+        '<div class="pt-agenda__caja">' +
+            '<div class="pt-agenda__tit">Próximos vencimientos</div>' +
+            (filas || '<div class="pt-agenda__vacio">No hay vencimientos pendientes en los trámites visibles.</div>') +
+        '</div>' +
+    '</aside>';
+}
+
 function pintarCalendarioVenc() {
     const cont = document.getElementById('contenido-calendario-venc');
     if (!cont || !_mesCalVenc) return;
@@ -1307,10 +1732,15 @@ function pintarCalendarioVenc() {
             '<strong>' + MESES[mes].charAt(0).toUpperCase() + MESES[mes].slice(1) + ' ' + anio + '</strong>' +
             '<button type="button" class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="cal-venc-mes" data-delta="1" aria-label="Mes siguiente">›</button>' +
         '</div>' +
-        '<div class="pt-calv__semana"><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span></div>' +
-        '<div class="pt-calv__rejilla">' + celdas + '</div>' +
-        '<p class="pt-nota" style="margin-top:.6rem;">Los días grises son fines de semana o festivos colombianos. Haz clic en un día para ver sus vencimientos.</p>' +
-        listaDia;
+        '<div class="pt-cal-marco">' +
+            '<div>' +
+                '<div class="pt-calv__semana"><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span></div>' +
+                '<div class="pt-calv__rejilla">' + celdas + '</div>' +
+                '<p class="pt-nota" style="margin-top:.6rem;">Los días grises son fines de semana o festivos colombianos. Haz clic en un día para ver sus vencimientos.</p>' +
+                listaDia +
+            '</div>' +
+            agendaProximos(carpetasCal) +
+        '</div>';
 
     // listeners de los filtros (se recrean con cada render)
     const selOp = document.getElementById('filtro-cal-operador');
@@ -2463,6 +2893,15 @@ async function pintarArchivos() {
     cuerpo.innerHTML = _archivosCache.map(filaArchivo).join('');
     document.getElementById('archivos-vacio').hidden = archivos.length > 0;
     if (_editandoOrden) activarArrastreOrden();
+
+    // Cifras del expediente y resumen sobre la tabla
+    pintarCifrasDetalle(carpetaAbierta, _archivosCache);
+    const resumen = document.getElementById('archivos-resumen');
+    if (resumen) {
+        resumen.textContent = archivos.length
+            ? archivos.length + (archivos.length === 1 ? ' documento' : ' documentos')
+            : 'Todavia no hay documentos en esta carpeta.';
+    }
 }
 
 function filaArchivo(a) {
@@ -3740,6 +4179,12 @@ async function mostrarVistaUsuarios() {
     mostrarVista('vista-usuarios');
     _usuariosCache = await dbTodos('usuarios');
     _usuariosCache.sort((a, b) => a.usuario.localeCompare(b.usuario));
+    const resumen = document.getElementById('usuarios-resumen');
+    if (resumen) {
+        const activas = _usuariosCache.filter(u => u.activo !== false).length;
+        resumen.textContent = activas + (activas === 1 ? ' cuenta activa' : ' cuentas activas') +
+            ' de ' + _usuariosCache.length;
+    }
     pintarListaUsuarios();
 }
 
@@ -3992,6 +4437,7 @@ async function crearUsuario(evento) {
         return;
     }
     document.getElementById('form-usuario').reset();
+    alternarCajonUsuario(false);
     await mostrarVistaUsuarios();
 }
 
@@ -4129,18 +4575,38 @@ function conectarEventos() {
         const dd = document.getElementById('campana-dropdown');
         if (dd && !dd.hidden && !evento.target.closest('.pt-campana-envoltura')) dd.hidden = true;
 
+        // Un clic fuera de un menú «⋯» lo cierra
+        if (!evento.target.closest('.pt-menu')) cerrarMenusFila();
+
         const boton = evento.target.closest('[data-accion]');
         if (!boton) return;
         const id = Number(boton.dataset.id);
+
+        // Elegir una opción del menú «⋯» también lo cierra
+        if (boton.closest('.pt-menu__lista')) cerrarMenusFila();
 
         switch (boton.dataset.accion) {
             case 'salir':             confirmarSalida(); break;
             case 'salir-sitio':       confirmarSalida('../index.html'); break; // volver al sitio cierra la sesión
             case 'ver-carpetas':      mostrarVistaCarpetas(); break;
+            case 'alternar-subida':   alternarZonaSubida(); break;
+            case 'abrir-cajon-usuario':  alternarCajonUsuario(true); break;
+            case 'cerrar-cajon-usuario': alternarCajonUsuario(false); break;
+
+            // Barra lateral en pantallas angostas
+            case 'abrir-lateral':     alternarLateral(true); break;
+            case 'cerrar-lateral':    alternarLateral(false); break;
+
+            // Menú «⋯» de acciones secundarias de una carpeta
+            case 'menu-carpeta':      alternarMenuFila('menu-carpeta-' + id); break;
 
             // Estados de los trámites (semáforos) y calendario de vencimientos
             case 'ver-estados':          mostrarVistaEstados(); break;
             case 'refrescar-estados':    cargarYPintarEstados(); break;
+            case 'alternar-vista-estados':
+                _vistaEstados = (_vistaEstados === 'tabla' ? 'tablero' : 'tabla');
+                pintarEstados();
+                break;
             case 'ver-calendario-vencimientos': mostrarVistaCalendarioVenc(); break;
             case 'refrescar-calendario': mostrarVistaCalendarioVenc(); break;
             case 'nuevo-proceso':        abrirModalProceso(id); break;
