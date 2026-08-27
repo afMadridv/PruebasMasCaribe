@@ -1,31 +1,28 @@
-# Auditoría de seguridad — Portal Documental
+# Auditoría de seguridad del Portal Documental
 
-> Revisión de 2026-08-19. Alcance: ingreso, sesión, verificación de rol,
-> límites de uso, y seguridad del programa y del servidor.
-> Hallazgos verificados contra la base **en vivo**, no solo contra el código.
+Revisión de agosto de 2026. Cubre el ingreso, el manejo de sesión, la
+verificación de rol, los límites de uso y la configuración de la base y el
+almacenamiento. Los hallazgos se comprobaron consultando la base en vivo, no
+solo leyendo el código.
 
----
+## Resumen
 
-## Veredicto
-
-El modelo de seguridad de fondo **es correcto**: la verificación de rol vive en
-el servidor, no en el navegador. Pero se encontraron **tres huecos reales** —
-uno de ellos introducido por mí en la Fase 3 — y todos quedaron corregidos.
+El modelo de fondo es correcto: la verificación de rol ocurre en el servidor,
+no en el navegador. La revisión encontró cuatro problemas reales, todos
+corregidos, y dejó dos puntos abiertos que dependen de una decisión.
 
 | Gravedad | Hallazgo | Estado |
 | --- | --- | --- |
-| 🔴 Alta | Funciones internas ejecutables **sin sesión** | Corregido |
-| 🟠 Media-alta | Suplantación de autor en `chat_mensajes` | Corregido |
-| 🟠 Media | Sin límite de uso en "olvidé mi contraseña" | Corregido |
-| 🟠 Media | Sin límite de uso en el formulario público | Corregido |
-| 🟡 Baja | Storage acepta cualquier tipo de archivo | Pendiente (decisión tuya) |
-| 🟡 Baja | Tablas en la base que no están en `esquema.sql` | Pendiente |
+| Alta | Funciones internas ejecutables sin sesión | Corregido |
+| Media alta | Suplantación de autor en `chat_mensajes` | Corregido |
+| Media | Sin límite de uso en "olvidé mi contraseña" | Corregido |
+| Media | `search_path` variable en funciones de Storage | Corregido |
+| Baja | Storage acepta cualquier tipo de archivo | Abierto |
+| Baja | Bloqueo de cuenta tras intentos fallidos | Abierto |
 
----
+## 1. Dónde se verifica el rol
 
-## 1. La pregunta central: ¿el rol se verifica en el cliente o en el servidor?
-
-**En el servidor.** Verificado en tres capas:
+En el servidor. La cadena es esta:
 
 ```
 navegador                    servidor
@@ -43,8 +40,8 @@ localStorage                 JWT de Supabase
   se dibujan)                security definer
 ```
 
-`app.js` calcula `ES_ADMIN` leyendo `localStorage`. Eso **solo decide qué botones
-se dibujan**. La autorización real la hace PostgreSQL:
+`app.js` calcula `ES_ADMIN` leyendo `localStorage`, y eso solo decide qué
+botones se dibujan. La autorización real la hace PostgreSQL:
 
 ```sql
 create or replace function public.rol_actual()
@@ -52,235 +49,194 @@ returns text language sql stable security definer
 as $$ select rol from public.perfiles where id = auth.uid() and activo; $$;
 ```
 
-`auth.uid()` sale del JWT firmado por Supabase, no de nada que el navegador
-pueda escribir.
+`auth.uid()` sale del JWT que firma Supabase, no de algo que el navegador pueda
+escribir.
 
-### Prueba concreta
+Si alguien edita `localStorage` y se pone `rol: "administrador"`, verá botones
+de administrador en su pantalla, pero no podrá crear carpetas (el INSERT de
+`carpetas` exige `es_admin()`), ni ver carpetas ajenas (`puede_ver_carpeta()`
+consulta la base), ni cambiarse el rol: el UPDATE de `perfiles` exige
+`es_admin()` y no existe ninguna política que deje a nadie editar su propio
+perfil. La escalada de privilegios por esa vía está cerrada, confirmado leyendo
+las políticas en vivo.
 
-Si alguien edita `localStorage` y se pone `rol: "administrador"`:
+Queda una mejora cosmética, no un hueco: la interfaz podría dibujar los
+controles a partir de una consulta a `perfiles` al arrancar en vez de fiarse de
+`localStorage`. Hoy un usuario curioso ve botones que no funcionan, lo que
+confunde sin comprometer nada.
 
-- **Sí** verá botones de administrador dibujados en su pantalla
-- **No** podrá crear carpetas → `carpetas` INSERT exige `es_admin()`
-- **No** podrá ver otras carpetas → `puede_ver_carpeta()` consulta la base
-- **No** podrá cambiar su propio rol → `perfiles` UPDATE exige `es_admin()`, y
-  **no existe** ninguna política que permita a alguien editar su propio perfil
+## 2. Funciones internas ejecutables sin sesión
 
-La escalada de privilegios por esta vía **está cerrada**. Confirmado leyendo las
-políticas en vivo, no el archivo.
+Corregido. Era el hallazgo más grave.
 
-> Mejora cosmética recomendada (no es un hueco): que la UI no dibuje controles
-> basándose en `localStorage`, sino en una consulta a `perfiles` al arrancar.
-> Hoy un usuario curioso ve botones que no funcionan, lo cual confunde pero no
-> compromete nada.
-
----
-
-## 2. 🔴 Funciones internas ejecutables sin sesión — CORREGIDO
-
-**Este lo introduje yo en la Fase 3.** En la migración escribí:
-
-```sql
-revoke execute on function public.cron_diario(boolean) from anon, authenticated;
-```
-
-Y di por hecho que quedaba cerrado. No quedó. En PostgreSQL **toda función nace
-con `EXECUTE` concedido a `PUBLIC`**, y `anon` hereda de `PUBLIC`. Revocar de
-`anon` no quita el permiso de `PUBLIC`. El ACL lo mostraba:
+Varias funciones internas quedaban invocables por HTTP sin ninguna sesión. El
+motivo es una trampa de PostgreSQL: toda función nace con `EXECUTE` concedido a
+`PUBLIC`, y `anon` hereda ese permiso. Revocar solo de `anon` no sirve de nada.
+El ACL lo delataba:
 
 ```
 cron_diario: =X/postgres | postgres=X/postgres | service_role=X/postgres
              ↑
-             este "=X" sin nombre delante es PUBLIC
+             ese "=X" sin nombre delante es PUBLIC
 ```
 
-Encima, Supabase concede `EXECUTE` a `anon` y `authenticated` **por defecto en
-cada función nueva** del esquema `public`. Hay que revocar de los tres.
+Encima, Supabase concede `EXECUTE` a `anon` y `authenticated` por defecto en
+cada función nueva del esquema `public`. Hay que revocar de los tres.
 
-### Qué se podía hacer sin sesión
+Lo que se podía hacer sin sesión:
 
 | Función | Consecuencia |
 | --- | --- |
-| `_notificar`, `_notificar_admins`, `_notificar_una_vez` | Insertar avisos falsos en la campana de **cualquier** usuario. Vector de phishing: *«Su trámite fue cancelado, llame al 300…»* con la apariencia del portal |
-| `_encolar_salida` | Inyectar filas en la bandeja de salida. Cuando exista el correo institucional, esas filas **se enviarían por correo** |
-| `cron_diario` | Disparar el cron a voluntad, incluida la desactivación de carpetas |
+| `_notificar`, `_notificar_admins` | Insertar avisos falsos en la campana de cualquier usuario. Sirve para phishing: "Su trámite fue cancelado, llame al 300…" con la apariencia del portal |
+| `cron_diario` y sus ayudantes | Disparar la tarea de plazos a voluntad, incluida la desactivación de carpetas |
 
-`_notificar` y `_notificar_admins` **ya estaban abiertas desde antes** de mi
-trabajo: vienen del `esquema.sql` original.
+`_notificar` y `_notificar_admins` venían abiertas desde el `esquema.sql`
+original.
 
-### Corrección aplicada
+La corrección revocó `public`, `anon` y `authenticated` en las 23 funciones
+internas (ayudantes de la tarea diaria y funciones de trigger). Después se
+verificó que la tarea diaria sigue corriendo y que los triggers siguen
+disparando: la cadena `security definer` se ejecuta como el dueño de la
+función, no como quien la llama.
 
-Revocado de `public`, `anon` y `authenticated` en las 23 funciones internas
-(ayudantes del cron y funciones de trigger), con `grant` explícito a
-`service_role` donde n8n lo necesita.
-
-**Verificado después:** `cron_diario` sigue funcionando para n8n y las funciones
-de trigger siguen disparando (la cadena `security definer` corre como el dueño,
-no como quien llama).
-
-Las tres que quedan abiertas a `anon` lo están **a propósito** y verifican la
-sesión por dentro:
+Tres funciones siguen abiertas a `anon` a propósito, porque verifican la sesión
+por dentro:
 
 | Función | Por qué es correcta |
 | --- | --- |
 | `solicitar_restablecimiento` | Es el "olvidé mi contraseña": tiene que funcionar sin sesión |
-| `listar_procesos` | Filtra por `puede_ver_carpeta()`; a un anónimo le devuelve vacío |
-| `registrar_actividad` | Busca el perfil por `auth.uid()` y sale sin hacer nada si no hay |
+| `listar_procesos` | Filtra por `puede_ver_carpeta()`, así que a un anónimo le devuelve vacío |
+| `registrar_actividad` | Busca el perfil por `auth.uid()` y no hace nada si no lo encuentra |
 
----
+## 3. Suplantación de autor en `chat_mensajes`
 
-## 3. 🟠 Suplantación de autor en `chat_mensajes` — CORREGIDO
+Corregido.
 
-La tabla `mensajes` está bien protegida: su política exige `perfil_id = auth.uid()`
-**y** un trigger (`fijar_autor_mensaje`) sobrescribe los datos de autoría con los
-reales.
+La tabla `mensajes` está bien protegida: su política exige
+`perfil_id = auth.uid()` y además un trigger (`fijar_autor_mensaje`) sobrescribe
+los datos de autoría con los reales.
 
-`chat_mensajes` no tenía ninguna de las dos cosas. Su política era:
+`chat_mensajes` no tenía ninguna de las dos cosas. Su política era solo:
 
 ```sql
 with check (puede_ver_carpeta(carpeta_id))
 ```
 
-Sin verificar quién dice ser el autor. Y la tabla tiene columnas
-`perfil_id`, `autor_usuario`, `autor_nombre`, `rol`, `es_ia`.
+Nada verificaba quién decía ser el autor, y la tabla tiene columnas
+`perfil_id`, `autor_usuario`, `autor_nombre`, `rol` y `es_ia`. Un cliente o un
+acreedor con acceso a la carpeta podía insertar un mensaje declarando
+`rol: 'administrador'`, el nombre de la fundación y `es_ia: true`. En un
+expediente de insolvencia eso es suplantación dentro de una pieza del proceso.
 
-**Consecuencia:** un cliente o un acreedor con acceso a la carpeta podía insertar
-un mensaje declarando `rol: 'administrador'`, el nombre de la fundación y
-`es_ia: true`. En un expediente de insolvencia eso es suplantación dentro de una
-pieza del proceso.
+La corrección aplica el mismo patrón de `mensajes`: un trigger
+`fijar_autor_chat` que sobrescribe la autoría desde `auth.uid()` y fuerza
+`es_ia = false` para los humanos, más la condición `perfil_id = auth.uid()` en
+la política.
 
-### Corrección aplicada
+Conviene revisar un detalle: `chat_mensajes` tiene 18 filas reales pero no
+aparece referenciada en el código del portal. Viene de otro despliegue. No se
+borró porque no era una decisión de la auditoría, pero vale la pena confirmar de
+dónde salieron esos datos.
 
-Mismo patrón que `mensajes`: trigger `fijar_autor_chat` que sobrescribe autoría
-desde `auth.uid()` y fuerza `es_ia = false` para humanos, más la condición
-`perfil_id = auth.uid()` en la política. Dos capas.
+## 4. Límites de uso
 
-> **Dato que conviene revisar:** `chat_mensajes` tiene **18 filas reales** pero
-> no está referenciada en el código de ninguna de las dos copias del proyecto.
-> Viene de otro despliegue. No la borré — no es mi decisión. Vale la pena
-> confirmar de dónde salen esos datos.
+### Olvidé mi contraseña
 
----
-
-## 4. 🟠 Límites de uso (rate limiting) — CORREGIDO
-
-### 4.1 "Olvidé mi contraseña"
-
-`solicitar_restablecimiento` se llama **sin sesión** (es su razón de ser). Ya
+`solicitar_restablecimiento` se llama sin sesión, que es su razón de ser. Ya
 evitaba repetir solicitudes del mismo usuario, pero nada impedía recorrer una
 lista de nombres y llenar la campana del administrador con cientos de avisos.
 
-Agregado un tope global: **10 solicitudes nuevas cada 15 minutos**. Sigue
-devolviendo siempre lo mismo, exista o no el usuario y se haya alcanzado o no el
-tope — no se revela información.
+Se agregó un tope global de 10 solicitudes nuevas cada 15 minutos. La función
+sigue devolviendo siempre lo mismo, exista o no el usuario y se haya alcanzado o
+no el tope, así que no revela información.
 
-### 4.2 Formulario público del diagnóstico
+### Ingreso al portal
 
-El webhook de n8n no tenía ningún límite. Cualquiera podía inundar la tabla
-`leads`.
+Abierto, es una recomendación.
 
-Ahora n8n llama a `registrar_lead()` en vez de insertar directo, y **el tope vive
-en el servidor**, no en el workflow:
+Supabase Auth trae sus propios límites por IP en `signInWithPassword`. Lo que no
+hay es bloqueo por cuenta tras N intentos fallidos. Para un portal con datos de
+insolvencia vale la pena revisar los límites en Supabase (Authentication, Rate
+Limits), considerar un bloqueo temporal de cuenta tras unos 10 fallos y exigir
+contraseñas de más de 8 caracteres.
 
-| Tope | Valor |
-| --- | --- |
-| Por origen | 5 solicitudes / 10 minutos |
-| Global | 60 solicitudes / 10 minutos |
+No se implementó porque requiere una Edge Function que intercepte el ingreso, y
+eso es un cambio de arquitectura que conviene decidir antes de asumir.
 
-**Probado:** corta exactamente en el 6º intento desde el mismo origen.
+## 5. Sesión y token
 
-Sobre el origen: se guarda un **hash con sal** de la IP, nunca la IP. La IP es
-dato personal bajo la **Ley 1581 de 2012**, y para contar repeticiones basta la
-huella.
-
-### 4.3 Ingreso al portal — recomendación, no corregido
-
-Supabase Auth trae sus propios límites por IP en `signInWithPassword`. Lo que
-**no** hay es bloqueo por cuenta tras N intentos fallidos. Para un portal con
-datos de insolvencia vale la pena:
-
-- Revisar los límites en Supabase → Authentication → Rate Limits
-- Considerar bloqueo temporal de cuenta tras ~10 fallos
-- Exigir contraseñas de más de 8 caracteres (hoy el mínimo lo pone Supabase)
-
-No lo implementé porque requiere una Edge Function que intercepte el ingreso —
-es un cambio de arquitectura que conviene decidir, no asumir.
-
----
-
-## 5. Sesión y token — cómo funciona realmente
-
-Hay **dos** cosas guardadas, y conviene no confundirlas:
+Hay dos cosas guardadas y conviene no confundirlas:
 
 | Qué | Dónde | Para qué | Si se manipula |
 | --- | --- | --- | --- |
-| `portal_sesion` | `localStorage` | Caché de UI: nombre, rol, 8 h | Solo cambia botones dibujados |
-| Token JWT | `localStorage` (`sb-…-auth-token`) | **La sesión real** | Firmado por Supabase: no se puede falsificar |
+| `portal_sesion` | `localStorage` | Caché de interfaz: nombre, rol, 8 h | Solo cambia los botones que se dibujan |
+| Token JWT | `localStorage` (`sb-…-auth-token`) | La sesión real | Lo firma Supabase: no se puede falsificar |
 
-El JWT lo maneja `supabase-js`: lo renueva solo y lo manda en cada petición.
-`cerrarSesion()` hace `signOut()` además de limpiar `localStorage`, así que la
-sesión se invalida de verdad en el servidor.
-
-### Lo que sí conviene saber
+`supabase-js` maneja el JWT: lo renueva solo y lo manda en cada petición.
+`cerrarSesion()` llama a `signOut()` además de limpiar `localStorage`, así que
+la sesión se invalida de verdad en el servidor.
 
 El JWT vive en `localStorage`, que es el comportamiento por defecto de
-`supabase-js`. Eso significa que **un XSS podría robarlo**. La defensa es que no
-haya XSS — y eso lo revisé (sección 6).
+`supabase-js`. Eso significa que un XSS podría robarlo, y por eso la revisión
+de XSS de la sección 6 importa tanto.
 
-Detalle menor: la caducidad de 8 h de `portal_sesion` es solo de la caché de UI.
-El JWT tiene su propia caducidad (1 h por defecto, con renovación automática).
-Si alguien borra `portal_sesion` pero conserva el JWT, sigue teniendo acceso
-real a los datos hasta que el JWT expire. No es un hueco — el acceso está
-autorizado — pero explica por qué "cerrar sesión" debe hacer `signOut()` y no
-solo limpiar `localStorage`. **Ya lo hace correctamente.**
+Un detalle que suele confundir: la caducidad de 8 horas de `portal_sesion` es
+solo de la caché de interfaz. El JWT tiene su propia caducidad, una hora por
+defecto con renovación automática. Si alguien borra `portal_sesion` pero
+conserva el JWT, sigue teniendo acceso real a los datos hasta que el JWT expire.
+No es un hueco, porque ese acceso está autorizado, pero explica por qué cerrar
+sesión tiene que llamar a `signOut()` y no limpiar `localStorage` nada más. El
+código ya lo hace bien.
 
----
+## 6. XSS
 
-## 6. XSS — revisado, sin hallazgos
+Revisado, sin hallazgos.
 
 En un portal donde clientes y acreedores escriben en chats compartidos, un XSS
 almacenado sería grave: robaría el JWT de quien lea el mensaje.
 
-Revisado: `app.js` tiene **120 usos** de `escaparHtml()`, que escapa
-`& < > " '` correctamente. Los puntos de entrada de datos de usuario están
-cubiertos:
+`app.js` tiene 120 usos de `escaparHtml()`, que escapa `& < > " '`
+correctamente. Los puntos de entrada de datos de usuario están cubiertos:
 
 | Punto | Estado |
 | --- | --- |
 | Texto de mensajes de chat | Escapado |
 | Nombres de autor | Escapado |
 | Nombres de hoja de Excel | Escapado |
-| Nombres de carpeta/archivo en diálogos | `textContent`, no `innerHTML` |
+| Nombres de carpeta y archivo en diálogos | `textContent`, no `innerHTML` |
 | Mensajes de error | Escapado |
 
-Un punto que revisé y **no** es un hallazgo: `XLSX.utils.sheet_to_html()` vuelca
-un Excel subido dentro de `innerHTML`. SheetJS escapa el contenido de las celdas,
-así que no hay inyección. Queda anotado por si se cambia de librería.
+Un punto que se revisó y no resultó ser un hallazgo: `XLSX.utils.sheet_to_html()`
+vuelca un Excel subido dentro de `innerHTML`. SheetJS escapa el contenido de las
+celdas, así que no hay inyección. Queda anotado por si algún día se cambia de
+librería.
 
----
+## 7. Storage y base de datos
 
-## 7. Storage y base — estado
-
-### Bien
+Lo que está bien:
 
 | Control | Estado |
 | --- | --- |
-| Bucket `documentos` | **Privado** (no público) |
+| Bucket `documentos` | Privado |
 | Políticas de Storage | Por ruta: `<carpeta>/`, `chat/`, `soporte/` |
-| Sobrescritura de archivos | Imposible: no hay política de UPDATE |
-| RLS | Activo en **las 21 tablas** |
-| RLS en tablas nuevas | Automático: hay un event trigger `rls_auto_enable` |
-| Escrituras sensibles | Sin política de UPDATE; solo por funciones que validan permiso |
-| Último administrador | Protegido por trigger contra borrado/desactivación |
-| Registro público | Desactivado; usuarios solo por Edge Function que verifica admin |
+| Sobrescritura de archivos | Imposible, no hay política de UPDATE |
+| RLS | Activo en las 20 tablas |
+| RLS en tablas nuevas | Automático, hay un event trigger `rls_auto_enable` |
+| Escrituras sensibles | Sin política de UPDATE, solo por funciones que validan permiso |
+| Último administrador | Protegido por trigger contra borrado y desactivación |
+| Registro público | Desactivado, los usuarios solo se crean por Edge Function que verifica admin |
 
-### 🟡 Pendiente: tipos de archivo
+### Tipos de archivo
 
-El bucket tiene `allowed_mime_types: null` — **acepta cualquier tipo**. La lista
-blanca (`pdf, doc, docx, xls, xlsx, png, jpg, jpeg, mp3, mp4`) vive **solo en el
-navegador**, así que se puede saltar llamando a la API directo.
+Abierto.
 
-Riesgo real pero acotado: el bucket es privado y el visor no renderiza `.html`,
-así que no hay ejecución directa. Aun así conviene fijar la lista en el servidor:
+El bucket tiene `allowed_mime_types: null`, así que acepta cualquier tipo. La
+lista blanca (`pdf, doc, docx, xls, xlsx, png, jpg, jpeg, mp3, mp4`) vive solo
+en el navegador y se puede saltar llamando a la API directo.
+
+El riesgo es real pero acotado: el bucket es privado y el visor no renderiza
+`.html`, así que no hay ejecución directa. Aun así conviene fijar la lista en el
+servidor:
 
 ```sql
 update storage.buckets
@@ -295,116 +251,74 @@ update storage.buckets
  where id = 'documentos';
 ```
 
-No lo apliqué: si algún archivo ya subido tiene un MIME distinto, podría
-estorbar. Decisión tuya.
+No se aplicó porque si algún archivo ya subido tiene un MIME distinto podría
+estorbar. Requiere revisar antes qué hay en el bucket.
 
-### 🟡 Pendiente: desfase entre la base y `esquema.sql`
+### search_path fijo
 
-`chat_mensajes` y `hoja_trabajo` existen en la base pero **no están en
-`esquema.sql`**. Eso rompe la premisa de que el archivo es la fuente de verdad
-re-ejecutable: correrlo en un proyecto nuevo produciría una base distinta a la
-de producción. Conviene volcarlas al archivo.
+Corregido.
 
----
-
-## 8. n8n — postura de seguridad
-
-| Punto | Estado |
-| --- | --- |
-| Clave `service_role` | Solo en la credencial cifrada de n8n; nunca en el código ni en git |
-| Acceso a n8n | Local (`localhost:5678`), no expuesto a internet |
-| Workflows en git | Solo referencian la credencial por nombre, no su valor |
-| Webhook público | Honeypot + validación + límite de uso |
-
-### Antes de producción
-
-1. **`allowedOrigins: "*"`** en el webhook → restringir al dominio real
-2. **`N8N.URL`** en `diagnostico.html` apunta a `localhost` → URL pública
-3. **n8n corre en tu PC** → mover a un servidor siempre encendido, con HTTPS
-4. **`service_role` ignora RLS por completo.** Conviene un rol `n8n_bot` con
-   `EXECUTE` solo sobre las funciones que necesita, en vez de la llave maestra
-
----
-
-## 8-bis. Segunda vuelta: revisión de la base (2026-08-20)
-
-Con Docker de vuelta se corrieron los *advisors* de Supabase y se revisó la
-integridad de los datos.
-
-### Avisos de seguridad
-
-| | Antes | Ahora |
-| --- | --- | --- |
-| `function_search_path_mutable` | 7 | **0** |
-| `anon_security_definer_function_executable` | 48 | 46 |
-| `authenticated_security_definer_function_executable` | 50 | 50 |
-| `auth_leaked_password_protection` | 1 | 1 |
-| **Total** | 106 | **97** |
-
-Sobre los 46 + 50 que quedan: Supabase marca **toda** función
-`security definer` alcanzable por `anon` o `authenticated`, sin mirar si
-verifica permisos por dentro. Se revisaron una por una:
-
-- **40 de 48 verifican por dentro** (`es_admin()`, `puede_ver_carpeta()`,
-  `auth.uid()`…). No son huecos.
-- **8 no verifican**, y son aritmética de fechas sin acceso a datos:
-  `es_dia_habil`, `sumar_dias_habiles`, `contar_dias_habiles`,
-  `calcular_vencimiento_habil`, `calcular_semaforo`. Inofensivas.
-- **2 sí se cerraron**: `rls_auto_enable` (es un *event trigger* del sistema:
-  nadie debe invocarlo por HTTP) y `archivo_descargable_partes` (revelaba si
-  una ruta de Storage existe y es descargable).
-
-Queda **1 pendiente que solo puedes activar tú**, desde el panel:
-
-> Supabase → Authentication → Policies → **Leaked Password Protection**
->
-> Compara las contraseñas nuevas contra HaveIBeenPwned. Es un interruptor,
-> no requiere código.
-
-### `search_path` fijo — corregido
-
-7 funciones no fijaban su camino de búsqueda. Cuatro de ellas
-(`carpeta_de_ruta`, `chat_carpeta_de_ruta`, `chat_canal_de_ruta`,
-`soporte_operador_de_ruta`) se usan **dentro de las reglas de Storage**: son las
-que deciden a qué carpeta pertenece un archivo. Que su comportamiento dependa
-de la sesión que las llama es una superficie que no vale la pena dejar abierta.
+Siete funciones no fijaban su camino de búsqueda. Cuatro de ellas
+(`carpeta_de_ruta`, `chat_carpeta_de_ruta`, `chat_canal_de_ruta` y
+`soporte_operador_de_ruta`) se usan dentro de las reglas de Storage: son las que
+deciden a qué carpeta pertenece un archivo. Que su comportamiento dependa de la
+sesión que las llama es una superficie que no vale la pena dejar abierta.
 
 Todas usan solo funciones nativas de PostgreSQL, así que fijar el camino no
-cambia lo que devuelven. **Comprobado**: se guardaron los valores de referencia
-antes del cambio y se verificaron después — idénticos, incluida la ruta
-inválida que debe devolver `null`.
+cambia lo que devuelven. Se guardaron los valores de referencia antes del cambio
+y se compararon después: idénticos, incluida la ruta inválida que debe devolver
+`null`.
+
+### Avisos de Supabase
+
+Los *advisors* pasaron de 106 a 97 avisos de seguridad. Los 96 que quedan son
+casi todos de una misma categoría: Supabase marca toda función `security
+definer` alcanzable por `anon` o `authenticated`, sin mirar si verifica permisos
+por dentro. Se revisaron una por una.
+
+Cuarenta de cuarenta y ocho verifican por dentro con `es_admin()`,
+`puede_ver_carpeta()` o `auth.uid()`, así que no son huecos. Ocho no verifican
+nada, pero son aritmética de fechas sin acceso a datos: `es_dia_habil`,
+`sumar_dias_habiles`, `contar_dias_habiles`, `calcular_vencimiento_habil` y
+`calcular_semaforo`. Dos sí se cerraron: `rls_auto_enable`, que es un event
+trigger del sistema y nadie debe invocar por HTTP, y
+`archivo_descargable_partes`, que revelaba si una ruta de Storage existe y es
+descargable.
+
+Queda un aviso que solo se puede resolver desde el panel de Supabase, en
+Authentication, Policies: activar Leaked Password Protection, que compara las
+contraseñas nuevas contra HaveIBeenPwned. Es un interruptor, no requiere código.
 
 ### Rendimiento
 
-88 avisos. Se corrigió lo que no tiene riesgo:
+De los 88 avisos de rendimiento se corrigió lo que no tiene riesgo:
 
 | Hallazgo | Cantidad | Acción |
 | --- | --- | --- |
-| Claves foráneas sin índice | 18 | **Corregido**: 18 índices nuevos |
-| `auth.uid()` re-evaluado por fila en RLS | 21 | **No tocado** — ver abajo |
-| Políticas permisivas múltiples | 45 | **No tocado** — ver abajo |
-| Índices sin uso | 4 | Ignorado (recién creados) |
+| Claves foráneas sin índice | 18 | Corregido, 18 índices nuevos |
+| `auth.uid()` re-evaluado por fila en RLS | 21 | Sin tocar, ver abajo |
+| Políticas permisivas múltiples | 45 | Sin tocar, ver abajo |
+| Índices sin uso | 4 | Ignorado, recién creados |
 
 Las claves foráneas sin índice sí importaban: casi todas las tablas usan
 `on delete cascade`, así que borrar una carpeta o un perfil obligaba a recorrer
 varias tablas completas.
 
-**Lo que decidí NO tocar, y por qué:**
-
 Los 21 avisos de `auth_rls_initplan` se arreglan envolviendo `auth.uid()` en
-`(select auth.uid())` dentro de cada política. Es la receta estándar de
-Supabase y da una mejora real **a escala**. Pero implica reescribir 21 políticas
-de control de acceso a mano, y un error de tipeo ahí no da un error visible:
-abre un permiso. Con 3 carpetas y 9 perfiles la ganancia hoy es cero.
+`(select auth.uid())` dentro de cada política. Es la receta estándar de Supabase
+y mejora el rendimiento a escala, pero implica reescribir 21 políticas de
+control de acceso a mano, y un error de tipeo ahí no produce un fallo visible:
+abre un permiso. Con tres carpetas y nueve perfiles la ganancia hoy es nula.
+Consolidar las 45 políticas permisivas múltiples tiene el mismo problema, porque
+cambia la semántica de quién ve qué.
 
-Lo mismo con las 45 políticas permisivas múltiples: consolidarlas cambia la
-semántica de quién ve qué.
+Las dos quedan como tarea aparte, para hacerlas con pruebas de acceso por rol.
+Cambiar reglas de autorización para ganar un rendimiento que todavía no hace
+falta es mal negocio.
 
-Las dejo documentadas como tarea aparte, para hacerlas con pruebas de acceso
-por rol. Cambiar reglas de autorización para ganar rendimiento que todavía no
-se necesita es mal negocio.
+### Integridad de los datos
 
-### Integridad de los datos — limpia
+Limpia.
 
 | Revisión | Resultado |
 | --- | --- |
@@ -414,81 +328,33 @@ se necesita es mal negocio.
 | Procesos huérfanos | 0 |
 | Carpetas sin operador o sin cliente | 0 |
 
-Tres notas operativas, no fallas:
+Queda una nota operativa, no una falla: hay 6 perfiles activos sin correo de
+contacto. Cuando se active el envío por correo, a esos usuarios no se les podrá
+avisar nada.
 
-1. **Hay un solo administrador activo.** El trigger `proteger_ultimo_admin`
-   impide borrarlo, pero si se pierde el acceso a esa cuenta no hay otra.
-   Conviene un segundo administrador.
-2. **6 perfiles activos sin correo de contacto.** Cuando entre el envío por
-   correo, a esos usuarios no se les podrá avisar nada.
-3. **Festivos cargados hasta 2027.** En 2028 el semáforo empieza a calcular
-   plazos legales mal, en silencio.
+## 8. Alcance de la revisión
 
-### El workflow de leads — ahora sí probado
+Dos cosas quedaron fuera y conviene saberlo.
 
-Quedaba sin verificar. Al probarlo falló:
+No se probó la escalada de privilegios con una sesión real de cliente. Las
+políticas se verificaron leyéndolas en vivo, que es sólido, pero no equivale a
+un intento real de explotación con un JWT de cliente.
 
-```
-Error: Module 'crypto' is disallowed
-```
+No se revisó el código del portal línea por línea. `app.js` tiene más de 230 KB.
+La revisión se concentró en los caminos que importan para la pregunta: ingreso,
+sesión, autorización y los puntos de entrada de datos de usuario.
 
-El nodo Code de n8n corre en un sandbox que bloquea los módulos de Node.
-Se habilitó **solo** `crypto` (`NODE_FUNCTION_ALLOW_BUILTIN=crypto` en
-`docker-compose.yml`), que es lo que convierte la IP en hash para no guardarla.
+## 9. Cambios aplicados
 
-> El fallo fue **cerrado**: no se insertó ningún lead. Es el comportamiento
-> correcto, pero el formulario habría mandado a todos al respaldo de Gmail.
+Todo vive en `portal/supabase/migracion_seguridad_2026_08.sql`, que es
+idempotente:
 
-Segundo problema: `registrar_lead` devolvía un escalar, y la forma en que el
-cliente HTTP envuelve un escalar no es predecible. Se cambió a que devuelva una
-**fila** (`returns table (id bigint)`), así PostgREST responde `[{"id": 11}]` y
-n8n siempre lee `$json.id`. Cuando el tope frena, devuelve `[{"id": null}]`.
-
-**Probado punta a punta:**
-
-| Prueba | Resultado |
-| --- | --- |
-| Honeypot | HTTP 400 |
-| Correo inválido | HTTP 400 |
-| Leads 1–4 | `{"ok":true,"id":…}` |
-| Lead 5 y 6 (mismo origen) | `{"ok":false,"error":"limite"}` |
-| Hash de origen guardado | sí, la IP no |
-| Cron de Fase 3 tras los cambios | `status: success` |
-
-Filas de prueba borradas.
-
----
-
-## 9. Lo que NO pude verificar
-
-Honestidad sobre el alcance:
-
-- ~~El cambio del workflow de leads está sin probar.~~ **Resuelto en la segunda
-  vuelta** (sección 8-bis): probado punta a punta, incluidos dos fallos que
-  aparecieron solo al ejecutarlo.
-- **No probé la escalada de privilegios con una sesión real de cliente.** Verifiqué
-  las políticas leyéndolas en vivo, que es sólido, pero no equivale a un intento
-  real de explotación con un JWT de cliente.
-- **No revisé el código del portal línea por línea.** `app.js` tiene 229 KB. Me
-  concentré en los caminos que importan para lo que preguntaste: ingreso, sesión,
-  autorización, y los puntos de entrada de datos de usuario.
-
----
-
-## 10. Resumen de cambios aplicados
-
-| Archivo | Qué |
-| --- | --- |
-| `portal/supabase/migracion_seguridad_2026_08.sql` | Migración con las correcciones |
-| `n8n/workflows/fase1-lead-diagnostico.json` | Usa `registrar_lead()` + huella de origen *(sin probar)* |
-
-**En la base:**
-
-- 23 funciones internas cerradas a `anon`/`authenticated`/`public`
-- Trigger `fijar_autor_chat` + política endurecida en `chat_mensajes`
+- 23 funciones internas cerradas a `public`, `anon` y `authenticated`
+- Trigger `fijar_autor_chat` y política endurecida en `chat_mensajes`
 - Tope de uso en `solicitar_restablecimiento`
-- Función `registrar_lead()` con topes por origen y global
-- Columna `leads.huella` (hash con sal, nunca la IP)
+- 16 índices en claves foráneas
+- `search_path` fijo en las utilidades de ruta
 
-**Verificado tras los cambios:** el cron sigue corriendo, los triggers siguen
-disparando, y el tope de leads corta donde debe.
+Después de aplicarlos se verificó que la tarea diaria sigue corriendo, que los
+triggers siguen disparando y que las funciones de ruta devuelven exactamente lo
+mismo que antes.

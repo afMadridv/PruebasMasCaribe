@@ -4,7 +4,7 @@
    esto se reemplaza por un backend real (Supabase).
    ============================================ */
 const DB_NOMBRE = 'portal_documental';
-const DB_VERSION = 10; // v10: procesos del trámite con semáforo por días hábiles
+const DB_VERSION = 11; // v11: subcarpetas dentro de la carpeta
 
 let _db = null;
 
@@ -16,7 +16,7 @@ function abrirDB() {
         peticion.onupgradeneeded = (e) => {
             const db = e.target.result;
             // Al cambiar de versión se reinician los datos de práctica
-            for (const nombre of ['usuarios', 'carpetas', 'archivos', 'actividad', 'chat', 'hoja', 'mensajes', 'audiencias', 'recordatorios', 'procesos']) {
+            for (const nombre of ['usuarios', 'carpetas', 'archivos', 'actividad', 'chat', 'hoja', 'mensajes', 'audiencias', 'recordatorios', 'procesos', 'subcarpetas']) {
                 if (db.objectStoreNames.contains(nombre)) db.deleteObjectStore(nombre);
             }
             db.createObjectStore('usuarios', { keyPath: 'usuario' });
@@ -37,6 +37,9 @@ function abrirDB() {
             // Procesos del trámite (semáforo por días hábiles)
             const procesos = db.createObjectStore('procesos', { keyPath: 'id', autoIncrement: true });
             procesos.createIndex('porCarpeta', 'carpetaId', { unique: false });
+            // Subcarpetas: agrupan los documentos dentro de una carpeta
+            const subcarpetas = db.createObjectStore('subcarpetas', { keyPath: 'id', autoIncrement: true });
+            subcarpetas.createIndex('porCarpeta', 'carpetaId', { unique: false });
         };
 
         peticion.onsuccess = () => { _db = peticion.result; resolver(_db); };
@@ -483,6 +486,61 @@ function canalSenalizacion() { return { enviar: () => {}, cerrar: () => {} }; }
 async function notificacionesListar() { return []; }
 async function notificacionesMarcarLeidas() {}
 async function notificacionEliminar() {}
+/* ============ SUBCARPETAS (modo de práctica) ============
+   Mismas operaciones que en la nube, contra IndexedDB. */
+async function subcarpetasListar(carpetaId) {
+    const todas = await dbTodos('subcarpetas');
+    return todas
+        .filter(s => String(s.carpetaId) === String(carpetaId))
+        .sort((a, b) => (a.orden - b.orden) || a.nombre.localeCompare(b.nombre));
+}
+
+async function subcarpetaCrear(carpetaId, nombre) {
+    const limpio = String(nombre || '').trim().slice(0, 60);
+    if (!limpio) throw new Error('La subcarpeta necesita un nombre.');
+    const existentes = await subcarpetasListar(carpetaId);
+    if (existentes.some(s => s.nombre.toLowerCase() === limpio.toLowerCase())) {
+        throw new Error('Ya existe una subcarpeta con ese nombre en esta carpeta.');
+    }
+    return dbAgregar('subcarpetas', {
+        carpetaId: carpetaId, nombre: limpio,
+        orden: existentes.length + 1, creado: Date.now()
+    });
+}
+
+async function subcarpetaRenombrar(subcarpetaId, nombre) {
+    const limpio = String(nombre || '').trim().slice(0, 60);
+    if (!limpio) throw new Error('La subcarpeta necesita un nombre.');
+    const sub = await dbObtener('subcarpetas', Number(subcarpetaId));
+    if (!sub) throw new Error('Subcarpeta no encontrada.');
+    const hermanas = await subcarpetasListar(sub.carpetaId);
+    if (hermanas.some(s => s.id !== sub.id && s.nombre.toLowerCase() === limpio.toLowerCase())) {
+        throw new Error('Ya existe una subcarpeta con ese nombre en esta carpeta.');
+    }
+    sub.nombre = limpio;
+    return dbGuardar('subcarpetas', sub);
+}
+
+/* Al eliminarla los documentos vuelven a la raíz, no se borran */
+async function subcarpetaEliminar(subcarpetaId) {
+    const id = Number(subcarpetaId);
+    const archivos = await dbTodos('archivos');
+    for (const a of archivos) {
+        if (String(a.subcarpetaId) === String(id)) {
+            a.subcarpetaId = null;
+            await dbGuardar('archivos', a);
+        }
+    }
+    return dbEliminar('subcarpetas', id);
+}
+
+async function archivoMover(archivoId, subcarpetaId) {
+    const a = await dbObtener('archivos', Number(archivoId));
+    if (!a) throw new Error('Archivo no encontrado.');
+    a.subcarpetaId = subcarpetaId ? Number(subcarpetaId) : null;
+    return dbGuardar('archivos', a);
+}
+
 async function notificacionesGenerarVencidos() {}
 async function notificarMiIngreso() {}
 function suscribirNotificaciones() { return null; }

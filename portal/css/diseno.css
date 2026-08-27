@@ -1320,3 +1320,94 @@ body.pt-app .pt-buscador:focus-within{ border-color: var(--pt-marca-cian); }
     top: auto;
     bottom: calc(100% + .3rem);
 }
+
+
+/* ============================================================
+   11) SUBCARPETAS dentro de una carpeta
+   ------------------------------------------------------------
+   Un solo nivel. La carpeta sigue siendo el trámite; la
+   subcarpeta solo agrupa sus documentos («Audiencias»,
+   «Notificaciones»…). Se navegan como fichas, no como árbol:
+   con pocas subcarpetas un árbol estorba más de lo que ayuda.
+   ============================================================ */
+.pt-subcarpetas{
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.2rem;
+    padding-bottom: 1.1rem;
+    border-bottom: 1px solid var(--pt-borde);
+}
+.pt-subcarpeta{
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    min-height: 3.2rem;
+    padding: .4rem 1.1rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: 999px;
+    background: var(--pt-superficie);
+    color: var(--pt-gris);
+    font: inherit;
+    font-size: .78rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--pt-rapido);
+}
+.pt-subcarpeta:hover{ border-color: var(--pt-azul); color: var(--pt-tinta); }
+.pt-subcarpeta.activa{
+    background: var(--pt-navy-700);
+    border-color: var(--pt-navy-700);
+    color: var(--pt-blanco);
+    font-weight: 600;
+}
+.pt-subcarpeta svg{ width: 15px; height: 15px; flex: 0 0 auto; }
+.pt-subcarpeta__num{
+    font-size: .68rem;
+    font-weight: 600;
+    padding: .05rem .45rem;
+    border-radius: 999px;
+    background: var(--pt-superficie-2);
+    color: var(--pt-gris);
+}
+.pt-subcarpeta.activa .pt-subcarpeta__num{
+    background: rgba(255,255,255,.18);
+    color: var(--pt-blanco);
+}
+/* Botón para crear: se distingue por el borde discontinuo */
+.pt-subcarpeta--nueva{
+    border-style: dashed;
+    border-color: var(--pt-marca-cian);
+    color: var(--pt-marca-cian);
+    background: transparent;
+}
+.pt-subcarpeta--nueva:hover{
+    background: var(--pt-superficie-2);
+    color: var(--pt-marca-cian);
+}
+
+/* Acciones de la subcarpeta abierta (renombrar / eliminar) */
+.pt-subcarpeta-barra{
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin-left: auto;
+}
+
+/* Selector de destino al mover un documento */
+.pt-mover{
+    min-height: 2.8rem;
+    padding: .3rem .7rem;
+    font-size: .75rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: 1.2rem;
+    background: var(--pt-superficie);
+    color: var(--pt-tinta);
+    font-family: inherit;
+    cursor: pointer;
+}
+
+@media (max-width: 620px){
+    .pt-subcarpeta-barra{ margin-left: 0; width: 100%; }
+}

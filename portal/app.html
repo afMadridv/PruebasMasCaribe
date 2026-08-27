@@ -194,6 +194,8 @@
             <div id="sub-pestanas-carpeta" class="pt-sub-pestanas"></div>
 
             <div id="panel-archivos">
+            <!-- Subcarpetas de la carpeta: lo llena pintarSubcarpetas() -->
+            <div class="pt-subcarpetas" id="barra-subcarpetas" hidden></div>
             <div class="pt-barra-archivos">
                 <span class="pt-nota" id="archivos-resumen"></span>
                 <button id="boton-subir" class="pt-boton pt-boton--primario pt-boton--mini"
@@ -799,6 +801,24 @@
                 <button class="pt-boton pt-boton--fantasma" data-accion="confirmar-no">Cancelar</button>
                 <button class="pt-boton pt-boton--primario" id="confirmar-si" data-accion="confirmar-si">Confirmar</button>
             </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL: PEDIR UN TEXTO (nombre de subcarpeta, etc.) ===== -->
+    <div id="modal-texto" class="pt-modal" hidden>
+        <div class="pt-modal__caja">
+            <h3 id="texto-titulo">Escribe un nombre</h3>
+            <p class="pt-nota" id="texto-ayuda" style="margin:1rem 0;"></p>
+            <form id="form-texto">
+                <label class="pt-campo">
+                    <span id="texto-etiqueta">Nombre</span>
+                    <input type="text" id="texto-valor" maxlength="60" autocomplete="off" required>
+                </label>
+                <div class="pt-modal__acciones">
+                    <button type="button" class="pt-boton pt-boton--fantasma" data-accion="texto-cancelar">Cancelar</button>
+                    <button type="submit" class="pt-boton pt-boton--primario">Guardar</button>
+                </div>
+            </form>
         </div>
     </div>
 

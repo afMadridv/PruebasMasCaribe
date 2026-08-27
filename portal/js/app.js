@@ -702,6 +702,9 @@ async function abrirCarpeta(id) {
         return;
     }
     carpetaAbierta = carpeta;
+    // Cada carpeta se abre por su raíz, no por la subcarpeta de la anterior
+    _subcarpetaAbierta = null;
+    _subcarpetas = [];
     mostrarVista('vista-carpeta');
     registrarActividad('abrir-carpeta', carpeta.nombre, carpeta.id);
 
@@ -2609,6 +2612,30 @@ function confirmarPortal(mensaje, titulo) {
     });
 }
 
+/* Pide un texto corto con el mismo modal del portal (nunca prompt(),
+   que el navegador puede bloquear y no sigue el tema). */
+let _textoResolver = null;
+
+function pedirTextoPortal(titulo, ayuda, valorInicial) {
+    return new Promise((resolver) => {
+        _textoResolver = resolver;
+        document.getElementById('texto-titulo').textContent = titulo || 'Escribe un nombre';
+        const cajaAyuda = document.getElementById('texto-ayuda');
+        cajaAyuda.textContent = ayuda || '';
+        cajaAyuda.hidden = !ayuda;
+        const campo = document.getElementById('texto-valor');
+        campo.value = valorInicial || '';
+        document.getElementById('modal-texto').hidden = false;
+        campo.focus();
+        campo.select();
+    });
+}
+
+function _responderTexto(valor) {
+    document.getElementById('modal-texto').hidden = true;
+    if (_textoResolver) { _textoResolver(valor); _textoResolver = null; }
+}
+
 function _responderConfirmacion(valor) {
     document.getElementById('modal-confirmar').hidden = true;
     if (_confirmarResolver) { _confirmarResolver(valor); _confirmarResolver = null; }
@@ -2856,7 +2883,9 @@ function ordenarArchivos(archivos) {
     });
 }
 
-let _editandoOrden = false;   // modo "Editar documentos" (reordenar la tabla)
+let _editandoOrden = false;
+let _subcarpetas = [];        // subcarpetas de la carpeta abierta
+let _subcarpetaAbierta = null; // null = raíz de la carpeta   // modo "Editar documentos" (reordenar la tabla)
 let _archivosCache = [];      // archivos de la carpeta abierta, ya ordenados
 
 async function pintarArchivos() {
@@ -2864,10 +2893,21 @@ async function pintarArchivos() {
     const archivos = await dbArchivosDeCarpeta(carpetaAbierta.id);
     _archivosCache = ordenarArchivos(archivos);
 
+    // Subcarpetas de la carpeta y fichas de navegación
+    await cargarSubcarpetas();
+    // Si la subcarpeta abierta ya no existe, se vuelve a la raíz
+    if (_subcarpetaAbierta !== null &&
+        !_subcarpetas.some(x => String(x.id) === String(_subcarpetaAbierta))) {
+        _subcarpetaAbierta = null;
+    }
+    pintarSubcarpetas();
+    // A partir de aquí se trabaja SOLO con lo que se está viendo
+    const visibles = archivosDeVistaActual();
+
     // Botón "Editar documentos" sobre la tabla (solo personal de la carpeta)
     const barraArchivos = document.getElementById('barra-editar-documentos');
     if (barraArchivos) barraArchivos.remove();
-    if (puedeGestionarCarpeta(carpetaAbierta) && archivos.length > 1) {
+    if (puedeGestionarCarpeta(carpetaAbierta) && visibles.length > 1) {
         const envoltura = document.querySelector('#panel-archivos .pt-tabla-envoltura');
         const barra = document.createElement('div');
         barra.id = 'barra-editar-documentos';
@@ -2890,17 +2930,159 @@ async function pintarArchivos() {
     if (thSubidoPor) thSubidoPor.hidden = (ES_CLIENTE || ES_ACREEDOR);
 
     const cuerpo = document.getElementById('lista-archivos');
-    cuerpo.innerHTML = _archivosCache.map(filaArchivo).join('');
-    document.getElementById('archivos-vacio').hidden = archivos.length > 0;
+    cuerpo.innerHTML = visibles.map(filaArchivo).join('');
+    document.getElementById('archivos-vacio').hidden = visibles.length > 0;
+    const vacio = document.getElementById('archivos-vacio');
+    if (vacio && !visibles.length) {
+        vacio.textContent = _subcarpetaAbierta === null
+            ? 'Todavía no hay documentos en esta carpeta.'
+            : 'La subcarpeta «' + nombreSubcarpeta(_subcarpetaAbierta) + '» está vacía.';
+    }
     if (_editandoOrden) activarArrastreOrden();
 
-    // Cifras del expediente y resumen sobre la tabla
+    // Las cifras del expediente cuentan TODOS los documentos, no solo los visibles
     pintarCifrasDetalle(carpetaAbierta, _archivosCache);
     const resumen = document.getElementById('archivos-resumen');
     if (resumen) {
-        resumen.textContent = archivos.length
-            ? archivos.length + (archivos.length === 1 ? ' documento' : ' documentos')
-            : 'Todavia no hay documentos en esta carpeta.';
+        const donde = _subcarpetaAbierta === null
+            ? '' : ' en «' + nombreSubcarpeta(_subcarpetaAbierta) + '»';
+        resumen.textContent = visibles.length
+            ? visibles.length + (visibles.length === 1 ? ' documento' : ' documentos') + donde
+            : '';
+    }
+}
+
+/* ============ SUBCARPETAS DE LA CARPETA ============
+   Un solo nivel. La carpeta sigue siendo el trámite; la subcarpeta
+   agrupa sus documentos («Audiencias», «Notificaciones»…).
+   Se navegan como fichas: con pocas subcarpetas un árbol estorba. */
+
+function nombreSubcarpeta(id) {
+    const s = _subcarpetas.find(x => String(x.id) === String(id));
+    return s ? s.nombre : '';
+}
+
+/* Documentos que se ven ahora: los de la subcarpeta abierta, o los
+   de la raíz si no hay ninguna abierta. */
+function archivosDeVistaActual() {
+    if (_subcarpetaAbierta === null) {
+        return _archivosCache.filter(a => !a.subcarpetaId);
+    }
+    return _archivosCache.filter(a => String(a.subcarpetaId) === String(_subcarpetaAbierta));
+}
+
+function pintarSubcarpetas() {
+    const caja = document.getElementById('barra-subcarpetas');
+    if (!caja || !carpetaAbierta) return;
+
+    const gestiona = puedeGestionarCarpeta(carpetaAbierta);
+    const enRaiz = _archivosCache.filter(a => !a.subcarpetaId).length;
+
+    let html = '<button class="pt-subcarpeta' + (_subcarpetaAbierta === null ? ' activa' : '') + '" ' +
+        'data-accion="abrir-subcarpeta" data-sub="">' +
+        icono('carpeta', 15) + ' Documentos' +
+        '<span class="pt-subcarpeta__num">' + enRaiz + '</span></button>';
+
+    for (const sub of _subcarpetas) {
+        const n = _archivosCache.filter(a => String(a.subcarpetaId) === String(sub.id)).length;
+        html += '<button class="pt-subcarpeta' + (String(_subcarpetaAbierta) === String(sub.id) ? ' activa' : '') + '" ' +
+            'data-accion="abrir-subcarpeta" data-sub="' + sub.id + '">' +
+            icono('carpeta', 15) + ' ' + escaparHtml(sub.nombre) +
+            '<span class="pt-subcarpeta__num">' + n + '</span></button>';
+    }
+
+    if (gestiona) {
+        html += '<button class="pt-subcarpeta pt-subcarpeta--nueva" data-accion="nueva-subcarpeta">' +
+            '+ Nueva subcarpeta</button>';
+        if (_subcarpetaAbierta !== null) {
+            html += '<span class="pt-subcarpeta-barra">' +
+                '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="renombrar-subcarpeta">Renombrar</button>' +
+                '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="eliminar-subcarpeta">Eliminar</button>' +
+                '</span>';
+        }
+    }
+
+    caja.innerHTML = html;
+    caja.hidden = false;
+}
+
+async function cargarSubcarpetas() {
+    if (!carpetaAbierta || typeof subcarpetasListar !== 'function') { _subcarpetas = []; return; }
+    try { _subcarpetas = await subcarpetasListar(carpetaAbierta.id); }
+    catch (e) { _subcarpetas = []; }
+}
+
+function abrirSubcarpeta(id) {
+    _subcarpetaAbierta = (id === '' || id === undefined || id === null) ? null : Number(id);
+    _editandoOrden = false;
+    pintarArchivos();
+}
+
+async function nuevaSubcarpetaAccion() {
+    if (!carpetaAbierta) return;
+    const nombre = await pedirTextoPortal('Nombre de la subcarpeta',
+        'Por ejemplo: Audiencias, Notificaciones, Soportes.', '');
+    if (!nombre) return;
+    try {
+        const id = await subcarpetaCrear(carpetaAbierta.id, nombre);
+        registrarActividad('crear-subcarpeta', nombre + ' · ' + carpetaAbierta.nombre, carpetaAbierta.id);
+        await cargarSubcarpetas();
+        _subcarpetaAbierta = Number(id);
+        await pintarArchivos();
+        avisar('Subcarpeta «' + nombre + '» creada.');
+    } catch (e) {
+        avisar((e && e.message) || 'No se pudo crear la subcarpeta.', 'error');
+    }
+}
+
+async function renombrarSubcarpetaAccion() {
+    if (_subcarpetaAbierta === null) return;
+    const actual = nombreSubcarpeta(_subcarpetaAbierta);
+    const nombre = await pedirTextoPortal('Renombrar subcarpeta', '', actual);
+    if (!nombre || nombre === actual) return;
+    try {
+        await subcarpetaRenombrar(_subcarpetaAbierta, nombre);
+        registrarActividad('renombrar-subcarpeta', actual + ' → ' + nombre, carpetaAbierta.id);
+        await cargarSubcarpetas();
+        await pintarArchivos();
+        avisar('Subcarpeta renombrada.');
+    } catch (e) {
+        avisar((e && e.message) || 'No se pudo renombrar.', 'error');
+    }
+}
+
+async function eliminarSubcarpetaAccion() {
+    if (_subcarpetaAbierta === null) return;
+    const nombre = nombreSubcarpeta(_subcarpetaAbierta);
+    const dentro = _archivosCache.filter(a => String(a.subcarpetaId) === String(_subcarpetaAbierta)).length;
+    const aviso = dentro
+        ? 'La subcarpeta «' + nombre + '» tiene ' + dentro + ' documento(s).\n\n' +
+          'Los documentos NO se eliminan: vuelven a la raíz de la carpeta.\n\n¿Eliminar la subcarpeta?'
+        : '¿Eliminar la subcarpeta «' + nombre + '»?';
+    if (!await confirmarPortal(aviso)) return;
+    try {
+        await subcarpetaEliminar(_subcarpetaAbierta);
+        registrarActividad('eliminar-subcarpeta', nombre + ' · ' + carpetaAbierta.nombre, carpetaAbierta.id);
+        _subcarpetaAbierta = null;
+        await cargarSubcarpetas();
+        await pintarArchivos();
+        avisar('Subcarpeta eliminada. Sus documentos quedaron en la carpeta.');
+    } catch (e) {
+        avisar((e && e.message) || 'No se pudo eliminar la subcarpeta.', 'error');
+    }
+}
+
+async function moverArchivoAccion(archivoId, destino) {
+    try {
+        await archivoMover(archivoId, destino === '' ? null : Number(destino));
+        const a = _archivosCache.find(x => String(x.id) === String(archivoId));
+        registrarActividad('mover-archivo',
+            (a ? a.nombre : '') + ' → ' + (destino === '' ? 'raíz' : nombreSubcarpeta(destino)),
+            carpetaAbierta.id);
+        await pintarArchivos();
+        avisar('Documento movido.');
+    } catch (e) {
+        avisar((e && e.message) || 'No se pudo mover el documento.', 'error');
     }
 }
 
@@ -2924,6 +3106,17 @@ function filaArchivo(a) {
             acciones += '<button class="pt-boton pt-boton--primario pt-boton--mini" data-accion="descargar-archivo" data-id="' + a.id + '">Descargar</button>';
         }
         if (gestiona) {
+            // Mover entre subcarpetas: solo se ofrece si la carpeta tiene alguna
+            if (_subcarpetas.length) {
+                const opciones = ['<option value=""' + (!a.subcarpetaId ? ' selected' : '') + '>Documentos</option>']
+                    .concat(_subcarpetas.map(sub =>
+                        '<option value="' + sub.id + '"' +
+                        (String(a.subcarpetaId) === String(sub.id) ? ' selected' : '') + '>' +
+                        escaparHtml(sub.nombre) + '</option>'))
+                    .join('');
+                acciones += ' <select class="pt-mover" data-accion-cambio="mover-archivo" data-id="' + a.id + '"' +
+                    ' title="Mover a otra subcarpeta">' + opciones + '</select>';
+            }
             acciones += ' <button class="pt-boton pt-boton--peligro pt-boton--mini" data-accion="eliminar-archivo" data-id="' + a.id + '">Eliminar</button>';
         }
     }
@@ -3815,6 +4008,8 @@ async function subirArchivos(listaArchivos) {
         try {
             await dbAgregar('archivos', {
                 carpetaId: carpetaAbierta.id,
+                // Se sube a la subcarpeta que está abierta (null = raíz)
+                subcarpetaId: _subcarpetaAbierta,
                 nombre: archivo.name,
                 tipo: archivo.type || 'application/octet-stream',
                 tamano: archivo.size,
@@ -4590,6 +4785,13 @@ function conectarEventos() {
             case 'salir-sitio':       confirmarSalida('../index.html'); break; // volver al sitio cierra la sesión
             case 'ver-carpetas':      mostrarVistaCarpetas(); break;
             case 'alternar-subida':   alternarZonaSubida(); break;
+
+            // Subcarpetas dentro de la carpeta
+            case 'abrir-subcarpeta':     abrirSubcarpeta(boton.dataset.sub); break;
+            case 'nueva-subcarpeta':     nuevaSubcarpetaAccion(); break;
+            case 'renombrar-subcarpeta': renombrarSubcarpetaAccion(); break;
+            case 'eliminar-subcarpeta':  eliminarSubcarpetaAccion(); break;
+            case 'texto-cancelar':       _responderTexto(null); break;
             case 'abrir-cajon-usuario':  alternarCajonUsuario(true); break;
             case 'cerrar-cajon-usuario': alternarCajonUsuario(false); break;
 
@@ -4756,10 +4958,22 @@ function conectarEventos() {
         if (e.target.dataset && e.target.dataset.accionCambio === 'chequeo-expediente') {
             alternarSeleccionExpediente(Number(e.target.value), e.target.checked);
         }
+        // Mover un documento a otra subcarpeta
+        if (e.target.dataset && e.target.dataset.accionCambio === 'mover-archivo') {
+            moverArchivoAccion(Number(e.target.dataset.id), e.target.value);
+        }
     });
 
     document.getElementById('form-carpeta').addEventListener('submit', guardarCarpeta);
     document.getElementById('form-usuario').addEventListener('submit', crearUsuario);
+    // Modal de texto (nombre de subcarpeta y similares)
+    const formTexto = document.getElementById('form-texto');
+    if (formTexto) {
+        formTexto.addEventListener('submit', (e) => {
+            e.preventDefault();
+            _responderTexto(document.getElementById('texto-valor').value.trim());
+        });
+    }
     document.getElementById('form-editar-usuario').addEventListener('submit', guardarEdicionUsuario);
     document.getElementById('form-descripcion').addEventListener('submit', guardarDescripcion);
     document.getElementById('form-mensaje').addEventListener('submit', enviarMensaje);

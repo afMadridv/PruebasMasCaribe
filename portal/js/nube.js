@@ -267,12 +267,16 @@
             return data.id;
         }
         if (almacen === 'archivos') {
-            const ruta = valor.carpetaId + '/' + Date.now() + '_' + limpiarNombre(valor.nombre);
+            // <id-carpeta>/<id-subcarpeta>/<archivo>. El primer segmento no
+            // cambia, así que las reglas de Storage siguen aplicando igual.
+            const sub = valor.subcarpetaId ? valor.subcarpetaId + '/' : '';
+            const ruta = valor.carpetaId + '/' + sub + Date.now() + '_' + limpiarNombre(valor.nombre);
             const { error: errorSube } = await nube.storage.from('documentos')
                 .upload(ruta, valor.blob, { contentType: valor.tipo || 'application/octet-stream' });
             if (errorSube) fallar(errorSube);
             const { error: errorFila } = await nube.from('archivos').insert({
                 carpeta_id: valor.carpetaId, nombre: valor.nombre,
+                subcarpeta_id: valor.subcarpetaId || null,
                 tipo: valor.tipo || '', tamano: valor.tamano || 0,
                 ruta_storage: ruta,
                 descargable_partes: valor.descargablePartes !== false,
@@ -335,11 +339,12 @@
 
     window.dbArchivosDeCarpeta = async (carpetaId) => {
         const { data, error } = await nube.from('archivos')
-            .select('id, carpeta_id, nombre, tipo, tamano, subido_por_usuario, fecha, orden, descargable_partes')
+            .select('id, carpeta_id, subcarpeta_id, nombre, tipo, tamano, subido_por_usuario, fecha, orden, descargable_partes')
             .eq('carpeta_id', carpetaId);
         if (error) fallar(error);
         return data.map(a => ({
-            id: a.id, carpetaId: a.carpeta_id, nombre: a.nombre, tipo: a.tipo,
+            id: a.id, carpetaId: a.carpeta_id, subcarpetaId: a.subcarpeta_id,
+            nombre: a.nombre, tipo: a.tipo,
             tamano: a.tamano, subidoPor: a.subido_por_usuario,
             fecha: Date.parse(a.fecha), orden: a.orden,
             descargablePartes: a.descargable_partes !== false
@@ -347,6 +352,66 @@
     };
 
     /* Marca si las partes (cliente/acreedor) pueden descargar un archivo */
+    /* ============ SUBCARPETAS DE UNA CARPETA ============
+       Un solo nivel: agrupan los documentos del trámite
+       («Audiencias», «Notificaciones»…). Las gestiona quien puede
+       subir a la carpeta; las ven todos los que ven la carpeta. */
+    window.subcarpetasListar = async (carpetaId) => {
+        const { data, error } = await nube.from('subcarpetas')
+            .select('*').eq('carpeta_id', carpetaId).order('orden').order('nombre');
+        if (error) fallar(error);
+        return (data || []).map(s => ({
+            id: s.id, carpetaId: s.carpeta_id, nombre: s.nombre,
+            orden: s.orden, creado: Date.parse(s.creado)
+        }));
+    };
+
+    window.subcarpetaCrear = async (carpetaId, nombre) => {
+        const ses = sesionNube();
+        const limpio = String(nombre || '').trim().slice(0, 60);
+        if (!limpio) throw new Error('La subcarpeta necesita un nombre.');
+        const { data, error } = await nube.from('subcarpetas').insert({
+            carpeta_id: carpetaId, nombre: limpio, creado_por: ses._id || null
+        }).select('id').single();
+        if (error) {
+            if (String(error.message || '').includes('duplicate') ||
+                String(error.code || '') === '23505') {
+                throw new Error('Ya existe una subcarpeta con ese nombre en esta carpeta.');
+            }
+            fallar(error);
+        }
+        return data.id;
+    };
+
+    window.subcarpetaRenombrar = async (subcarpetaId, nombre) => {
+        const limpio = String(nombre || '').trim().slice(0, 60);
+        if (!limpio) throw new Error('La subcarpeta necesita un nombre.');
+        const { error } = await nube.from('subcarpetas')
+            .update({ nombre: limpio }).eq('id', subcarpetaId);
+        if (error) {
+            if (String(error.message || '').includes('duplicate') ||
+                String(error.code || '') === '23505') {
+                throw new Error('Ya existe una subcarpeta con ese nombre en esta carpeta.');
+            }
+            fallar(error);
+        }
+    };
+
+    /* Al eliminar la subcarpeta los documentos NO se borran: la columna
+       es "on delete set null", así que vuelven a la raíz de la carpeta. */
+    window.subcarpetaEliminar = async (subcarpetaId) => {
+        const { error } = await nube.from('subcarpetas').delete().eq('id', subcarpetaId);
+        if (error) fallar(error);
+    };
+
+    /* Mueve un documento a otra subcarpeta (o a la raíz con null).
+       Solo cambia la etiqueta: el binario se queda donde está. */
+    window.archivoMover = async (archivoId, subcarpetaId) => {
+        const { error } = await nube.from('archivos')
+            .update({ subcarpeta_id: subcarpetaId || null }).eq('id', archivoId);
+        if (error) fallar(error);
+    };
+
     window.fijarDescargaPartes = async (archivoId, permitir) => {
         const { error } = await nube.rpc('fijar_descarga_partes', { archivo: archivoId, permitir: !!permitir });
         if (error) fallar(error);
