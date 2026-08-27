@@ -1,0 +1,6 @@
+# Configuración local del editor
+.obsidian/
+
+# Banco de pruebas: copia de app.html apuntada al modo práctica (IndexedDB).
+# Se genera a mano cuando hace falta revisar el diseño sin tocar Supabase.
+.disenos/

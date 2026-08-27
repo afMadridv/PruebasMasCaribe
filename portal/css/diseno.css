@@ -619,14 +619,87 @@ body.pt-app{
    de la pantalla: cada trámite cae en el grupo que le toca.
    El reloj 60/90 del trámite se dibuja como anillo.
    ============================================================ */
-.pt-tablero{ display: flex; flex-direction: column; gap: 2.4rem; }
+/* ---- El tablero: una columna por grupo ----
+   Las columnas se estiran a la misma altura (comportamiento normal
+   de grid), que es lo que hace que el tablero se lea como tablero
+   y no como cuatro listas sueltas. El número de columnas lo pone
+   el JS en --pt-columnas, porque "Pausados" solo aparece si hay. */
+.pt-tablero{
+    display: grid;
+    grid-template-columns: repeat(var(--pt-columnas, 4), minmax(0, 1fr));
+    gap: 1.44rem;
+    align-items: stretch;
+}
+.pt-columna{
+    display: flex;
+    flex-direction: column;
+    gap: 1.12rem;
+    padding: 1.28rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: 20px;
+    background: var(--pt-fondo);
+}
+/* Cada columna toma un tinte de su color. El borde plano va primero
+   como respaldo para navegadores sin color-mix. */
+.pt-columna--rojo{    border-color: color-mix(in srgb, var(--pt-rojo)   32%, var(--pt-borde)); }
+.pt-columna--naranja{ border-color: color-mix(in srgb, var(--pt-ambar)  38%, var(--pt-borde)); }
+.pt-columna--cian{    border-color: color-mix(in srgb, var(--pt-marca-cian) 32%, var(--pt-borde)); }
+.pt-columna--verde{   border-color: color-mix(in srgb, var(--pt-verde)  28%, var(--pt-borde)); }
 
-.pt-grupo__cab{
+.pt-columna__cab{
     display: flex;
     align-items: center;
-    gap: 0.96rem;
-    margin-bottom: 1.12rem;
+    gap: 0.8rem;
+    padding-bottom: 1.04rem;
+    border-bottom: 1px solid var(--pt-borde);
 }
+.pt-columna__tit{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 1.44rem;
+    font-weight: 600;
+    color: var(--pt-tinta);
+    margin-right: auto;
+}
+.pt-columna__num{
+    font-size: 1.152rem;
+    font-weight: 700;
+    color: var(--pt-gris);
+    background: var(--pt-superficie-2);
+    border-radius: 999px;
+    padding: 0.16rem 0.72rem;
+}
+.pt-columna__lista{
+    display: flex;
+    flex-direction: column;
+    gap: 0.96rem;
+    flex: 1;
+}
+.pt-columna__vacio{
+    padding: 1.6rem 1.44rem;
+    border: 1px dashed var(--pt-borde);
+    border-radius: 16px;
+    font-size: 1.224rem;
+    line-height: 1.5;
+    color: var(--pt-gris);
+    text-align: center;
+}
+/* Atajo para el caso más común de columna vacía: hay carpetas
+   activas a las que todavía no se les definió ningún proceso. */
+.pt-columna__crear{
+    padding: 1.28rem 1.2rem;
+    border: 1px dashed var(--pt-borde);
+    border-radius: 16px;
+    background: none;
+    font: inherit;
+    font-size: 1.192rem;
+    line-height: 1.45;
+    color: var(--pt-gris);
+    text-align: center;
+    cursor: pointer;
+    transition: border-color var(--pt-rapido), color var(--pt-rapido);
+}
+.pt-columna__crear:hover{ border-color: var(--pt-azul); color: var(--pt-azul); }
+
 .pt-grupo__punto{
     width: 9px; height: 9px;
     border-radius: 50%;
@@ -634,53 +707,50 @@ body.pt-app{
 }
 .pt-grupo__punto--rojo{ background: var(--pt-rojo); }
 .pt-grupo__punto--naranja{ background: var(--pt-ambar); }
+.pt-grupo__punto--cian{ background: var(--pt-marca-cian); }
 .pt-grupo__punto--verde{ background: var(--pt-verde); }
 .pt-grupo__punto--gris{ background: var(--pt-gris); }
-.pt-grupo__tit{
-    font-family: var(--pt-fuente-titulos);
-    font-size: 1.6rem;
-    font-weight: 600;
-    color: var(--pt-tinta);
-}
-.pt-grupo__num{
-    font-size: 1.152rem;
-    font-weight: 600;
-    color: var(--pt-gris);
-    background: var(--pt-superficie-2);
-    border-radius: 999px;
-    padding: 0.16rem 0.8rem;
-}
-.pt-grupo__lista{ display: flex; flex-direction: column; gap: 0.96rem; }
-.pt-grupo__vacio{
-    padding: 1.44rem 1.76rem;
-    border: 1px dashed var(--pt-borde);
-    border-radius: 16px;
-    font-size: 1.28rem;
-    color: var(--pt-gris);
-}
 
-/* ---- Tarjeta de trámite ---- */
+/* ---- Tarjeta de trámite: nombre y anillo arriba, detalle abajo ---- */
 .pt-tramite{
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 1.76rem;
-    padding: 1.44rem 1.84rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.04rem;
+    padding: 1.28rem 1.36rem;
     border: 1px solid var(--pt-borde);
-    border-radius: 18px;
+    border-radius: 16px;
     background: var(--pt-superficie);
     transition: border-color var(--pt-rapido);
 }
 .pt-tramite:hover{ border-color: var(--pt-azul); }
+.pt-tramite__cab{
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.04rem;
+}
 .pt-tramite__nombre{
     font-weight: 600;
-    font-size: 1.44rem;
+    font-size: 1.352rem;
+    line-height: 1.35;
     color: var(--pt-tinta);
-    margin-bottom: 0.24rem;
 }
-.pt-tramite__linea{ font-size: 1.224rem; color: var(--pt-gris); }
+.pt-tramite__op{
+    font-size: 1.16rem;
+    color: var(--pt-gris);
+    margin-top: 0.24rem;
+}
+.pt-tramite__cuerpo{
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding-top: 1.04rem;
+    border-top: 1px solid var(--pt-borde);
+}
+.pt-tramite__linea{ font-size: 1.192rem; line-height: 1.5; color: var(--pt-gris); }
 .pt-tramite__linea strong{ color: var(--pt-tinta); font-weight: 600; }
 .pt-tramite__acciones{ display: flex; align-items: center; gap: 0.56rem; }
+.pt-tramite__ver{ flex: 1; justify-content: center; }
 
 /* ---- Anillo del conteo 60/90 ---- */
 .pt-anillo{ position: relative; width: 52px; height: 52px; flex: 0 0 auto; }
@@ -717,11 +787,15 @@ body.pt-app{
     font-size: 1.224rem;
     color: var(--pt-gris);
 }
-.pt-tablero__pie .pt-acciones{ display: flex; gap: 0.72rem; }
+.pt-tablero__pie .pt-acciones{ display: flex; gap: 0.72rem; flex-wrap: wrap; }
 
-@media (max-width: 620px){
-    .pt-tramite{ grid-template-columns: auto minmax(0,1fr); row-gap: 0.96rem; }
-    .pt-tramite__acciones{ grid-column: 1 / -1; justify-content: flex-end; }
+/* Cuatro columnas solo caben con pantalla ancha. Debajo se reparten
+   en dos y al final se apilan, sin dejar de ser columnas. */
+@media (max-width: 1180px){
+    .pt-tablero{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px){
+    .pt-tablero{ grid-template-columns: minmax(0, 1fr); }
 }
 
 
@@ -872,6 +946,58 @@ body.pt-app{
     gap: 2.24rem;
     align-items: start;
 }
+
+/* ---- El mes, dentro de su propia tarjeta ---- */
+.pt-calv-tarjeta{
+    padding: 1.76rem 1.92rem 1.92rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: 20px;
+    background: var(--pt-superficie);
+}
+.pt-calv-tarjeta__cab{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.6rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.8rem;
+}
+.pt-calv-tarjeta .pt-cal__barra{
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: none;
+}
+.pt-calv-leyenda{
+    display: flex;
+    align-items: center;
+    gap: 1.28rem;
+    flex-wrap: wrap;
+    font-size: 1.088rem;
+    color: var(--pt-gris);
+}
+.pt-calv-leyenda span{ display: inline-flex; align-items: center; gap: 0.4rem; }
+
+/* ---- Cifras del resumen: etiqueta a la izquierda, número a la derecha ---- */
+.pt-agenda__cifra{
+    display: flex;
+    align-items: center;
+    gap: 0.72rem;
+    padding: 0.72rem 0;
+    border-top: 1px solid var(--pt-borde);
+    font-size: 1.216rem;
+    color: var(--pt-gris);
+}
+.pt-agenda__cifra:first-of-type{ border-top: none; padding-top: 0; }
+.pt-agenda__cifra span{ margin-right: auto; }
+.pt-agenda__cifra strong{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 1.68rem;
+    font-weight: 600;
+    color: var(--pt-tinta);
+}
+
 .pt-agenda{
     position: sticky;
     top: 7.2rem;
@@ -933,6 +1059,53 @@ body.pt-app{
 .pt-agenda__plazo--rojo{ background: var(--pt-rojo-suave); color: var(--pt-rojo); }
 .pt-agenda__plazo--naranja{ background: var(--pt-ambar-suave); color: var(--pt-ambar); }
 .pt-agenda__vacio{ font-size: 1.248rem; color: var(--pt-gris); }
+
+/* ---- Caja de acción sugerida: la única con relleno de marca ---- */
+/* El cian de marca puro deja el texto blanco en 3.1:1, por debajo del
+   mínimo legible. Se oscurece con el slate de la estructura hasta
+   ~4.9:1 sin salirse de los colores de la casa. */
+.pt-agenda__caja--accion{
+    --pt-accion-fondo: #067B8F;
+    --pt-accion-fondo: color-mix(in srgb, var(--pt-marca-cian) 70%, var(--pt-navy-900));
+    border-color: transparent;
+    background: var(--pt-accion-fondo);
+    color: var(--pt-blanco);
+}
+.pt-agenda__caja--accion .pt-agenda__tit{ color: rgba(255,255,255,.78); }
+.pt-agenda__accion-que{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 1.44rem;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--pt-blanco);
+}
+.pt-agenda__accion-det{
+    font-size: 1.152rem;
+    color: rgba(255,255,255,.82);
+    margin-top: 0.32rem;
+}
+.pt-agenda__accion-btns{
+    display: flex;
+    gap: 0.64rem;
+    flex-wrap: wrap;
+    margin-top: 1.28rem;
+}
+/* Sobre el cian, los botones se invierten: blanco sólido y contorno */
+.pt-agenda__accion-btns .pt-boton{
+    background: var(--pt-blanco);
+    border-color: var(--pt-blanco);
+    color: var(--pt-accion-fondo);
+}
+.pt-agenda__accion-btns .pt-boton--fantasma{
+    background: transparent;
+    border-color: rgba(255,255,255,.5);
+    color: var(--pt-blanco);
+}
+.pt-agenda__accion-btns .pt-boton--fantasma:hover{
+    background: rgba(255,255,255,.14);
+    border-color: var(--pt-blanco);
+    color: var(--pt-blanco);
+}
 
 @media (max-width: 1050px){
     .pt-cal-marco{ grid-template-columns: 1fr; }
@@ -1102,8 +1275,8 @@ body.pt-app .pt-tabla-envoltura{ border-radius: 18px; }
     font-family: var(--pt-fuente-titulos);
     font-size: 1.352rem;      /* 13.5px */
 }
-.pt-grupo__tit{ font-size: 1.2rem; font-weight: 600; font-family: var(--pt-fuente-texto); }
-.pt-grupo__num{ font-size: 1.088rem; }
+.pt-columna__tit{ font-size: 1.28rem; font-weight: 600; font-family: var(--pt-fuente-texto); }
+.pt-columna__num{ font-size: 1.088rem; }
 .pt-tramite__acciones .pt-boton{ border-radius: 22px; }
 
 /* Nombre de carpeta en la fila: Lora */
@@ -1175,12 +1348,16 @@ body.pt-cuerpo-login .pt-campo > span{
    Eran una caja con borde que competía con el contenido. Ahora
    son una fila de controles discretos, como el resto del tema. */
 body.pt-app .pt-calv-filtros{
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
     background: none;
     border: none;
     padding: 0;
     gap: 1.2rem;
-    margin-bottom: 1.2rem !important;
+    margin: 0 !important;   /* vive en la cabecera de la sección */
 }
+body.pt-app .pt-calv-filtros:empty{ display: none; }
 body.pt-app .pt-calv-filtros label{
     display: inline-flex;
     align-items: center;
@@ -1198,34 +1375,106 @@ body.pt-app .pt-calv-filtros select{
     color: var(--pt-tinta);
 }
 
-/* ---- Resumen del calendario: cifras, no párrafo ---- */
-body.pt-app .pt-calv-resumen{
-    gap: 2.4rem;
-    padding: 1.1rem 1.4rem;
-    border: 1px solid var(--pt-borde);
-    border-radius: 1.8rem;
-    font-size: 1.248rem;
-    box-shadow: none;
-}
-body.pt-app .pt-calv-resumen strong{
-    font-size: 1.6rem;
-    font-weight: 600;
-    margin-left: .2rem;
-}
-
-/* ---- Calendario: celdas más compactas y legibles ---- */
+/* ---- Calendario: celdas grandes, con el detalle dentro del día ----
+   La rejilla ocupa el ancho de su tarjeta en vez de quedarse en 52rem,
+   y cada día tiene sitio para dos etiquetas. Se puede leer el mes sin
+   ir día por día. */
+body.pt-app .pt-calv__semana,
+body.pt-app .pt-calv__rejilla{ max-width: none; }
 body.pt-app .pt-calv__semana span{
     font-size: .96rem;
     font-weight: 500;
     letter-spacing: .08em;
     text-transform: uppercase;
     color: var(--pt-gris);
+    text-align: left;
+    padding-left: .6rem;
 }
-body.pt-app .pt-calv__rejilla{ gap: .5rem; }
-body.pt-app .pt-calv__rejilla > *{
-    min-height: 5.6rem;
+body.pt-app .pt-calv__rejilla{ gap: .6rem; }
+body.pt-app .pt-calv__dia{
+    min-height: 9.6rem;
     border-radius: 1.2rem;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: .5rem;
+    padding: .7rem .6rem;
+    text-align: left;
+    overflow: hidden;
+}
+body.pt-app .pt-calv__num{
     font-size: 1.28rem;
+    font-weight: 600;
+    color: var(--pt-tinta);
+}
+body.pt-app .pt-calv__dia--nohabil .pt-calv__num{ color: var(--pt-gris); }
+body.pt-app .pt-calv__dia--vacio{ min-height: 0; }
+/* El día de hoy se marca con contorno, no con relleno: el relleno
+   está reservado para el estado del vencimiento. */
+body.pt-app .pt-calv__dia--hoy{
+    border-color: var(--pt-tinta);
+    box-shadow: inset 0 0 0 1px var(--pt-tinta);
+}
+body.pt-app .pt-calv__dia--marca-rojo{ background: var(--pt-rojo-suave); }
+body.pt-app .pt-calv__dia--marca-naranja{ background: var(--pt-ambar-suave); }
+body.pt-app .pt-calv__dia--marca-verde{ background: var(--pt-verde-suave); }
+
+.pt-calv__chips{
+    display: flex;
+    flex-direction: column;
+    gap: .3rem;
+    min-width: 0;
+}
+.pt-calv__chip{
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: .22rem .56rem;
+    border-radius: .8rem;
+    font-size: 1.008rem;
+    line-height: 1.5;
+    font-weight: 500;
+    background: var(--pt-superficie-2);
+    color: var(--pt-gris);
+}
+.pt-calv__chip--rojo{ background: var(--pt-rojo); color: #fff; }
+.pt-calv__chip--naranja{ background: var(--pt-ambar); color: #fff; }
+.pt-calv__chip--verde{ background: var(--pt-verde); color: #fff; }
+.pt-calv__chip--pausado{ background: var(--pt-gris); color: #fff; }
+.pt-calv__mas{ font-size: .96rem; color: var(--pt-gris); padding-left: .2rem; }
+
+/* En móvil una celda mide ~38px: no cabe ninguna etiqueta. Las mismas
+   marcas se dibujan como puntos y el detalle se lee tocando el día. */
+@media (max-width: 720px){
+    body.pt-app .pt-calv__dia{
+        min-height: 5.6rem;
+        align-items: center;
+        padding: .5rem .2rem;
+    }
+    body.pt-app .pt-calv__semana span{ text-align: center; padding-left: 0; }
+    .pt-calv__chips{ flex-direction: row; flex-wrap: wrap; justify-content: center; gap: .25rem; }
+    .pt-calv__chip{
+        width: 7px;
+        height: 7px;
+        padding: 0;
+        border-radius: 50%;
+        overflow: hidden;
+        text-indent: -999px;
+    }
+    .pt-calv__mas{ font-size: .88rem; padding: 0; }
+    .pt-calv-tarjeta{ padding: 1.28rem 1.12rem 1.44rem; }
+}
+
+/* Los filtros comparten fila con «Actualizar»; en pantallas angostas
+   se reparten en líneas en vez de empujar la página a lo ancho. */
+body.pt-app .pt-calv-filtros{ max-width: 100%; min-width: 0; }
+body.pt-app .pt-calv-filtros label{ min-width: 0; max-width: 100%; }
+body.pt-app .pt-calv-filtros select{ min-width: 0; max-width: 100%; }
+@media (max-width: 620px){
+    body.pt-app .pt-calv-filtros{ width: 100%; }
+    body.pt-app .pt-calv-filtros label{ flex: 1 1 100%; }
+    body.pt-app .pt-calv-filtros select{ flex: 1; }
 }
 
 /* ---- Registro de actividad: filas más juntas ---- */

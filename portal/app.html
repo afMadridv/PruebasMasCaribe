@@ -135,7 +135,11 @@
         <section id="vista-calendario" hidden>
             <div class="pt-barra-seccion">
                 <h2>Calendario de vencimientos</h2>
-                <button class="pt-boton pt-boton--fantasma" data-accion="refrescar-calendario"><span data-icono="refrescar" data-icono-tam="15"></span> Actualizar</button>
+                <div class="pt-barra-seccion__acciones">
+                    <!-- Los filtros los rellena pintarCalendarioVenc() -->
+                    <div id="cal-venc-filtros" class="pt-calv-filtros"></div>
+                    <button class="pt-boton pt-boton--fantasma" data-accion="refrescar-calendario"><span data-icono="refrescar" data-icono-tam="15"></span> Actualizar</button>
+                </div>
             </div>
             <p class="pt-nota" style="margin-bottom:1.6rem;">Vencimientos de los procesos por día hábil.
                 Los fines de semana y festivos colombianos aparecen en gris.</p>

@@ -990,44 +990,71 @@ function anilloTramite(c) {
     '</div>';
 }
 
-/* Una tarjeta de tramite dentro del tablero */
+/* Una tarjeta de tramite dentro del tablero.
+   Nombre y anillo arriba, operador debajo, una linea separadora y
+   luego el detalle del plazo. Las acciones van al pie. */
 function tarjetaTramiteTablero(c) {
     const procesos = _estadosProcesos[c.id] || [];
     const actual = procesoActualDe(procesos);
     const operadores = (c.operadores || []).map(o => nombreDe(o)).join(', ');
 
-    let linea;
+    const lineas = [];
     if (c.finalizado) {
-        linea = 'Finalizado' + (c.fechaFinTramite ? ' el ' + escaparHtml(formatoFechaDia(c.fechaFinTramite)) : '');
+        lineas.push('Todos los procesos completados');
+        lineas.push('Finalizado' +
+            (c.fechaFinTramite ? ' ' + escaparHtml(formatoFechaDia(c.fechaFinTramite)) : ''));
     } else if (c.pausado) {
-        linea = 'Tramite en pausa: el reloj esta detenido';
+        lineas.push('Tramite en pausa: el reloj esta detenido');
     } else if (!actual) {
-        linea = procesos.length ? 'Todos los procesos completados' : 'Sin procesos definidos todavia';
+        lineas.push(procesos.length ? 'Todos los procesos completados' : 'En espera');
+        lineas.push('Sin procesos definidos todavia');
     } else {
-        const s = semaforoEfectivo(actual, c.pausado);
-        const d = s.diasRestantes;
-        linea = 'Vence ' + escaparHtml(formatoVencimiento(actual.fechaVencimiento)) +
+        const st = semaforoEfectivo(actual, c.pausado);
+        const d = st.diasRestantes;
+        lineas.push('Vence <strong>' + escaparHtml(formatoVencimiento(actual.fechaVencimiento)) + '</strong>' +
             (d === null ? '' : ' · ' + (d < 0
                 ? Math.abs(d) + ' dia(s) habil(es) de atraso'
-                : d + ' dia(s) habil(es)'));
+                : d + ' dia(s) habil(es)')));
+        lineas.push('Proceso: ' + escaparHtml(actual.nombre));
     }
 
-    const proceso = actual ? 'Proceso: ' + escaparHtml(actual.nombre) : '';
+    // El menu solo aparece donde hay algo que gestionar
+    const conMenu = !c.finalizado && puedeGestionarCarpeta(c);
+    const etiqueta = c.finalizado ? 'Ver expediente' : 'Ver detalle';
 
     return '<article class="pt-tramite">' +
-        anilloTramite(c) +
-        '<div>' +
-            '<div class="pt-tramite__nombre">' + escaparHtml(c.nombre) + '</div>' +
-            '<div class="pt-tramite__linea">' + (operadores ? escaparHtml(operadores) + ' · ' : '') + linea + '</div>' +
-            (proceso ? '<div class="pt-tramite__linea">' + proceso + '</div>' : '') +
+        '<div class="pt-tramite__cab">' +
+            '<div>' +
+                '<div class="pt-tramite__nombre">' + escaparHtml(c.nombre) + '</div>' +
+                (operadores ? '<div class="pt-tramite__op">' + escaparHtml(operadores) + '</div>' : '') +
+            '</div>' +
+            anilloTramite(c) +
+        '</div>' +
+        '<div class="pt-tramite__cuerpo">' +
+            lineas.map(l => '<div class="pt-tramite__linea">' + l + '</div>').join('') +
         '</div>' +
         '<div class="pt-tramite__acciones">' +
-            '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="abrir-carpeta" data-id="' + c.id + '">Ver detalle</button>' +
+            '<button class="pt-boton pt-boton--fantasma pt-boton--mini pt-tramite__ver" ' +
+                'data-accion="abrir-carpeta" data-id="' + c.id + '">' + etiqueta + '</button>' +
+            (conMenu
+                ? '<div class="pt-menu">' +
+                    '<button class="pt-menu__boton" data-accion="menu-tramite" data-id="' + c.id + '" ' +
+                            'aria-label="Más acciones" title="Más acciones">⋯</button>' +
+                    '<div class="pt-menu__lista" id="menu-tramite-' + c.id + '" hidden>' +
+                        '<button data-accion="abrir-carpeta" data-id="' + c.id + '">Abrir la carpeta</button>' +
+                        (c.pausado
+                            ? '<button data-accion="reactivar-tramite" data-id="' + c.id + '">Reactivar el tramite</button>'
+                            : '<button data-accion="pausar-tramite" data-id="' + c.id + '">Pausar el tramite</button>') +
+                    '</div>' +
+                  '</div>'
+                : '') +
         '</div>' +
     '</article>';
 }
 
-/* El tablero completo, en orden de urgencia */
+/* El tablero: una columna por grupo, en orden de urgencia.
+   Las columnas se ven siempre, incluso vacias: parte del valor de
+   la pantalla es poder decir "no hay ninguno vencido". */
 function tableroEstados(carpetas) {
     const grupos = { vencidos: [], porvencer: [], encurso: [], pausados: [], completados: [] };
     for (const c of carpetas) grupos[grupoDeTramite(c)].push(c);
@@ -1035,27 +1062,77 @@ function tableroEstados(carpetas) {
     const def = [
         ['vencidos',    'Vencidos',    'rojo',    'Ningun tramite vencido sin completar'],
         ['porvencer',   'Por vencer',  'naranja', 'Nada por vencer en los proximos dias habiles'],
-        ['encurso',     'En curso',    'verde',   'Sin tramites en curso'],
+        ['encurso',     'En curso',    'cian',    'Sin tramites en curso'],
         ['pausados',    'Pausados',    'gris',    'Ningun tramite en pausa'],
         ['completados', 'Completados', 'verde',   'Todavia no hay tramites completados']
     ];
 
-    return '<div class="pt-tablero">' + def.map(function (d) {
+    // La columna de pausados solo aparece si hay alguno: en la mayoria
+    // de los dias esta vacia y solo robaria ancho a las demas.
+    const visibles = def.filter(d => d[0] !== 'pausados' || grupos.pausados.length);
+
+    const columnas = visibles.map(function (d) {
         const clave = d[0], titulo = d[1], color = d[2], vacio = d[3];
         const lista = grupos[clave];
-        // Los grupos vacios de pausados y completados no ocupan espacio
-        if (!lista.length && (clave === 'pausados' || clave === 'completados')) return '';
-        return '<section>' +
-            '<div class="pt-grupo__cab">' +
+        const puedeCrear = clave === 'encurso' && lista.some(c => !(_estadosProcesos[c.id] || []).length);
+
+        return '<section class="pt-columna pt-columna--' + color + '">' +
+            '<div class="pt-columna__cab">' +
                 '<span class="pt-grupo__punto pt-grupo__punto--' + color + '"></span>' +
-                '<span class="pt-grupo__tit">' + titulo + '</span>' +
-                '<span class="pt-grupo__num">' + lista.length + '</span>' +
+                '<span class="pt-columna__tit">' + titulo + '</span>' +
+                '<span class="pt-columna__num">' + lista.length + '</span>' +
             '</div>' +
-            (lista.length
-                ? '<div class="pt-grupo__lista">' + lista.map(tarjetaTramiteTablero).join('') + '</div>'
-                : '<div class="pt-grupo__vacio">' + vacio + '</div>') +
+            '<div class="pt-columna__lista">' +
+                (lista.length
+                    ? lista.map(tarjetaTramiteTablero).join('')
+                    : '<div class="pt-columna__vacio">' + vacio + '</div>') +
+                (puedeCrear
+                    ? '<button class="pt-columna__crear" data-accion="ver-carpetas">' +
+                      '+ Anadir proceso a una carpeta sin tramites definidos</button>'
+                    : '') +
+            '</div>' +
         '</section>';
-    }).join('') + '</div>';
+    }).join('');
+
+    return '<div class="pt-tablero" style="--pt-columnas:' + visibles.length + ';">' + columnas + '</div>';
+}
+
+/* Exporta el tablero a Excel: una fila por tramite con su grupo,
+   el proceso en curso y los dias que quedan. Lo mismo que se ve en
+   pantalla, para poder repartirlo por fuera del portal. */
+async function exportarEstadosExcel() {
+    try {
+        const XLSX = await cargarSheetJS();
+        const ETIQ = {
+            vencidos: 'Vencido', porvencer: 'Por vencer', encurso: 'En curso',
+            pausados: 'Pausado', completados: 'Completado'
+        };
+        const filas = _estadosCarpetas.map(function (c) {
+            const actual = procesoActualDe(_estadosProcesos[c.id] || []);
+            const st = actual ? semaforoEfectivo(actual, c.pausado) : null;
+            const d = st ? st.diasRestantes : null;
+            return {
+                'Carpeta': c.nombre,
+                'Estado': ETIQ[grupoDeTramite(c)] || '',
+                'Operador(es)': (c.operadores || []).map(o => nombreDe(o)).join(', '),
+                'Proceso en curso': actual ? actual.nombre : '',
+                'Vence': actual && actual.fechaVencimiento ? formatoFechaDia(actual.fechaVencimiento) : '',
+                'Dias habiles': d === null ? '' : d,
+                'Activa': c.activa ? 'Si' : 'No'
+            };
+        });
+        const hoja = XLSX.utils.json_to_sheet(filas.length ? filas : [{
+            'Carpeta': '', 'Estado': '', 'Operador(es)': '', 'Proceso en curso': '',
+            'Vence': '', 'Dias habiles': '', 'Activa': ''
+        }]);
+        const libro = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(libro, hoja, 'Estados');
+        XLSX.writeFile(libro, 'estados_tramites_mascaribe.xlsx');
+        registrarActividad('exportar-estados', 'Excel del tablero de estados');
+        avisar('Excel descargado.');
+    } catch (e) {
+        avisar((e && e.message) || 'No se pudo generar el Excel.', 'error');
+    }
 }
 
 /* Pie del tablero: resumen y conmutador tablero/tabla */
@@ -1066,6 +1143,8 @@ function pieTablero(activos, desactivados) {
             '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="alternar-vista-estados">' +
                 (_vistaEstados === 'tabla' ? 'Ver como tablero' : 'Ver como tabla') +
             '</button>' +
+            '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="exportar-estados">' +
+                'Exportar Excel</button>' +
         '</span>' +
     '</div>';
 }
@@ -1534,10 +1613,10 @@ function colorVencimiento(c, p) {
     return semaforoEfectivo(p, c.pausado).color;
 }
 
-/* Agenda «qué sigue»: los próximos vencimientos sin completar,
-   ordenados por fecha. Responde la pregunta sin hacer clic en el mes.
-   Usa los mismos datos ya cargados; no consulta nada extra. */
-function agendaProximos(carpetas) {
+/* Columna derecha del calendario. Tres cajas que responden, en orden,
+   «cómo va el mes», «qué sigue» y «qué hago ahora». Todo sale de los
+   datos ya cargados: no se consulta nada extra. */
+function agendaProximos(carpetas, resumen) {
     const hoy = fechaISOLocalHabil();
     const items = [];
 
@@ -1545,19 +1624,38 @@ function agendaProximos(carpetas) {
         if (c.pausado || c.finalizado) continue;
         for (const p of (_estadosProcesos[c.id] || [])) {
             if (p.completado || p.pausado || !p.fechaVencimiento) continue;
+            const st = semaforoEfectivo(p, c.pausado);
             items.push({
                 fecha: p.fechaVencimiento,
                 que: p.nombre,
                 carpeta: c.nombre,
+                carpetaId: c.id,
                 operadores: (c.operadores || []).map(function (o) { return nombreDe(o); }).join(', '),
-                color: semaforoEfectivo(p, c.pausado).color,
-                dias: semaforoEfectivo(p, c.pausado).diasRestantes
+                color: st.color,
+                dias: st.diasRestantes
             });
         }
     }
-
     items.sort(function (a, b) { return a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0; });
-    const proximos = items.slice(0, 8);
+
+    // ---- Caja 1: resumen del mes ----
+    const filaResumen = (color, texto, n) =>
+        '<div class="pt-agenda__cifra">' + puntoSemaforo(color, 9) +
+            '<span>' + texto + '</span><strong>' + n + '</strong></div>';
+    const cajaResumen =
+        '<div class="pt-agenda__caja">' +
+            '<div class="pt-agenda__tit">Resumen del mes</div>' +
+            filaResumen('rojo',    'Vencidos sin completar', resumen.rojos) +
+            filaResumen('naranja', 'Por vencer (0–1 día hábil)', resumen.naranjas) +
+            filaResumen('verde',   'Completados a tiempo', resumen.verdes) +
+        '</div>';
+
+    // ---- Caja 2: agenda de los próximos diez días ----
+    // El corte es por días de calendario, que es como se lee una agenda.
+    const limite = new Date(hoy + 'T12:00:00');
+    limite.setDate(limite.getDate() + 10);
+    const limiteISO = fechaISOLocal(limite);
+    const proximos = items.filter(it => it.fecha <= limiteISO).slice(0, 6);
 
     const MES_CORTO = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
     const filas = proximos.map(function (it) {
@@ -1583,13 +1681,36 @@ function agendaProximos(carpetas) {
             '</div>' +
         '</div>';
     }).join('');
-
-    return '<aside class="pt-agenda">' +
+    const cajaAgenda =
         '<div class="pt-agenda__caja">' +
-            '<div class="pt-agenda__tit">Próximos vencimientos</div>' +
-            (filas || '<div class="pt-agenda__vacio">No hay vencimientos pendientes en los trámites visibles.</div>') +
-        '</div>' +
-    '</aside>';
+            '<div class="pt-agenda__tit">Agenda · próximos 10 días</div>' +
+            (filas || '<div class="pt-agenda__vacio">Nada vence en los próximos diez días.</div>') +
+        '</div>';
+
+    // ---- Caja 3: acción sugerida ----
+    // Solo aparece si hay algo realmente urgente: vencido o a un día
+    // hábil. Los dos botones llevan a acciones que ya existen.
+    const urgente = items.find(it => it.dias !== null && it.dias !== undefined && it.dias <= 1);
+    let cajaAccion = '';
+    if (urgente) {
+        cajaAccion =
+            '<div class="pt-agenda__caja pt-agenda__caja--accion">' +
+                '<div class="pt-agenda__tit">Acción sugerida</div>' +
+                '<div class="pt-agenda__accion-que">' + escaparHtml(urgente.que) + '</div>' +
+                '<div class="pt-agenda__accion-det">' + escaparHtml(urgente.carpeta) + ' · ' +
+                    (urgente.dias < 0
+                        ? Math.abs(urgente.dias) + ' día(s) hábil(es) de atraso'
+                        : 'vence en ' + urgente.dias + ' día(s) hábil(es)') + '</div>' +
+                '<div class="pt-agenda__accion-btns">' +
+                    '<button class="pt-boton pt-boton--mini" data-accion="abrir-carpeta" data-id="' +
+                        urgente.carpetaId + '">Abrir la carpeta</button>' +
+                    '<button class="pt-boton pt-boton--mini pt-boton--fantasma" data-accion="pausar-tramite" data-id="' +
+                        urgente.carpetaId + '">Pausar el trámite</button>' +
+                '</div>' +
+            '</div>';
+    }
+
+    return '<aside class="pt-agenda">' + cajaResumen + cajaAgenda + cajaAccion + '</aside>';
 }
 
 function pintarCalendarioVenc() {
@@ -1644,15 +1765,28 @@ function pintarCalendarioVenc() {
         const iso = anio + '-' + String(mes + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
         const noHabil = !esDiaHabil(iso);
         const marcas = porDia[iso] || [];
-        const puntos = marcas.slice(0, 4).map(m => puntoSemaforo(colorMarca(m), 8)).join('') +
-            (marcas.length > 4 ? '<small>+' + (marcas.length - 4) + '</small>' : '');
+        // Etiqueta corta por marca: se lee el mes sin tener que abrir el día.
+        // Caben dos; el resto se cuenta.
+        const etiquetaMarca = (m) => m.tipo === 'proceso' ? m.p.nombre
+            : m.tipo === 'tramite' ? 'Vence ' + m.c.nombre
+            : m.r.mensaje;
+        const chips = marcas.slice(0, 2).map(m =>
+            '<span class="pt-calv__chip pt-calv__chip--' + colorMarca(m) + '">' +
+                escaparHtml(etiquetaMarca(m)) + '</span>').join('') +
+            (marcas.length > 2 ? '<span class="pt-calv__mas">+' + (marcas.length - 2) + ' más</span>' : '');
+        // El día se tiñe con la marca más urgente que tenga
+        const ORDEN = ['rojo', 'naranja', 'verde', 'pausado'];
+        let tinte = '';
+        for (const col of ORDEN) { if (marcas.some(m => colorMarca(m) === col)) { tinte = col; break; } }
         celdas += '<button type="button" class="pt-calv__dia' +
             (noHabil ? ' pt-calv__dia--nohabil' : '') +
+            (tinte ? ' pt-calv__dia--marca-' + tinte : '') +
             (iso === hoyISO ? ' pt-calv__dia--hoy' : '') +
             (iso === _diaCalVencSel ? ' pt-calv__dia--sel' : '') + '"' +
             ' data-accion="cal-venc-dia" data-fecha="' + iso + '"' +
             (marcas.length ? ' title="' + marcas.length + ' vencimiento(s)"' : (noHabil ? ' title="Día no hábil"' : '')) +
-            '><span class="pt-calv__num">' + d + '</span><span class="pt-calv__puntos">' + puntos + '</span></button>';
+            '><span class="pt-calv__num">' + d + '</span>' +
+            '<span class="pt-calv__chips">' + chips + '</span></button>';
     }
 
     // lista del día seleccionado
@@ -1705,7 +1839,7 @@ function pintarCalendarioVenc() {
     let filtros = '';
     if (ES_SUPERVISION) {
         const operadoresUnicos = [...new Set(_estadosCarpetas.flatMap(c => c.operadores || []))];
-        filtros = '<div class="pt-calv-filtros">' +
+        filtros =
             '<label class="pt-nota">Operador: <select id="filtro-cal-operador">' +
                 '<option value="">Todos (panorama general)</option>' +
                 operadoresUnicos.map(o => '<option value="' + escaparHtml(o) + '"' +
@@ -1719,30 +1853,37 @@ function pintarCalendarioVenc() {
                         (String(_filtroCalTramite) === String(c.id) ? ' selected' : '') + '>' + escaparHtml(c.nombre) + '</option>').join('') +
             '</select></label>' +
             ((_filtroCalOperador || _filtroCalTramite)
-                ? ' <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="cal-venc-limpiar">Quitar filtros</button>' : '') +
-            '</div>';
+                ? ' <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="cal-venc-limpiar">Quitar filtros</button>' : '');
     }
+    // Los filtros viven en la cabecera de la sección, junto a «Actualizar»
+    const cajaFiltros = document.getElementById('cal-venc-filtros');
+    if (cajaFiltros) cajaFiltros.innerHTML = filtros;
+
+    const leyenda =
+        '<div class="pt-calv-leyenda">' +
+            '<span>' + puntoSemaforo('rojo', 8) + ' Vencido</span>' +
+            '<span>' + puntoSemaforo('naranja', 8) + ' Por vencer</span>' +
+            '<span>' + puntoSemaforo('verde', 8) + ' Completado</span>' +
+            '<span>' + puntoSemaforo('pausado', 8) + ' Recordatorio</span>' +
+        '</div>';
 
     cont.innerHTML =
-        '<div class="pt-calv-resumen">' +
-            '<span>' + puntoSemaforo('rojo', 12) + ' Vencidos sin completar: <strong>' + rojos + '</strong></span>' +
-            '<span>' + puntoSemaforo('naranja', 12) + ' Por vencer (0–1 día hábil): <strong>' + naranjas + '</strong></span>' +
-            '<span>' + puntoSemaforo('verde', 12) + ' Completados a tiempo: <strong>' + verdes + '</strong></span>' +
-        '</div>' +
-        filtros +
-        '<div class="pt-cal__barra" style="max-width:520px;">' +
-            '<button type="button" class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="cal-venc-mes" data-delta="-1" aria-label="Mes anterior">‹</button>' +
-            '<strong>' + MESES[mes].charAt(0).toUpperCase() + MESES[mes].slice(1) + ' ' + anio + '</strong>' +
-            '<button type="button" class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="cal-venc-mes" data-delta="1" aria-label="Mes siguiente">›</button>' +
-        '</div>' +
         '<div class="pt-cal-marco">' +
-            '<div>' +
+            '<div class="pt-calv-tarjeta">' +
+                '<div class="pt-calv-tarjeta__cab">' +
+                    '<div class="pt-cal__barra">' +
+                        '<button type="button" class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="cal-venc-mes" data-delta="-1" aria-label="Mes anterior">‹</button>' +
+                        '<strong>' + MESES[mes].charAt(0).toUpperCase() + MESES[mes].slice(1) + ' ' + anio + '</strong>' +
+                        '<button type="button" class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="cal-venc-mes" data-delta="1" aria-label="Mes siguiente">›</button>' +
+                    '</div>' +
+                    leyenda +
+                '</div>' +
                 '<div class="pt-calv__semana"><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span></div>' +
                 '<div class="pt-calv__rejilla">' + celdas + '</div>' +
-                '<p class="pt-nota" style="margin-top:.6rem;">Los días grises son fines de semana o festivos colombianos. Haz clic en un día para ver sus vencimientos.</p>' +
+                '<p class="pt-nota" style="margin-top:1rem;">Los días grises son fines de semana o festivos colombianos. Haz clic en un día para ver sus vencimientos.</p>' +
                 listaDia +
             '</div>' +
-            agendaProximos(carpetasCal) +
+            agendaProximos(carpetasCal, { rojos: rojos, naranjas: naranjas, verdes: verdes }) +
         '</div>';
 
     // listeners de los filtros (se recrean con cada render)
@@ -4801,6 +4942,7 @@ function conectarEventos() {
 
             // Menú «⋯» de acciones secundarias de una carpeta
             case 'menu-carpeta':      alternarMenuFila('menu-carpeta-' + id); break;
+            case 'menu-tramite':      alternarMenuFila('menu-tramite-' + id); break;
 
             // Estados de los trámites (semáforos) y calendario de vencimientos
             case 'ver-estados':          mostrarVistaEstados(); break;
@@ -4844,6 +4986,7 @@ function conectarEventos() {
             // Usuarios: filtro por rol y exportar Excel
             case 'filtro-rol-usuario':   cambiarFiltroRolUsuario(boton.dataset.rol); break;
             case 'exportar-usuarios-excel': exportarUsuariosExcel(); break;
+            case 'exportar-estados':  exportarEstadosExcel(); break;
 
             // Confirmación propia, consentimiento y panel de consentimientos
             case 'confirmar-si':         _responderConfirmacion(true); break;
