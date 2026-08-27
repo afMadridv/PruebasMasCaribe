@@ -130,8 +130,15 @@ La función `carpeta_de_ruta()` lee el primer segmento, y de ella dependen todas
 las políticas del bucket. Por eso las subcarpetas pudieron añadirse sin tocar
 ninguna regla de seguridad: el primer segmento sigue siendo el id de la carpeta.
 
-Límite de 100 MB por archivo. Extensiones permitidas: `pdf, doc, docx, xls,
-xlsx, png, jpg, jpeg, mp3, mp4`.
+Límite de 50 MB por archivo, que es el `file_size_limit` del bucket.
+
+Las extensiones se reparten en dos grupos y el destino decide cuál acepta. Los
+documentos (`pdf, doc, docx, xls, xlsx, png, jpg, jpeg`) van en la raíz de la
+carpeta y en cualquier subcarpeta que no sea de audiencias. Los medios (`mp3,
+mp4, m4a, wav, ogg, mov, webm`) solo entran en la subcarpeta de audiencias,
+que se reconoce porque su nombre contiene «audiencia», sin distinguir
+mayúsculas ni tildes. La regla vive en `destinoAdmiteExtension()` y se aplica
+tanto al subir como al mover entre subcarpetas.
 
 ## 4. Las reglas de negocio que hay que entender
 

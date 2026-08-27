@@ -209,10 +209,13 @@
                 <p><span data-icono="adjunto" data-icono-tam="20"></span> Arrastra archivos aquí, o</p>
                 <label class="pt-boton pt-boton--primario">
                     Seleccionar archivos
+                    <!-- accept y la nota los ajusta ajustarZonaSubida() según
+                         la subcarpeta abierta: audiencias admite audio y video,
+                         el resto admite documentos -->
                     <input type="file" id="entrada-archivos" multiple hidden
-                           accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.mp3,.mp4">
+                           accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
                 </label>
-                <p class="pt-nota">Permitidos: PDF, Word, Excel, PNG, JPG, MP3, MP4 · máximo 100 MB por archivo</p>
+                <p class="pt-nota" id="subida-nota">Permitidos: PDF, Word, Excel, PNG, JPG. El audio y el video van en la subcarpeta de audiencias · máximo 50 MB por archivo</p>
                 <label class="pt-check-descarga">
                     <input type="checkbox" id="subida-descargable" checked>
                     Permitir que el cliente y los acreedores descarguen estos documentos

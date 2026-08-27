@@ -20,11 +20,19 @@ if (!sesion) {
     cerrarSesion(); // sesión de una versión anterior del portal
 }
 
-const EXTENSIONES_PERMITIDAS = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg', 'mp3', 'mp4'];
+// Grabaciones de audiencias y documentos del expediente se guardan
+// aparte: los medios solo entran en la subcarpeta de audiencias y los
+// documentos solo fuera de ella. Ver destinoAdmiteExtension().
+const EXTENSIONES_MEDIA = ['mp3', 'mp4', 'm4a', 'wav', 'ogg', 'mov', 'webm'];
+const EXTENSIONES_DOCUMENTO = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg'];
+const EXTENSIONES_PERMITIDAS = EXTENSIONES_DOCUMENTO.concat(EXTENSIONES_MEDIA);
 // Vista dentro del portal: PDF/imágenes/audio/video en visor nativo; Word y
 // Excel se renderizan con librerías (docx-preview y SheetJS), ver verArchivo.
-const EXTENSIONES_VISTA = ['pdf', 'png', 'jpg', 'jpeg', 'mp3', 'mp4', 'doc', 'docx', 'xls', 'xlsx'];
-const TAMANO_MAXIMO = 100 * 1024 * 1024; // 100 MB
+const EXTENSIONES_VISTA = EXTENSIONES_PERMITIDAS.slice();
+// 50 MB: es el file_size_limit del bucket 'documentos' en esquema.sql.
+// Estaba en 100 MB, así que un archivo de 60 MB pasaba la validación del
+// navegador y lo rechazaba Storage al subirlo.
+const TAMANO_MAXIMO = 50 * 1024 * 1024;
 
 const SESION_VALIDA = !!(sesion && ROLES_VALIDOS.includes(sesion.rol));
 const ES_ADMIN = SESION_VALIDA && sesion.rol === 'administrador';
@@ -3098,6 +3106,33 @@ async function pintarArchivos() {
    agrupa sus documentos («Audiencias», «Notificaciones»…).
    Se navegan como fichas: con pocas subcarpetas un árbol estorba. */
 
+/* La subcarpeta de audiencias guarda las grabaciones; el resto de la
+   carpeta guarda el expediente escrito. Se reconoce por el nombre
+   porque las subcarpetas las crea el operador con el que quiera, sin
+   distinguir mayúsculas ni tildes: «Audiencias», «audiencia»… */
+function esSubcarpetaDeMedios(nombre) {
+    return /audiencia/i.test(String(nombre || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+}
+
+/* ¿Admite este destino un archivo con esta extensión?
+   destino: id de subcarpeta, o null para la raíz («Documentos»). */
+function destinoAdmiteExtension(destino, ext) {
+    const esMedia = EXTENSIONES_MEDIA.includes(ext);
+    return destinoEsDeMedios(destino) ? esMedia : !esMedia;
+}
+
+function destinoEsDeMedios(destino) {
+    if (destino === null || destino === undefined || destino === '') return false;
+    return esSubcarpetaDeMedios(nombreSubcarpeta(destino));
+}
+
+/* Motivo del rechazo, en las palabras del portal */
+function motivoRechazo(destino, nombreArchivo) {
+    return nombreArchivo + (destinoEsDeMedios(destino)
+        ? ' (en audiencias solo entran audio y video)'
+        : ' (el audio y el video van en la subcarpeta de audiencias)');
+}
+
 function nombreSubcarpeta(id) {
     const s = _subcarpetas.find(x => String(x.id) === String(id));
     return s ? s.nombre : '';
@@ -3145,6 +3180,24 @@ function pintarSubcarpetas() {
 
     caja.innerHTML = html;
     caja.hidden = false;
+    ajustarZonaSubida();
+}
+
+/* El selector de archivos y la nota se ajustan al destino abierto:
+   el filtro del navegador evita que el operador escoja algo que el
+   portal va a rechazar después. */
+function ajustarZonaSubida() {
+    const entrada = document.getElementById('entrada-archivos');
+    const nota = document.getElementById('subida-nota');
+    const medios = destinoEsDeMedios(_subcarpetaAbierta);
+    const lista = medios ? EXTENSIONES_MEDIA : EXTENSIONES_DOCUMENTO;
+    if (entrada) entrada.accept = lista.map(e => '.' + e).join(',');
+    if (nota) {
+        nota.textContent = (medios
+            ? 'Solo audio y video: ' + lista.join(', ').toUpperCase()
+            : 'Permitidos: PDF, Word, Excel, PNG, JPG. El audio y el video van en la subcarpeta de audiencias') +
+            ' · máximo 50 MB por archivo';
+    }
 }
 
 async function cargarSubcarpetas() {
@@ -3214,6 +3267,14 @@ async function eliminarSubcarpetaAccion() {
 }
 
 async function moverArchivoAccion(archivoId, destino) {
+    // Mover no puede saltarse la regla de la subida
+    const arch = _archivosCache.find(x => String(x.id) === String(archivoId));
+    const dest = destino === '' ? null : Number(destino);
+    if (arch && !destinoAdmiteExtension(dest, extensionDe(arch.nombre))) {
+        avisar('No se movió: ' + motivoRechazo(dest, arch.nombre), 'error');
+        pintarArchivos();   // devuelve el selector a su valor real
+        return;
+    }
     try {
         await archivoMover(archivoId, destino === '' ? null : Number(destino));
         const a = _archivosCache.find(x => String(x.id) === String(archivoId));
@@ -3249,14 +3310,23 @@ function filaArchivo(a) {
         if (gestiona) {
             // Mover entre subcarpetas: solo se ofrece si la carpeta tiene alguna
             if (_subcarpetas.length) {
-                const opciones = ['<option value=""' + (!a.subcarpetaId ? ' selected' : '') + '>Documentos</option>']
-                    .concat(_subcarpetas.map(sub =>
-                        '<option value="' + sub.id + '"' +
-                        (String(a.subcarpetaId) === String(sub.id) ? ' selected' : '') + '>' +
-                        escaparHtml(sub.nombre) + '</option>'))
-                    .join('');
-                acciones += ' <select class="pt-mover" data-accion-cambio="mover-archivo" data-id="' + a.id + '"' +
-                    ' title="Mover a otra subcarpeta">' + opciones + '</select>';
+                // Solo se ofrecen los destinos que admiten este tipo de archivo
+                const destinos = (destinoAdmiteExtension(null, ext)
+                        ? [['', 'Documentos']]
+                        : [])
+                    .concat(_subcarpetas
+                        .filter(sub => destinoAdmiteExtension(sub.id, ext))
+                        .map(sub => [String(sub.id), sub.nombre]));
+                // Con un solo destino posible el selector no mueve nada
+                if (destinos.length > 1) {
+                    const actual = a.subcarpetaId ? String(a.subcarpetaId) : '';
+                    acciones += ' <select class="pt-mover" data-accion-cambio="mover-archivo" data-id="' + a.id + '"' +
+                        ' title="Mover a otra subcarpeta">' +
+                        destinos.map(d => '<option value="' + d[0] + '"' +
+                            (d[0] === actual ? ' selected' : '') + '>' +
+                            escaparHtml(d[1]) + '</option>').join('') +
+                        '</select>';
+                }
             }
             acciones += ' <button class="pt-boton pt-boton--peligro pt-boton--mini" data-accion="eliminar-archivo" data-id="' + a.id + '">Eliminar</button>';
         }
@@ -4131,6 +4201,8 @@ async function subirArchivos(listaArchivos) {
         const ext = extensionDe(archivo.name);
         if (!EXTENSIONES_PERMITIDAS.includes(ext)) {
             rechazados.push(archivo.name + ' (tipo no permitido)');
+        } else if (!destinoAdmiteExtension(_subcarpetaAbierta, ext)) {
+            rechazados.push(motivoRechazo(_subcarpetaAbierta, archivo.name));
         } else if (archivo.size > TAMANO_MAXIMO) {
             rechazados.push(archivo.name + ' (supera 50 MB)');
         } else {
