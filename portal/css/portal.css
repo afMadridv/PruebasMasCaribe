@@ -142,13 +142,6 @@ html{
     vertical-align: -0.25em;
     color: var(--pt-azul);
 }
-/* Cabecera de la tarjeta de carpeta (icono + estado) */
-.pt-carpeta__cab{
-    display: flex;
-    align-items: center;
-    gap: .7rem;
-    color: var(--pt-navy-700);
-}
 body{
     margin: 0;
     min-height: 100vh;
@@ -254,25 +247,6 @@ button{
     padding: 2rem;
     background: #0B141A;   /* fondo sólido oscuro: entrada seria al portal */
 }
-.pt-tarjeta-login{
-    width: 100%;
-    max-width: 42rem;
-    background-color: var(--pt-superficie);
-    border-radius: 1.6rem;
-    padding: 3.2rem;
-    box-shadow: var(--pt-sombra-3);
-    animation: pt-emerger .5s var(--pt-curva) backwards;
-}
-.pt-tarjeta-login h1{
-    text-align: center;
-    font-size: 3.4rem;
-}
-.pt-subtitulo{
-    text-align: center;
-    color: var(--pt-gris);
-    font-size: 1.4rem;
-    margin: .6rem 0 2.6rem;
-}
 .pt-error{
     background-color: var(--pt-rojo-suave);
     color: var(--pt-rojo);
@@ -281,33 +255,6 @@ button{
     font-size: 1.4rem;
     margin-bottom: 1.5rem;
     animation: pt-aparecer .25s var(--pt-curva) backwards;
-}
-.pt-credenciales{
-    margin-top: 2.6rem;
-    border-top: 1px dashed var(--pt-borde);
-    padding-top: 1.6rem;
-    font-size: 1.3rem;
-    line-height: 1.7;
-    color: var(--pt-gris);
-}
-.pt-credenciales code{
-    background-color: var(--pt-fondo);
-    color: var(--pt-navy-700);
-    font-weight: 600;
-    border-radius: .5rem;
-    padding: .1rem .7rem;
-}
-.pt-volver-tienda{
-    margin-top: 2.2rem;
-    color: var(--pt-blanco);
-    font-size: 1.4rem;
-    text-decoration: none;
-    opacity: .85;
-    transition: opacity var(--pt-rapido);
-}
-.pt-volver-tienda:hover{
-    opacity: 1;
-    text-decoration: underline;
 }
 
 /* ============ CAMPOS DE FORMULARIO ============ */
@@ -389,81 +336,12 @@ fieldset.pt-campo{
     opacity: 1;
     background-color: var(--pt-fondo);
 }
-
-/* ============ ENCABEZADO DE LA APLICACIÓN ============
-   (el anclaje al hacer scroll vive en .pt-topbar, que une el
-    encabezado y las pestañas en UN solo bloque fijo) */
-.pt-encabezado{
-    background: linear-gradient(120deg, var(--pt-navy-900), var(--pt-navy-700) 70%);
-    color: var(--pt-blanco);
-    padding: 1.2rem 2.4rem;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    box-shadow: 0 2px 14px rgba(15,42,68,.25);
-}
-.pt-encabezado h1{
-    color: var(--pt-blanco);
-    font-size: 2.4rem;
-}
-.pt-encabezado .pt-marca small{
-    display: block;
-    font-family: var(--pt-fuente-texto);
-    font-size: 1.1rem;
-    color: var(--pt-azul-claro);
-    letter-spacing: 0;
-}
-.pt-usuario-chip{
-    display: flex;
-    align-items: center;
-    gap: 1.1rem;
-    font-size: 1.4rem;
-}
 .pt-usuario-chip .pt-boton{
     background-color: rgba(255,255,255,.14);
     color: var(--pt-blanco);
 }
 .pt-usuario-chip .pt-boton:hover{
     background-color: rgba(255,255,255,.28);
-}
-
-/* ============ PESTAÑAS ============ */
-.pt-pestanas{
-    background-color: var(--pt-navy-700);
-    display: flex;
-    gap: .4rem;
-    padding: 0 2rem;
-    box-shadow: inset 0 -1px 0 rgba(255,255,255,.08);
-}
-.pt-pestanas button{
-    position: relative;
-    background: none;
-    border: none;
-    color: var(--pt-blanco);
-    font-size: 1.5rem;
-    font-weight: 600;
-    padding: 1.3rem 1.6rem;
-    cursor: pointer;
-    opacity: .72;
-    transition: opacity var(--pt-rapido);
-}
-.pt-pestanas button::after{
-    content: '';
-    position: absolute;
-    left: 1.2rem;
-    right: 1.2rem;
-    bottom: 0;
-    height: .35rem;
-    border-radius: 99rem 99rem 0 0;
-    background-color: var(--pt-superficie);
-    transform: scaleX(0);
-    transform-origin: center;
-    transition: transform .28s var(--pt-curva);
-}
-.pt-pestanas button:hover{
-    opacity: 1;
 }
 .pt-pestanas button.activa{
     opacity: 1;
@@ -504,80 +382,13 @@ fieldset.pt-campo{
     border-radius: 1.4rem;
     background-color: var(--pt-superficie);
 }
-
-/* ============ TARJETAS DE CARPETA ============ */
-.pt-grid-carpetas{
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(28rem, 1fr));
-    gap: 1.8rem;
-}
-.pt-carpeta{
-    background-color: var(--pt-superficie);
-    border-radius: 1.4rem;
-    padding: 2rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    box-shadow: var(--pt-sombra-1);
-    transition: box-shadow var(--pt-normal), transform var(--pt-normal);
-    animation: pt-emerger .45s var(--pt-curva) backwards;
-}
-/* entrada escalonada de las tarjetas */
-.pt-carpeta:nth-child(2){ animation-delay: .05s; }
-.pt-carpeta:nth-child(3){ animation-delay: .1s; }
-.pt-carpeta:nth-child(4){ animation-delay: .15s; }
-.pt-carpeta:nth-child(5){ animation-delay: .2s; }
-.pt-carpeta:nth-child(n+6){ animation-delay: .25s; }
-.pt-carpeta:hover{
-    transform: translateY(-3px);
-    box-shadow: var(--pt-sombra-2);
-}
 /* Desactivada: se distingue por COLOR (ámbar), no por opacidad/lavado, para
    que el texto se siga leyendo bien también en modo oscuro. */
 .pt-carpeta--inactiva{
     background-color: var(--pt-ambar-suave);
     border: 1px solid var(--pt-ambar);
 }
-.pt-carpeta__nombre{
-    font-size: 1.7rem;
-    font-weight: 700;
-    color: var(--pt-navy-800);
-    margin: 0;
-    word-break: break-word;
-}
-/* Etapa del trámite mostrada en la propia tarjeta (para todos los roles) */
-.pt-carpeta__etapa{
-    display: flex;
-    align-items: center;
-    gap: .55rem;
-    margin: 0;
-    font-size: 1.25rem;
-    color: var(--pt-tinta);
-    background-color: var(--pt-superficie-2);
-    border: 1px solid var(--pt-borde);
-    border-radius: .8rem;
-    padding: .5rem .8rem;
-}
 .pt-carpeta__etapa .pt-svg{ color: var(--pt-azul-600); flex-shrink: 0; }
-.pt-carpeta__etapa strong{ color: var(--pt-tinta); font-weight: 700; }
-.pt-carpeta__descripcion{
-    font-size: 1.35rem;
-    color: var(--pt-gris);
-    margin: 0;
-    min-height: 2rem;
-}
-.pt-carpeta__datos{
-    font-size: 1.25rem;
-    color: var(--pt-gris);
-    margin: 0;
-}
-.pt-carpeta__acciones{
-    display: flex;
-    flex-wrap: wrap;
-    gap: .6rem;
-    margin-top: auto;
-    padding-top: .6rem;
-}
 
 /* ============ INSIGNIAS ============ */
 .pt-insignia{
@@ -773,82 +584,6 @@ fieldset.pt-campo{
 }
 .pt-proceso__barra .pt-boton{ flex: 0 0 auto; }
 
-.pt-timeline{
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    max-width: 60rem;
-}
-.pt-timeline__paso{
-    position: relative;
-    display: grid;
-    grid-template-columns: 2.8rem 1fr;
-    gap: 1.2rem;
-    padding-bottom: 1.4rem;
-    color: var(--pt-gris);
-}
-/* riel vertical que une las marcas dentro de la columna */
-.pt-timeline__paso::before{
-    content: '';
-    position: absolute;
-    left: 1.4rem;
-    top: 2.8rem;
-    bottom: 0;
-    width: 2px;
-    background: var(--pt-borde);
-    transform: translateX(-1px);
-}
-/* en una sola columna (móvil) el último paso no lleva riel */
-.pt-timeline__paso:last-child{ padding-bottom: 0; }
-.pt-timeline__paso:last-child::before{ display: none; }
-.pt-timeline__marca{
-    width: 2.8rem;
-    height: 2.8rem;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    background: var(--pt-superficie);
-    border: 2px solid var(--pt-borde);
-    color: var(--pt-gris);
-    font-weight: 700;
-    font-size: 1.3rem;
-}
-.pt-timeline__texto{
-    padding-top: .35rem;
-    font-size: 1.5rem;
-    line-height: 1.3;
-}
-.pt-timeline__num{
-    display: block;
-    font-size: 1.15rem;
-    font-weight: 600;
-    color: var(--pt-gris);
-    text-transform: uppercase;
-    letter-spacing: .03em;
-}
-/* etapas ya cumplidas */
-.pt-timeline__paso--hecho .pt-timeline__marca{
-    background: var(--pt-verde-suave);
-    border-color: var(--pt-verde);
-    color: var(--pt-verde);
-}
-.pt-timeline__paso--hecho::before{ background: var(--pt-verde); }
-.pt-timeline__paso--hecho .pt-timeline__texto{ color: var(--pt-tinta); }
-/* etapa actual */
-.pt-timeline__paso--actual .pt-timeline__marca{
-    background: var(--pt-navy-700);
-    border-color: var(--pt-navy-700);
-    color: var(--pt-blanco);
-    box-shadow: none;
-}
-.pt-timeline__paso--actual .pt-timeline__texto{
-    color: var(--pt-navy-800);
-    font-weight: 700;
-}
-html[data-tema="oscuro"] .pt-timeline__paso--actual .pt-timeline__texto{
-    color: #DCE7EB;
-}
-
 /* En pantallas anchas, las 9 etapas se reparten en 3 columnas (3 por columna),
    llenando columna por columna (1-2-3, 4-5-6, 7-8-9). El riel verde vertical se
    conserva dentro de cada columna y se oculta al pie de cada una (cada 3ª fila). */
@@ -869,19 +604,6 @@ html[data-tema="oscuro"] .pt-timeline__paso--actual .pt-timeline__texto{
 /* Estilos de la pestaña "Deudor", eliminada de la interfaz: ninguna
    clase .pt-deudor* se genera ya en el HTML. */
 .pt-deudor{ animation: pt-aparecer .25s var(--pt-curva) backwards; }
-.pt-deudor__titulo{
-    font-size: 1.55rem;
-    color: var(--pt-navy-800);
-    margin: 0 0 1.2rem;
-    padding-bottom: .6rem;
-    border-bottom: 1px solid var(--pt-borde);
-}
-.pt-deudor__titulo:not(:first-child){ margin-top: 2.4rem; }
-.pt-deudor__rejilla{
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
-    gap: 1.2rem 1.6rem;
-}
 /* ============================================================
    >>> FIN DEL BLOQUE SIN USO (timeline + deudor) <<<
    ============================================================ */
@@ -1068,101 +790,11 @@ html[data-tema="oscuro"] .pt-timeline__paso--actual .pt-timeline__texto{
     font-size: 1.25rem !important;
     margin-top: .2rem !important;
 }
-
-/* ============ ASISTENTE IA / CHAT ============ */
-.pt-chat{
-    margin-top: 2.4rem;
-    background-color: var(--pt-superficie);
-    border-radius: 1.4rem;
-    box-shadow: var(--pt-sombra-1);
-    overflow: hidden;
-}
-.pt-chat__cab{
-    display: flex;
-    align-items: flex-start;
-    gap: 1.2rem;
-    padding: 1.8rem 2rem;
-    background: linear-gradient(120deg, var(--pt-navy-900), var(--pt-navy-700) 75%);
-    color: var(--pt-blanco);
-}
-.pt-chat__cab h3{ color: var(--pt-blanco); font-size: 1.9rem; margin: 0 0 .3rem; }
 .pt-chat__cab .pt-nota{ color: var(--pt-azul-claro); font-size: 1.3rem; }
 .pt-chat__cab .pt-nota strong{ color: var(--pt-blanco); }
-.pt-chat__ic{
-    flex-shrink: 0;
-    width: 4rem; height: 4rem; border-radius: 1rem;
-    background-color: rgba(255,255,255,.15); color: var(--pt-blanco);
-    display: flex; align-items: center; justify-content: center;
-}
-.pt-chat__mensajes{
-    display: flex;
-    flex-direction: column;
-    gap: 1.2rem;
-    padding: 2rem;
-    max-height: 42rem;
-    overflow-y: auto;
-}
 .pt-chat-vacio{
     text-align: center; color: var(--pt-gris); font-size: 1.4rem; padding: 2rem 1rem;
 }
-.pt-msg{
-    max-width: 80%;
-    padding: 1.1rem 1.4rem;
-    border-radius: 1.2rem;
-    font-size: 1.45rem;
-    line-height: 1.5;
-    white-space: pre-wrap;
-    word-break: break-word;
-    animation: pt-aparecer .2s var(--pt-curva) backwards;
-}
-.pt-msg__autor{ font-size: 1.2rem; font-weight: 700; margin-bottom: .35rem; opacity: .85; }
-.pt-msg__hora{ font-size: 1.15rem; margin-top: .4rem; opacity: .6; }
-/* Pregunta del usuario (derecha) */
-.pt-msg--usuario{
-    align-self: flex-end;
-    background-color: var(--pt-navy-700);
-    color: var(--pt-blanco);
-    border-bottom-right-radius: .4rem;
-}
-/* Respuesta del asistente (izquierda) */
-.pt-msg--ia{
-    align-self: flex-start;
-    background-color: var(--pt-superficie-2);
-    color: var(--pt-tinta);
-    border-bottom-left-radius: .4rem;
-    border: 1px solid var(--pt-borde);
-}
-/* Respuesta de rechazo / fuera de scope */
-.pt-msg--rechazo{
-    align-self: flex-start;
-    background-color: var(--pt-ambar-suave);
-    color: var(--pt-ambar);
-    border-bottom-left-radius: .4rem;
-}
-.pt-msg--ia .pt-msg__ley{
-    display: inline-block; margin-top: .6rem; font-size: 1.2rem; font-weight: 700;
-    color: var(--pt-navy-700); background-color: #E2EBF4; border-radius: .5rem; padding: .2rem .7rem;
-}
-.pt-chat__entrada{ border-top: 1px solid var(--pt-borde); padding: 1.4rem 2rem 1.8rem; }
-.pt-chat__ayuda{ font-size: 1.25rem; color: var(--pt-gris); margin: 0 0 .9rem; }
-.pt-chat__fila{ display: flex; gap: 1rem; align-items: flex-end; }
-.pt-chat__entrada textarea{
-    flex: 1;
-    padding: 1.1rem 1.2rem;
-    border: 1px solid var(--pt-borde);
-    border-radius: 1rem;
-    font-family: inherit;
-    font-size: 1.5rem;
-    resize: vertical;
-    color: var(--pt-tinta);
-    background-color: var(--pt-superficie);
-}
-.pt-chat__entrada textarea:focus{
-    outline: none; border-color: var(--pt-azul);
-    box-shadow: none;
-}
-.pt-chat__entrada button{ white-space: nowrap; }
-.pt-chat__pensando{ align-self: flex-start; color: var(--pt-gris); font-size: 1.4rem; font-style: italic; }
 
 /* ============ TOAST ============ */
 .pt-toast{
@@ -2292,7 +1924,6 @@ html[data-tema="oscuro"] .pt-cal-prox h4{ color: #DCE7EB; }
     display: block; margin: 1.2rem auto 0; background: none; border: none;
     color: var(--pt-azul); font: inherit; font-size: 1.35rem; cursor: pointer; text-decoration: underline;
 }
-.pt-ayuda-olvide{ margin-top: 1rem; text-align: left; }
 
 /* Modal nativo <dialog> del login (¿olvidaste tu contraseña?) */
 .pt-dialogo{

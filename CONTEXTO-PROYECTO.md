@@ -35,38 +35,49 @@ Auth, Storage y Edge Functions. No hay servidor propio.
 ## 2. Estructura de archivos
 
 ```
-F:\PruebasMascaribe\
+PruebasMascaribe\
 ├── index.html                      redirección a portal/diagnostico.html
-├── CLAUDE.md                       instrucciones de graphify para agentes
-├── graphify-out/cache/             solo caché; NO hay graph.json todavía
+├── CONTEXTO-PROYECTO.md            este documento
+├── AUDITORIA-SEGURIDAD.md          seguridad: corregido y pendiente
 └── portal\
-    ├── diagnostico.html   (31 KB)  app pública de diagnóstico (HTML+JS en un archivo)
-    ├── index.html          (4 KB)  pantalla de login
-    ├── app.html           (46 KB)  shell del portal: todas las vistas en <section hidden>
+    ├── diagnostico.html   (33 KB)  sitio público: diagnóstico + pie legal
+    ├── index.html          (5 KB)  pantalla de ingreso
+    ├── app.html           (50 KB)  shell del portal: vistas en <section hidden>
+    ├── privacidad.html    (16 KB)  política de tratamiento de datos
+    ├── terminos.html      (12 KB)  términos de uso
     ├── css\
-    │   ├── portal.css     (69 KB)  estilos del portal
-    │   └── style.css      (11 KB)  estilos del diagnóstico
+    │   ├── portal.css     (58 KB)  base del portal (tokens y componentes)
+    │   ├── diseno.css     (35 KB)  rediseño de pantallas (estructura y densidad)
+    │   ├── style.css      (11 KB)  base del sitio público
+    │   ├── sitio.css       (5 KB)  el sitio con el lenguaje del portal
+    │   └── legal.css       (2 KB)  páginas legales
     ├── js\
-    │   ├── config.js       (0.7 KB) URL y clave publishable de Supabase, MODO
-    │   ├── auth.js         (2.5 KB) sesión en localStorage (8 h), hash SHA-256
-    │   ├── login.js        (4.5 KB) pantalla de acceso
-    │   ├── db.js          (28 KB)  capa de datos MODO 'local' (IndexedDB, práctica)
-    │   ├── nube.js        (50 KB)  capa de datos MODO 'nube' (Supabase) — API real
-    │   ├── app.js        (229 KB)  toda la lógica del portal
-    │   ├── diasHabiles.js  (5 KB)  aritmética de días hábiles colombianos
+    │   ├── config.js       (1 KB)  URL y clave publishable de Supabase, MODO
+    │   ├── auth.js         (3 KB)  sesión en localStorage (8 h)
+    │   ├── login.js        (5 KB)  pantalla de ingreso
+    │   ├── db.js          (28 KB)  capa de datos MODO 'local' (IndexedDB)
+    │   ├── nube.js        (50 KB)  capa de datos MODO 'nube' (Supabase)
+    │   ├── app.js        (232 KB)  toda la lógica del portal
+    │   ├── diasHabiles.js  (7 KB)  días hábiles colombianos (festivos 2024–2030)
     │   ├── iconos.js       (9 KB)  SVGs inline
-    │   └── tema.js         (2 KB)  claro/oscuro
+    │   ├── tema.js         (2 KB)  claro/oscuro del portal
+    │   └── legal.js        (1 KB)  claro/oscuro de las páginas legales
     └── supabase\
-        ├── esquema.sql    (96 KB, 2179 líneas)  esquema completo, idempotente
-        ├── migracion_cierre_y_descargas.sql     migración parcial (secciones 14–15)
+        ├── esquema.sql              esquema completo, idempotente
+        ├── migracion_cierre_y_descargas.sql
+        ├── migracion_seguridad_2026_08.sql
+        ├── migracion_festivos_y_cron.sql
         └── functions\
             ├── crear-usuario\index.ts        Edge Function (service_role)
             └── restablecer-clave\index.ts    Edge Function (service_role)
 ```
 
-**Nota**: `.claude/launch.json` referencia un `portal-next/` (Next.js, puerto 3300)
-que **no existe en el repositorio**. Es una configuración huérfana o de un
-experimento futuro.
+> `db.js` NO es opcional aunque el modo sea 'nube': define `fechaISOLocal`,
+> que usan `app.js` y `nube.js`. Sirve además el modo de práctica
+> (`MODO: 'local'`), que corre sin internet contra IndexedDB.
+
+**Nota**: no hay proceso de compilación. Se abren los `.html` con cualquier
+servidor estático; no hay `npm install` ni dependencias que instalar.
 
 ---
 
@@ -102,7 +113,7 @@ de contacto opcional.
 | `carpeta_operadores` | Qué operador es responsable de qué carpeta |
 | `archivos` | Metadatos de documentos (el binario vive en Storage bucket `documentos`), con `orden` manual y `descargable_partes` |
 | `procesos_tramite` | Etapas con plazo en días hábiles y semáforo |
-| `festivos_colombia` | Festivos oficiales **2024–2027** (Ley 51 de 1983, "Ley Emiliani") |
+| `festivos_colombia` | Festivos oficiales **2024–2030** (Ley 51 de 1983, "Ley Emiliani") |
 | `mensajes` | Chat por carpeta, canal `cliente` o `acreedor`, con adjuntos |
 | `mensajes_soporte` | Chat admin ↔ operador (un hilo por operador) |
 | `llamadas_soporte` | Señalización de llamadas WebRTC (solo las inicia el admin) |
@@ -146,7 +157,7 @@ El administrador puede forzarlo con `semaforo_manual`.
 > ⚠️ **La lista de festivos está duplicada**: en `js/diasHabiles.js`
 > (constante `FESTIVOS_COLOMBIA`) y en la tabla `festivos_colombia`. Ambos
 > comentarios lo advierten: si se agrega un año en un lado, hay que agregarlo en
-> el otro. **Solo llegan hasta 2027.**
+> el otro. **Cargados hasta 2030.**
 
 ### 4.2 Ciclo de vida del trámite
 
@@ -232,11 +243,15 @@ y `notificaciones`.
 
 ## 7. Cómo se ejecuta
 
-Es un sitio estático. `.claude/launch.json` define:
+Es un sitio estático: no hay compilación ni dependencias. Basta servir la
+carpeta con cualquier servidor estático. Con la extensión Live Server de
+VS Code (puerto 5501, ya configurado en `.vscode/settings.json`) o con:
 
 ```bash
-powershell -NoProfile -ExecutionPolicy Bypass -File .claude\serve.ps1 -Puerto 8421
+python -m http.server 5501
 ```
+
+y abrir `http://localhost:5501/portal/index.html`.
 
 `portal/js/config.js` controla el modo:
 - `MODO: 'nube'` → datos reales en Supabase (estado actual)
@@ -258,15 +273,17 @@ correr sin romper nada.
 
 | # | Punto | Detalle |
 | --- | --- | --- |
-| 1 | **Los leads del diagnóstico no se guardan** | `diagnostico.html` abre un compose de Gmail (`btn-correo`) o copia al portapapeles. Si la persona no le da "enviar", el lead se pierde. No hay tabla, no hay CRM |
-| 2 | **Cero correos automáticos** | Todo aviso al exterior es `mailto:` — audiencias (`app.js:2836`), credenciales restablecidas (`app.js:4075`). El humano debe confirmar el envío desde su cliente de correo |
-| 3 | **No hay programador de tareas** | `generar_notificaciones_vencidos()` corre solo si un admin la invoca; `aplicar_desactivaciones_automaticas()` corre "cada vez que alguien consulta sus avisos". Si nadie entra al portal, nada pasa |
-| 4 | **Festivos hard-coded hasta 2027, en dos lugares** | `js/diasHabiles.js` y tabla `festivos_colombia`. Se pueden desincronizar; en 2028 el semáforo empieza a calcular mal |
-| 5 | **Sin respaldos automáticos** | Ni de la base ni del bucket `documentos` |
-| 6 | **Sin reportes** | No hay resumen periódico de la cartera de trámites |
-| 7 | **`portal-next/` fantasma** | Referenciado en `launch.json`, no existe |
-| 8 | **Grafo de graphify incompleto** | `graphify-out/` solo tiene caché. `CLAUDE.md` asume un `graph.json` que no está: hay que correr `graphify .` para generarlo |
-| 9 | **`app.js` monolítico** | 229 KB en un archivo, ~4400 líneas |
+| 1 | **Los leads del diagnóstico no se guardan** | `diagnostico.html` abre un compose de Gmail. Si la persona no le da «enviar», el lead se pierde. No hay tabla ni CRM |
+| 2 | **Cero correos automáticos** | Todo aviso al exterior es `mailto:` — audiencias y credenciales restablecidas. El humano debe confirmar el envío desde su cliente de correo |
+| 3 | **Sin respaldos automáticos** | Ni de la base ni del bucket `documentos` |
+| 4 | **Perfiles activos sin correo de contacto** | No se les puede notificar nada |
+| 5 | **Fuentes y librerías desde CDN** | Google Fonts y jsDelivr reciben la IP del visitante. Conviene autohospedarlas antes de producción |
+| 6 | **`app.js` monolítico** | 229 KB en un archivo, ~4900 líneas |
+| 7 | **Datos financieros** | Se guardan montos adeudados y días de mora: puede aplicar la Ley 1266 de 2008 (habeas data financiero). Verificar con abogado |
+
+Ver [AUDITORIA-SEGURIDAD.md](AUDITORIA-SEGURIDAD.md) para el detalle de lo ya
+corregido y lo que falta antes de abrir al público.
+
 
 ---
 
@@ -279,6 +296,5 @@ correr sin romper nada.
 4. Toda escritura sensible va por función `security definer` que valide permisos,
    nunca por política de UPDATE abierta.
 5. `esquema.sql` debe seguir siendo idempotente y re-ejecutable.
-6. La clave `service_role` **solo** vive en Edge Functions o en el servidor de
-   automatización. Nunca en el navegador.
-7. Después de modificar código: `graphify update .`
+6. La clave `service_role` **solo** vive en Edge Functions o en el servidor.
+   Nunca en el navegador.
