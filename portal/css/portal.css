@@ -1739,9 +1739,7 @@ html[data-tema="oscuro"] .pt-cal-prox h4{ color: #DCE7EB; }
 /* ============ REDISEÑO: CHATS Y LLAMADA DE SOPORTE ============ */
 /* Historial: fondo suave y burbujas modernas con radios asimétricos */
 .pt-chat-historial{
-    background:
-        radial-gradient(circle at 20% 10%, rgba(21,156,149,.05), transparent 40%),
-        var(--pt-fondo);
+    background: var(--pt-fondo);
     padding: 1.2rem;
 }
 .pt-chat-msg{
@@ -1755,7 +1753,7 @@ html[data-tema="oscuro"] .pt-cal-prox h4{ color: #DCE7EB; }
 }
 .pt-chat-msg--mio{
     margin-left: auto;
-    background: linear-gradient(135deg, var(--pt-navy-800), var(--pt-navy-700));
+    background: var(--pt-navy-800);
     color: var(--pt-blanco);
     border: none;
     border-radius: 1.4rem 1.4rem .4rem 1.4rem;
@@ -1786,10 +1784,10 @@ html[data-tema="oscuro"] .pt-cal-prox h4{ color: #DCE7EB; }
 }
 .pt-chat-entrada textarea:focus{ outline: 2px solid var(--pt-azul); border-color: transparent; }
 
-/* Cabeceras de los paneles flotantes: degradado de marca */
+/* Cabeceras de los paneles flotantes: color plano de marca */
 .pt-soporte-panel__cab,
 .pt-chat-flotante__cab{
-    background: linear-gradient(120deg, var(--pt-navy-900), var(--pt-navy-700));
+    background: var(--pt-navy-900);
 }
 .pt-soporte-lista__item{ border-radius: 1.1rem; }
 .pt-soporte-burbuja{ transition: transform .15s var(--pt-curva); }
@@ -1804,13 +1802,12 @@ html[data-tema="oscuro"] .pt-cal-prox h4{ color: #DCE7EB; }
     height: 7.2rem;
     margin: 0 auto 1.2rem;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--pt-navy-800), var(--pt-navy-700));
+    background: var(--pt-navy-800);
     background-image:
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92Z'/%3E%3C/svg%3E"),
-        linear-gradient(135deg, var(--pt-navy-800), var(--pt-navy-700));
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92Z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: center;
-    background-size: 3.2rem, cover;
+    background-size: 3.2rem;
     animation: pt-pulso-llamada 1.6s ease-in-out infinite;
 }
 /* Latido sobrio (escala), sin halo de color brillante */

@@ -72,16 +72,10 @@ body.pt-cuerpo-login{
     color: var(--pt-blanco);
     overflow: hidden;
 }
-/* Halo cian muy tenue: da profundidad sin ruido */
-.pt-ingreso__marca::after{
-    content: '';
-    position: absolute;
-    width: 460px; height: 460px;
-    right: -170px; top: -140px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(0,161,184,.16), transparent 68%);
-    pointer-events: none;
-}
+/* El panel de marca va en color plano. Antes llevaba un halo cian
+   difuminado en la esquina; se quitó junto con el resto de los
+   degradados para que la interfaz use un solo color sólido por
+   superficie. */
 .pt-ingreso__logo{
     display: flex;
     align-items: center;
