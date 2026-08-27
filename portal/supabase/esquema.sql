@@ -2177,3 +2177,77 @@ begin
     update public.archivos set descargable_partes = permitir where id = archivo;
 end;
 $$;
+
+
+-- ============================================================
+-- 16) TABLAS QUE FALTABAN EN ESTE ARCHIVO
+-- ============================================================
+-- chat_mensajes y hoja_trabajo existían en la base pero no en el
+-- esquema: correr esquema.sql en un proyecto nuevo producía una
+-- base distinta a la de producción. Aquí quedan alineadas.
+-- ============================================================
+
+-- Chat del trámite con asistente (es_ia marca las respuestas
+-- automáticas; ley_citada guarda la norma que se referenció).
+create table if not exists public.chat_mensajes (
+    id             bigint generated always as identity primary key,
+    carpeta_id     bigint not null references public.carpetas (id) on delete cascade,
+    perfil_id      uuid references public.perfiles (id) on delete set null,
+    autor_usuario  text not null default '',
+    autor_nombre   text not null default '',
+    rol            text not null default '',
+    texto          text not null,
+    es_ia          boolean not null default false,
+    bloqueado      boolean not null default false,
+    ley_citada     text,
+    fecha          timestamptz not null default now()
+);
+create index if not exists idx_chat_mensajes_perfil on public.chat_mensajes (perfil_id);
+create index if not exists idx_chat_mensajes_carpeta on public.chat_mensajes (carpeta_id, fecha);
+
+alter table public.chat_mensajes enable row level security;
+
+drop policy if exists "ver chat de la carpeta" on public.chat_mensajes;
+create policy "ver chat de la carpeta" on public.chat_mensajes
+    for select using (public.puede_ver_carpeta(carpeta_id));
+
+-- El autor NO se acepta del cliente: lo sobrescribe el trigger
+-- fijar_autor_chat (ver migracion_seguridad_2026_08.sql).
+drop policy if exists "escribir chat en la carpeta" on public.chat_mensajes;
+create policy "escribir chat en la carpeta" on public.chat_mensajes
+    for insert with check (
+        public.puede_ver_carpeta(carpeta_id)
+        and perfil_id = auth.uid()
+    );
+
+drop policy if exists "admin borra chat" on public.chat_mensajes;
+create policy "admin borra chat" on public.chat_mensajes
+    for delete using (public.es_admin());
+
+-- Hoja de trabajo del operador: una por carpeta, contenido libre.
+create table if not exists public.hoja_trabajo (
+    carpeta_id      bigint primary key references public.carpetas (id) on delete cascade,
+    datos           jsonb not null default '{}'::jsonb,
+    actualizado     timestamptz not null default now(),
+    actualizado_por uuid references public.perfiles (id) on delete set null
+);
+create index if not exists idx_hoja_trabajo_actualizado on public.hoja_trabajo (actualizado_por);
+
+alter table public.hoja_trabajo enable row level security;
+
+drop policy if exists "ver hoja de trabajo (personal de la carpeta)" on public.hoja_trabajo;
+create policy "ver hoja de trabajo (personal de la carpeta)" on public.hoja_trabajo
+    for select using (public.puede_subir_a_carpeta(carpeta_id));
+
+drop policy if exists "crear hoja de trabajo (personal de la carpeta)" on public.hoja_trabajo;
+create policy "crear hoja de trabajo (personal de la carpeta)" on public.hoja_trabajo
+    for insert with check (public.puede_subir_a_carpeta(carpeta_id));
+
+drop policy if exists "editar hoja de trabajo (personal de la carpeta)" on public.hoja_trabajo;
+create policy "editar hoja de trabajo (personal de la carpeta)" on public.hoja_trabajo
+    for update using (public.puede_subir_a_carpeta(carpeta_id))
+        with check (public.puede_subir_a_carpeta(carpeta_id));
+
+drop policy if exists "borrar hoja de trabajo (admin)" on public.hoja_trabajo;
+create policy "borrar hoja de trabajo (admin)" on public.hoja_trabajo
+    for delete using (public.es_admin());
