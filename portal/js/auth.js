@@ -25,12 +25,17 @@ async function protegerClave(texto) {
     }
 }
 
+/* Compara la contraseña ingresada con la guardada. Acepta el formato
+   antiguo en texto plano para no dejar fuera a las cuentas creadas
+   antes de que existiera el hash. */
 async function verificarClave(guardada, ingresada) {
     if (typeof guardada !== 'string') return false;
     if (guardada.startsWith('plano:')) return guardada === 'plano:' + ingresada;
     return guardada === await protegerClave(ingresada);
 }
 
+/* Devuelve la sesión guardada si sigue vigente. Pasadas las ocho horas
+   la borra y devuelve null. */
 function sesionActual() {
     try {
         const sesion = JSON.parse(localStorage.getItem(CLAVE_SESION));
@@ -45,6 +50,8 @@ function sesionActual() {
     }
 }
 
+/* Guarda la sesión con su marca de tiempo, que es lo que permite
+   caducarla. */
 function guardarSesion(u) {
     localStorage.setItem(CLAVE_SESION, JSON.stringify({
         usuario: u.usuario,
@@ -54,11 +61,14 @@ function guardarSesion(u) {
     }));
 }
 
+/* Borra la sesión y vuelve a la pantalla de ingreso. */
 function cerrarSesion(destino) {
     localStorage.removeItem(CLAVE_SESION);
     location.href = destino || 'index.html';
 }
 
+/* Valida usuario y contraseña contra la base y abre la sesión si
+   coinciden y la cuenta está activa. */
 async function iniciarSesion(usuario, clave) {
     const nombreUsuario = String(usuario || '').trim().toLowerCase();
     if (!nombreUsuario || !clave) {

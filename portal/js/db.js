@@ -8,6 +8,9 @@ const DB_VERSION = 11; // v11: subcarpetas dentro de la carpeta
 
 let _db = null;
 
+/* Abre la base del navegador y crea sus almacenes la primera vez.
+   Subir DB_VERSION borra los datos de práctica y los vuelve a crear:
+   son datos de prueba, no hay nada que conservar. */
 function abrirDB() {
     if (_db) return Promise.resolve(_db);
     return new Promise((resolver, rechazar) => {
@@ -47,6 +50,8 @@ function abrirDB() {
     });
 }
 
+/* Envuelve una operación de IndexedDB en una promesa. IndexedDB
+   trabaja con eventos; el resto del portal trabaja con async/await. */
 function _transaccion(almacen, modo, operacion) {
     return abrirDB().then(db => new Promise((resolver, rechazar) => {
         const tx = db.transaction(almacen, modo);
@@ -56,12 +61,18 @@ function _transaccion(almacen, modo, operacion) {
     }));
 }
 
+/* Inserta un registro nuevo y devuelve su id. */
 function dbAgregar(almacen, valor)  { return _transaccion(almacen, 'readwrite', s => s.add(valor)); }
+/* Inserta o reemplaza un registro por su clave. */
 function dbGuardar(almacen, valor)  { return _transaccion(almacen, 'readwrite', s => s.put(valor)); }
+/* Trae un registro por su clave. */
 function dbObtener(almacen, clave)  { return _transaccion(almacen, 'readonly',  s => s.get(clave)); }
+/* Trae todos los registros de un almacén. */
 function dbTodos(almacen)           { return _transaccion(almacen, 'readonly',  s => s.getAll()); }
+/* Borra un registro por su clave. */
 function dbEliminar(almacen, clave) { return _transaccion(almacen, 'readwrite', s => s.delete(clave)); }
 
+/* Documentos de una carpeta, usando el índice por carpetaId. */
 function dbArchivosDeCarpeta(carpetaId) {
     return abrirDB().then(db => new Promise((resolver, rechazar) => {
         const tx = db.transaction('archivos', 'readonly');
@@ -78,6 +89,8 @@ async function fijarDescargaPartes(archivoId, permitir) {
     await dbGuardar('archivos', { ...a, descargablePartes: !!permitir });
 }
 
+/* Borra todos los documentos de una carpeta. Se usa al eliminar la
+   carpeta entera. */
 async function dbEliminarArchivosDeCarpeta(carpetaId) {
     const archivos = await dbArchivosDeCarpeta(carpetaId);
     for (const a of archivos) {
@@ -129,6 +142,7 @@ async function audienciasListar(carpetaId) {
         .filter(a => a.carpetaId === carpetaId)
         .sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
 }
+/* Guarda o actualiza una audiencia del calendario de la carpeta. */
 async function audienciaGuardar(carpetaId, datos) {
     const s = sesionActual() || {};
     await dbAgregar('audiencias', {
@@ -141,6 +155,7 @@ async function audienciaGuardar(carpetaId, datos) {
         creado: Date.now()
     });
 }
+/* Borra una audiencia marcada. */
 async function audienciaEliminar(id) {
     await dbEliminar('audiencias', id);
 }
@@ -154,6 +169,7 @@ async function recordatoriosListar(carpetaId) {
         .filter(r => r.carpetaId === carpetaId && r.usuario === s.usuario)
         .sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio));
 }
+/* Guarda un recordatorio privado del operador. */
 async function recordatorioGuardar(datos) {
     const s = sesionActual() || {};
     if (datos.id) {
@@ -171,6 +187,7 @@ async function recordatorioGuardar(datos) {
         creado: Date.now()
     });
 }
+/* Borra un recordatorio. */
 async function recordatorioEliminar(id) {
     const s = sesionActual() || {};
     const reg = await dbObtener('recordatorios', id);
@@ -241,6 +258,7 @@ async function mensajesListar(carpetaId, canal) {
         .filter(m => m.carpetaId === carpetaId && m.canal === canal)
         .sort((a, b) => a.fecha - b.fecha);
 }
+/* Guarda un mensaje del chat del trámite. */
 async function mensajesGuardar(carpetaId, canal, texto, archivo) {
     const s = sesionActual() || {};
     await dbAgregar('mensajes', {
@@ -312,6 +330,7 @@ function _semaforoLocal(p) {
     return { semaforo: 'verde', diasRestantes: restantes };
 }
 
+/* Procesos de una carpeta, ya ordenados y con su semáforo calculado. */
 async function procesosListar(carpetaId) {
     const todos = await dbTodos('procesos');
     return todos
@@ -320,6 +339,8 @@ async function procesosListar(carpetaId) {
         .map(p => ({ ...p, ..._semaforoLocal(p) }));
 }
 
+/* Todos los procesos visibles, para el tablero de estados y el
+   calendario de vencimientos. */
 async function procesosTodos() {
     const todos = await dbTodos('procesos');
     return todos
@@ -327,6 +348,8 @@ async function procesosTodos() {
         .map(p => ({ ...p, ..._semaforoLocal(p) }));
 }
 
+/* Crea un proceso con su plazo en días hábiles y calcula la fecha de
+   vencimiento saltando fines de semana y festivos. */
 async function procesoCrear(carpetaId, datos) {
     const carpeta = await dbObtener('carpetas', carpetaId);
     if (!carpeta) throw new Error('Carpeta no encontrada.');
@@ -353,6 +376,7 @@ async function procesoCrear(carpetaId, datos) {
     });
 }
 
+/* Marca el proceso como completado con la fecha de hoy. */
 async function procesoCompletar(procesoId) {
     const p = await dbObtener('procesos', procesoId);
     if (!p) throw new Error('Proceso no encontrado.');
@@ -365,10 +389,12 @@ async function procesoCompletar(procesoId) {
     await dbGuardar('procesos', { ...p, completado: true, fechaCompletado: hoy, semaforoManual: null });
 }
 
+/* Borra un proceso del trámite. */
 async function procesoEliminar(procesoId) {
     await dbEliminar('procesos', procesoId);
 }
 
+/* Pausa el trámite: se guarda el momento para descontarlo después. */
 async function tramitePausar(carpetaId) {
     const carpeta = await dbObtener('carpetas', carpetaId);
     if (!carpeta) throw new Error('Carpeta no encontrada.');
@@ -390,6 +416,8 @@ async function tramitePausar(carpetaId) {
     }
 }
 
+/* Reactiva el trámite y corre los vencimientos tantos días hábiles
+   como duró la pausa. */
 async function tramiteReactivar(carpetaId) {
     const carpeta = await dbObtener('carpetas', carpetaId);
     if (!carpeta) throw new Error('Carpeta no encontrada.');
@@ -428,6 +456,7 @@ async function tramiteIniciar(carpetaId, fecha) {
     });
 }
 
+/* Aplica la prórroga del trámite. Solo una por trámite. */
 async function tramiteProrroga(carpetaId) {
     if (!_esAdminLocal()) throw new Error('Solo el administrador puede aplicar la prórroga.');
     const carpeta = await dbObtener('carpetas', carpetaId);
@@ -443,6 +472,8 @@ async function tramiteProrroga(carpetaId) {
     });
 }
 
+/* Corrección de un proceso por el administrador: nombre, plazo o
+   estado. En la nube esta corrección queda registrada. */
 async function procesoEditarAdmin(procesoId, cambios) {
     if (!_esAdminLocal()) throw new Error('Solo el administrador puede corregir procesos.');
     const p = await dbObtener('procesos', procesoId);
@@ -466,25 +497,46 @@ async function procesoEditarAdmin(procesoId, cambios) {
    práctica sin internet estas funciones existen para que la interfaz no se
    rompa, pero avisan que la función es solo del modo nube. */
 async function soporteOperadores() { return []; }
+/* Mensajes de un hilo de soporte. */
 async function soporteMensajes() { return []; }
+/* Envía un mensaje al hilo de soporte. */
 async function soporteEnviar() { throw new Error('El chat de soporte solo está disponible en modo nube.'); }
+/* Recupera el adjunto de un mensaje de soporte. */
 async function descargarAdjuntoSoporte() { throw new Error('Solo disponible en modo nube.'); }
+/* Deja anotada una solicitud de cambio de contraseña para que el
+   administrador la resuelva. */
 async function solicitarRestablecimiento() {}
+/* Solicitudes de contraseña pendientes. */
 async function solicitudesClaveListar() { return []; }
+/* Marca una solicitud de contraseña como atendida. */
 async function solicitudClaveResolver() {}
+/* Marca como leídos los mensajes de un hilo de soporte. */
 async function marcarLeidosSoporte() {}
+/* Marca como leídos los mensajes de un canal del chat. */
 async function marcarLeidosCanal() {}
+/* Cuántos mensajes sin leer hay por canal. */
 async function chatsNoLeidos() { return []; }
+/* Cuántos mensajes de soporte hay sin leer. */
 async function soporteNoLeidos() { return []; }
+/* En la nube avisa de mensajes nuevos en tiempo real. En práctica no
+   hay nada que escuchar, así que devuelve una baja vacía. */
 function suscribirMensajesNuevos() { return null; }
+/* Equivalente local de la escucha de llamadas: sin efecto, porque el
+   modo práctica corre en un solo navegador. */
 function suscribirLlamadasEntrantes() { return null; }
+/* Registra una llamada de soporte. Sin efecto en modo práctica. */
 async function llamadaCrear() { throw new Error('Las llamadas solo están disponibles en modo nube.'); }
+/* Cambia el estado de una llamada. Sin efecto en modo práctica. */
 async function llamadaActualizar() {}
+/* Canal por el que se ponen de acuerdo los dos extremos de una
+   llamada. Sin efecto en modo práctica. */
 function canalSenalizacion() { return { enviar: () => {}, cerrar: () => {} }; }
 
 /* Notificaciones (campana): en modo local no hay triggers de servidor */
 async function notificacionesListar() { return []; }
+/* Marca notificaciones como leídas. */
 async function notificacionesMarcarLeidas() {}
+/* Borra una notificación. */
 async function notificacionEliminar() {}
 /* ============ SUBCARPETAS (modo de práctica) ============
    Mismas operaciones que en la nube, contra IndexedDB. */
@@ -495,6 +547,7 @@ async function subcarpetasListar(carpetaId) {
         .sort((a, b) => (a.orden - b.orden) || a.nombre.localeCompare(b.nombre));
 }
 
+/* Crea una subcarpeta dentro de una carpeta. */
 async function subcarpetaCrear(carpetaId, nombre) {
     const limpio = String(nombre || '').trim().slice(0, 60);
     if (!limpio) throw new Error('La subcarpeta necesita un nombre.');
@@ -508,6 +561,7 @@ async function subcarpetaCrear(carpetaId, nombre) {
     });
 }
 
+/* Cambia el nombre de una subcarpeta. */
 async function subcarpetaRenombrar(subcarpetaId, nombre) {
     const limpio = String(nombre || '').trim().slice(0, 60);
     if (!limpio) throw new Error('La subcarpeta necesita un nombre.');
@@ -534,6 +588,8 @@ async function subcarpetaEliminar(subcarpetaId) {
     return dbEliminar('subcarpetas', id);
 }
 
+/* Mueve un documento a otra subcarpeta, o a la raíz si el destino es
+   nulo. */
 async function archivoMover(archivoId, subcarpetaId) {
     const a = await dbObtener('archivos', Number(archivoId));
     if (!a) throw new Error('Archivo no encontrado.');
@@ -541,8 +597,12 @@ async function archivoMover(archivoId, subcarpetaId) {
     return dbGuardar('archivos', a);
 }
 
+/* Genera los avisos de procesos vencidos. En la nube lo hace además
+   una tarea diaria del servidor. */
 async function notificacionesGenerarVencidos() {}
+/* Deja constancia del inicio de sesión. */
 async function notificarMiIngreso() {}
+/* Escucha notificaciones nuevas. Sin efecto en modo práctica. */
 function suscribirNotificaciones() { return null; }
 
 /* Presencia y última conexión (modo local: sin tiempo real) */
@@ -554,6 +614,8 @@ async function registrarConexion() {
         if (u) await dbGuardar('usuarios', { ...u, ultimaConexion: Date.now() });
     } catch (e) { /* silencioso */ }
 }
+/* Marca al usuario como conectado. Sin efecto en modo práctica: no hay
+   nadie más con quien compartir la presencia. */
 function presenciaIniciar() { return null; }
 
 /* Fin de trámite (modo local): solo administrador */
@@ -597,12 +659,14 @@ async function perfilPropio() {
     const u = s.usuario ? await dbObtener('usuarios', s.usuario) : null;
     return u ? { usuario: u.usuario, nombre: u.nombre, rol: u.rol, primerLogin: u.primerLogin !== false } : null;
 }
+/* Registra la aceptación del tratamiento de datos. */
 async function consentimientoAceptar(version) {
     const s = sesionActual() || {};
     const u = s.usuario ? await dbObtener('usuarios', s.usuario) : null;
     if (!u) return;
     await dbGuardar('usuarios', { ...u, primerLogin: false, consentimiento: { fecha: Date.now(), version: version || '1.0' } });
 }
+/* Lista quién aceptó el tratamiento de datos y cuándo. */
 async function consentimientosListar() {
     const usuarios = await dbTodos('usuarios');
     return usuarios.filter(u => u.consentimiento).map(u => ({

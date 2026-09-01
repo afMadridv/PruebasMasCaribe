@@ -74,6 +74,9 @@ function filtrarPorBusqueda(carpetas, texto) {
         (c.operadores || []).some(o => (nombreDe(o) || '').toLowerCase().includes(q) || String(o).toLowerCase().includes(q)));
 }
 
+/* Nombre visible de un usuario. El propio sale de la sesión; el de
+   los demás del mapa que se llena al cargar los perfiles. Si no está,
+   se muestra el nombre de usuario en crudo. */
 function nombreDe(usuario) {
     if (usuario === sesion.usuario) return sesion.nombre;
     return nombrePorUsuario[usuario] || usuario;
@@ -94,6 +97,9 @@ window.addEventListener('unhandledrejection', (evento) => {
     avisar((evento.reason && evento.reason.message) || 'Error de conexión con la base de datos.', 'error');
 });
 
+/* Arranque de la aplicación. Pinta el encabezado, conecta los
+   escuchadores de eventos y abre la vista de carpetas. Sin sesión
+   válida no hace nada: de eso ya se encargó la comprobación de arriba. */
 async function iniciar() {
     if (!SESION_VALIDA) return;
     pintarEncabezado();
@@ -129,6 +135,8 @@ async function iniciar() {
    el navegador advierte si intenta cerrar la pestaña o salir del portal. */
 let _cerrandoSesion = false;   // al confirmar la salida, se desactiva el aviso de beforeunload
 
+/* Cierra la sesión previa confirmación. El destino permite volver al
+   sitio principal en vez de a la pantalla de ingreso. */
 async function confirmarSalida(destino) {
     if (!await confirmarPortal(
         'Estás a punto de finalizar tu sesión segura bajo los lineamientos del ' +
@@ -138,6 +146,9 @@ async function confirmarSalida(destino) {
     cerrarSesion(destino);    // limpia los tokens de Supabase y redirige al login
 }
 
+/* Avisa antes de cerrar la pestaña con la sesión abierta, para que no
+   se pierda trabajo sin querer. No se dispara cuando la salida es
+   intencional (botón de cerrar sesión). */
 function instalarAvisoCierre() {
     window.addEventListener('beforeunload', (e) => {
         if (_cerrandoSesion) return;               // el usuario ya confirmó la salida
@@ -179,6 +190,8 @@ function instalarAtrasSeguro() {
 /* ============ PRESENCIA: EN LÍNEA / DESCONECTADO ============ */
 let _usuariosEnLinea = new Set();
 
+/* Punto de color con el estado de conexión de un usuario. El atributo
+   data-usuario-conexion permite refrescarlo sin repintar la fila entera. */
 function puntoConexion(usuario) {
     const en = _usuariosEnLinea.has(usuario);
     return '<span class="pt-conexion' + (en ? ' pt-conexion--en-linea' : '') + '" data-usuario-conexion="' + escaparHtml(usuario) + '"' +
@@ -206,6 +219,9 @@ function generarClaveSegura() {
         azar('23456789', 3) + azar('!#$%*+', 1);
 }
 
+/* Rellena el formulario de alta con un usuario y una clave al azar.
+   Usa crypto.getRandomValues, no Math.random: la clave inicial no debe
+   ser adivinable a partir del momento en que se generó. */
 function generarCredenciales() {
     const azar = (letras, n) => Array.from(crypto.getRandomValues(new Uint32Array(n)))
         .map(x => letras[x % letras.length]).join('');
@@ -240,6 +256,9 @@ const LEYES_INSOLVENCIA = [
     { n: 'Estatuto Tributario', d: 'Decreto 624 de 1989', url: 'http://www.secretariasenado.gov.co/senado/basedoc/estatuto_tributario.html' }
 ];
 
+/* Lista de leyes de insolvencia con enlace al texto oficial. Abre en
+   pestaña nueva con rel="noopener" para que la página destino no pueda
+   manipular la del portal. */
 function pintarLeyes() {
     const cont = document.getElementById('lista-leyes');
     if (!cont) return;
@@ -258,6 +277,9 @@ function inicialesDe(nombre) {
     return (partes[0][0] + (partes.length > 1 ? partes[partes.length - 1][0] : '')).toUpperCase();
 }
 
+/* Nombre y rol del usuario en la barra superior, avatar con iniciales y
+   las pestañas que le corresponden a su rol. Las que no le tocan quedan
+   ocultas aquí; el permiso real lo aplica el servidor. */
 function pintarEncabezado() {
     const chip = document.getElementById('chip-usuario');
     if (chip) {
@@ -296,6 +318,8 @@ function alternarLateral(abrir) {
 
 const LATERAL_PLEGADO = 'portal_lateral_plegado';
 
+/* Pliega o despliega la barra lateral en escritorio y recuerda la
+   elección entre sesiones. */
 function plegarLateral(plegar) {
     const marco = document.querySelector('.pt-marco');
     if (!marco) return;
@@ -342,6 +366,8 @@ function alternarMenuFila(idLista) {
     }
 }
 
+/* Cierra todos los menús «...» abiertos. Solo puede haber uno abierto
+   a la vez, y un clic fuera los cierra. */
 function cerrarMenusFila() {
     document.querySelectorAll('.pt-menu__lista').forEach(m => { m.hidden = true; });
 }
@@ -373,6 +399,7 @@ function alternarCajonUsuario(abrir) {
    que tarde la respuesta. */
 const _cacheDatos = new Map();
 
+/* Devuelve la copia guardada de un conjunto, o undefined si no hay. */
 function cacheLeer(clave) {
     const e = _cacheDatos.get(clave);
     return e ? e.valor : undefined;
@@ -390,6 +417,7 @@ async function cacheRefrescar(clave, traer) {
     return { valor, cambio };
 }
 
+/* Descarta toda la caché de navegación. */
 function cacheOlvidar() { _cacheDatos.clear(); }
 
 /* Toda acción que no sea de lectura cambia los datos, así que tira la
@@ -496,6 +524,8 @@ function esqueletoFilas(n) {
    Todo sale de datos que ya se descargaron: no hay consultas extra. */
 const ALMACEN_TOPE_MB = 50;   // cupo del bucket 'documentos'
 
+/* Contadores de la barra lateral y barra de almacenamiento. Todo sale
+   de datos que ya se descargaron: no hay consultas extra. */
 function pintarLateral(carpetas, procesos) {
     const activas = carpetas.filter(c => c.activa);
     const num = (id, valor) => {
@@ -569,6 +599,7 @@ function pintarCarpetasSegunFiltro() {
             : 'Todavía no tienes carpetas asignadas. Comunícate con la fundación.');
 }
 
+/* Cambia entre carpetas activas y desactivadas (solo administrador). */
 function cambiarFiltroCarpetas(filtro) {
     if (filtro !== 'activas' && filtro !== 'desactivadas') return;
     _filtroCarpetas = filtro;
@@ -671,6 +702,7 @@ function filaCarpeta(c, totalArchivos) {
 /* ============ SEMÁFORO: HELPERS COMPARTIDOS ============ */
 const NOMBRE_SEMAFORO = { verde: 'Al día', naranja: 'Por vencer', rojo: 'Vencido', pausado: 'Pausado' };
 
+/* Punto de color del semáforo, en el tamaño que se pida. */
 function puntoSemaforo(color, tam) {
     return '<span class="pt-semaforo pt-semaforo--' + color + '" style="width:' + (tam || 12) + 'px;height:' + (tam || 12) + 'px;"></span>';
 }
@@ -976,10 +1008,14 @@ let _estadosProcesos = {};        // carpetaId → procesos
 let _autoRefrescoEstados = null;  // temporizador de recarga (5 min)
 let _vistaEstados = 'tablero';    // 'tablero' por urgencia | 'tabla' clasica
 
+/* Detiene el refresco automático del tablero. Se llama al salir de la
+   vista para no seguir consultando en segundo plano. */
 function detenerAutoRefrescoEstados() {
     if (_autoRefrescoEstados) { clearInterval(_autoRefrescoEstados); _autoRefrescoEstados = null; }
 }
 
+/* Abre el tablero de estados y programa su refresco cada cinco minutos
+   mientras la vista siga abierta. */
 async function mostrarVistaEstados() {
     if (!ES_PERSONAL && !ES_MONITOR) return;
     mostrarVista('vista-estados');
@@ -1004,6 +1040,8 @@ function aplicarEstados(carpetas, procesos) {
     for (const p of procesos) (_estadosProcesos[p.carpetaId] = _estadosProcesos[p.carpetaId] || []).push(p);
 }
 
+/* Carga carpetas y procesos y pinta el tablero. Pinta primero con la
+   copia guardada y corrige cuando llega la respuesta del servidor. */
 async function cargarYPintarEstados() {
     // Copia guardada primero: el tablero aparece sin esperar a la red
     const cCarp = cacheLeer('carpetas'), cProc = cacheLeer('procesos');
@@ -1032,12 +1070,16 @@ async function cargarYPintarEstados() {
 
 let _filtroEstados = 'activos'; // sub-pestaña del admin/monitor: 'activos' | 'desactivados'
 
+/* Cambia entre trámites activos y desactivados en el tablero. */
 function cambiarFiltroEstados(filtro) {
     if (filtro !== 'activos' && filtro !== 'desactivados') return;
     _filtroEstados = filtro;
     pintarEstados();
 }
 
+/* Dibuja la vista de estados según el rol: el operador ve tarjetas de
+   sus trámites; el administrador y el monitor ven el tablero o la tabla
+   de todos, con las sub-pestañas de activos y desactivados. */
 function pintarEstados() {
     const cont = document.getElementById('contenido-estados');
     if (!cont) return;
@@ -1444,6 +1486,7 @@ function cronologiaProcesos(c, procesos, gestiona) {
 /* ---- Acciones sobre procesos y trámites ---- */
 let _carpetaProcesoNuevo = null;
 
+/* Abre el formulario para añadir un proceso al trámite de una carpeta. */
 function abrirModalProceso(carpetaId) {
     if (!ES_PERSONAL) return;
     cerrarDetalleTramite();   // si venía del modal de detalle, se cierra para no quedar detrás
@@ -1455,11 +1498,14 @@ function abrirModalProceso(carpetaId) {
     document.getElementById('proceso-nombre').focus();
 }
 
+/* Cierra el formulario de nuevo proceso. */
 function cerrarModalProceso() {
     document.getElementById('modal-proceso').hidden = true;
     _carpetaProcesoNuevo = null;
 }
 
+/* Crea el proceso con el nombre y los días hábiles indicados. La fecha
+   de vencimiento la calcula el servidor, no el navegador. */
 async function crearProcesoDesdeModal(evento) {
     evento.preventDefault();
     if (!ES_PERSONAL || !_carpetaProcesoNuevo) return;
@@ -1480,6 +1526,8 @@ async function crearProcesoDesdeModal(evento) {
     await cargarYPintarEstados();
 }
 
+/* Marca un proceso como completado. El servidor registra la fecha y
+   recalcula el semáforo del trámite. */
 async function completarProcesoAccion(procesoId) {
     if (!ES_PERSONAL) return;
     if (!await confirmarPortal('¿Marcar este proceso como completado? Esta acción queda registrada.')) return;
@@ -1494,6 +1542,7 @@ async function completarProcesoAccion(procesoId) {
     await cargarYPintarEstados();
 }
 
+/* Elimina un proceso previa confirmación. */
 async function eliminarProcesoAccion(procesoId) {
     if (!ES_PERSONAL) return;
     if (!await confirmarPortal('¿Eliminar este proceso del trámite? Esta acción no se puede deshacer.')) return;
@@ -1508,6 +1557,8 @@ async function eliminarProcesoAccion(procesoId) {
     await cargarYPintarEstados();
 }
 
+/* Pausa el trámite: el reloj de días hábiles se detiene hasta que se
+   reactive. */
 async function pausarTramiteAccion(carpetaId) {
     if (!ES_PERSONAL) return;
     const c = _estadosCarpetas.find(x => x.id === carpetaId);
@@ -1524,6 +1575,7 @@ async function pausarTramiteAccion(carpetaId) {
     await cargarYPintarEstados();
 }
 
+/* Reactiva un trámite pausado y vuelve a correr el reloj. */
 async function reactivarTramiteAccion(carpetaId) {
     if (!ES_PERSONAL) return;
     const c = _estadosCarpetas.find(x => x.id === carpetaId);
@@ -1574,6 +1626,8 @@ async function finalizarTramiteAccion(carpetaId) {
     await cargarYPintarEstados();
 }
 
+/* Aplica la prórroga del trámite. Es única por trámite y el servidor
+   la rechaza si ya se usó. */
 async function prorrogaTramiteAccion(carpetaId) {
     if (!ES_PERSONAL) return; // admin u operador responsable (el servidor valida)
     const c = _estadosCarpetas.find(x => x.id === carpetaId);
@@ -1590,6 +1644,8 @@ async function prorrogaTramiteAccion(carpetaId) {
     await cargarYPintarEstados();
 }
 
+/* Nombre de un proceso a partir de su id, buscándolo en la caché de la
+   vista de estados. */
 function nombreProceso(procesoId) {
     for (const lista of Object.values(_estadosProcesos)) {
         const p = lista.find(x => x.id === procesoId);
@@ -1601,6 +1657,8 @@ function nombreProceso(procesoId) {
 /* ---- Corrección del administrador (modal editar proceso) ---- */
 let _procesoEditandoId = null;
 
+/* Abre la corrección de un proceso (solo administrador). Toda
+   corrección queda registrada en la actividad. */
 function abrirModalEditarProceso(procesoId) {
     if (!ES_ADMIN) return;
     cerrarDetalleTramite();   // no dejar el modal de detalle detrás
@@ -1618,11 +1676,13 @@ function abrirModalEditarProceso(procesoId) {
     document.getElementById('modal-editar-proceso').hidden = false;
 }
 
+/* Cierra el formulario de corrección de proceso. */
 function cerrarModalEditarProceso() {
     document.getElementById('modal-editar-proceso').hidden = true;
     _procesoEditandoId = null;
 }
 
+/* Guarda la corrección del proceso: nombre, días de plazo y estado. */
 async function guardarEdicionProceso(evento) {
     evento.preventDefault();
     if (!ES_ADMIN || !_procesoEditandoId) return;
@@ -1696,6 +1756,7 @@ function abrirDetalleTramite(carpetaId) {
     document.getElementById('modal-detalle-tramite').hidden = false;
 }
 
+/* Cierra la ventana de detalle del trámite. */
 function cerrarDetalleTramite() {
     document.getElementById('modal-detalle-tramite').hidden = true;
 }
@@ -1711,6 +1772,8 @@ let _recordatoriosCalCache = [];
 let _filtroCalOperador = '';   // '' = todos los operadores (panorama general)
 let _filtroCalTramite = '';    // '' = todos los trámites
 
+/* Abre el calendario de vencimientos. Dibuja el mes con la copia
+   guardada y lo corrige cuando responde el servidor. */
 async function mostrarVistaCalendarioVenc() {
     if (!ES_SUPERVISION && !ES_OPERADOR) return;
     mostrarVista('vista-calendario');
@@ -1861,6 +1924,9 @@ function agendaProximos(carpetas, resumen) {
     return '<aside class="pt-agenda">' + cajaResumen + cajaAgenda + cajaAccion + '</aside>';
 }
 
+/* Dibuja el mes completo: marca cada día con lo que vence, tiñe el día
+   según la marca más urgente y arma el panel derecho con el resumen,
+   la agenda y la acción sugerida. */
 function pintarCalendarioVenc() {
     const cont = document.getElementById('contenido-calendario-venc');
     if (!cont || !_mesCalVenc) return;
@@ -2050,6 +2116,7 @@ function pintarCalendarioVenc() {
     });
 }
 
+/* Avanza o retrocede un mes en el calendario de vencimientos. */
 function cambiarMesCalVenc(delta) {
     if (!_mesCalVenc) return;
     _mesCalVenc = new Date(_mesCalVenc.getFullYear(), _mesCalVenc.getMonth() + Number(delta || 0), 1);
@@ -2063,6 +2130,8 @@ function cambiarMesCalVenc(delta) {
 const CANALES_CHAT = { cliente: 'Cliente ↔ operador', acreedor: 'Acreedor ↔ operador' };
 let _canalChat = null;
 
+/* Canales de chat que puede abrir el usuario según su rol. El monitor
+   los ve todos pero solo lee. */
 function canalesAccesibles() {
     if (ES_PERSONAL || ES_MONITOR) return ['cliente', 'acreedor']; // el monitor solo LEE
     if (sesion.rol === 'cliente') return ['cliente'];
@@ -2075,6 +2144,8 @@ function canalesAccesibles() {
 let _chatCarpetaMin = true;      // arranca minimizado (burbuja)
 let _acreedorDestino = '';       // '' = todos; uuid = hilo con UN acreedor
 
+/* Decide si se ve el panel del chat, la burbuja o nada. El chat solo
+   existe dentro de una carpeta abierta. */
 function pintarVisibilidadChatCarpeta(hayCanales) {
     const seccion = document.getElementById('pt-chats');
     const burbuja = document.getElementById('chat-carpeta-burbuja');
@@ -2084,17 +2155,20 @@ function pintarVisibilidadChatCarpeta(hayCanales) {
     burbuja.hidden = !_chatCarpetaMin;
 }
 
+/* Despliega el panel del chat del trámite. */
 function abrirChatCarpeta() {
     _chatCarpetaMin = false;
     pintarVisibilidadChatCarpeta(canalesAccesibles().length > 0);
     pintarMensajes();
 }
 
+/* Repliega el chat a su burbuja de la esquina. */
 function minimizarChatCarpeta() {
     _chatCarpetaMin = true;
     pintarVisibilidadChatCarpeta(canalesAccesibles().length > 0);
 }
 
+/* Arma las pestañas de canales del chat y pinta el que esté activo. */
 async function pintarChats() {
     const seccion = document.getElementById('pt-chats');
     if (!seccion || !carpetaAbierta) return;
@@ -2116,6 +2190,8 @@ async function pintarChats() {
     await pintarMensajes();
 }
 
+/* Cambia de canal de chat. El adjunto pendiente se descarta para que
+   no se envíe al canal equivocado. */
 function cambiarCanal(canal) {
     if (!canalesAccesibles().includes(canal)) return;
     quitarAdjuntoChat(); // el adjunto pendiente no debe saltar a otro canal
@@ -2154,6 +2230,8 @@ async function pintarSelectorAcreedor() {
     });
 }
 
+/* Pinta los mensajes del canal activo y marca como leídos los que se
+   acaban de mostrar. */
 async function pintarMensajes() {
     if (!carpetaAbierta || !_canalChat) return;
     const cont = document.getElementById('chat-mensajes');
@@ -2178,6 +2256,7 @@ async function pintarMensajes() {
     }
 }
 
+/* Una burbuja de mensaje, con su adjunto si lo tiene. */
 function filaMensaje(m) {
     const mio = m.autorUsuario && m.autorUsuario === sesion.usuario;
     const rolEtq = ETIQUETAS_ROL[m.rol] || m.rol || '';
@@ -2202,6 +2281,8 @@ function filaMensaje(m) {
 /* ---- Adjunto pendiente de enviar en el chat ---- */
 let _adjuntoChat = null;
 
+/* Guarda el archivo elegido como adjunto pendiente del chat, tras
+   comprobar tipo y tamaño. */
 function ponerAdjuntoChat(archivo) {
     if (!archivo) return;
     const ext = extensionDe(archivo.name);
@@ -2220,6 +2301,7 @@ function ponerAdjuntoChat(archivo) {
     chip.hidden = false;
 }
 
+/* Descarta el adjunto pendiente del chat. */
 function quitarAdjuntoChat() {
     _adjuntoChat = null;
     const entrada = document.getElementById('chat-adjunto');
@@ -2228,6 +2310,8 @@ function quitarAdjuntoChat() {
     if (chip) chip.hidden = true;
 }
 
+/* Envía el mensaje del canal activo, con su adjunto si lo hay. El
+   monitor no puede escribir. */
 async function enviarMensaje(evento) {
     evento.preventDefault();
     if (!carpetaAbierta || !_canalChat || ES_MONITOR) return; // el monitor no escribe
@@ -2285,8 +2369,10 @@ let _soporteOperador = null;          // hilo abierto: { id, nombre }
 let _soporteNoLeidosPorOperador = {}; // operadorId → nº de no leídos
 let _chatsNoLeidosCache = [];         // no leídos de los chats de carpeta
 
+/* El soporte interno es solo para administrador y operadores. */
 function soporteDisponible() { return ES_ADMIN || ES_OPERADOR; }
 
+/* Muestra la burbuja de soporte y arranca el conteo de no leídos. */
 async function iniciarSoporte() {
     if (soporteDisponible()) {
         document.getElementById('soporte-burbuja').hidden = false;
@@ -2329,6 +2415,7 @@ function sonarAviso() {
     } catch (e) { /* sin audio no pasa nada */ }
 }
 
+/* Hace parpadear la burbuja cuando llega algo sin leer. */
 function parpadearBurbuja() {
     const b = document.getElementById('soporte-burbuja');
     if (!b || b.hidden) return;
@@ -2336,6 +2423,7 @@ function parpadearBurbuja() {
     setTimeout(() => b.classList.remove('pt-soporte-burbuja--alerta'), 6000);
 }
 
+/* Actualiza los contadores de mensajes sin leer del chat y del soporte. */
 async function refrescarNoLeidos() {
     try {
         const [sop, chats] = await Promise.all([
@@ -2355,6 +2443,7 @@ async function refrescarNoLeidos() {
     } catch (e) { /* contadores no rompen el portal */ }
 }
 
+/* Cuántos mensajes sin leer tiene un hilo concreto. */
 function noLeidosDe(carpetaId, canal) {
     const f = _chatsNoLeidosCache.find(x => x.carpetaId === carpetaId && x.canal === canal);
     return f ? f.noLeidos : 0;
@@ -2379,6 +2468,7 @@ function pintarBadgesChats() {
     }
 }
 
+/* Abre el panel de soporte con la lista de hilos. */
 async function abrirSoporte() {
     if (!soporteDisponible()) return;
     document.getElementById('soporte-panel').hidden = false;
@@ -2394,6 +2484,7 @@ async function abrirSoporte() {
     }
 }
 
+/* Repliega el panel de soporte a su burbuja. */
 function minimizarSoporte() {
     document.getElementById('soporte-panel').hidden = true;
     if (soporteDisponible()) document.getElementById('soporte-burbuja').hidden = false;
@@ -2428,6 +2519,7 @@ async function pintarSoporteLista() {
         }).join('');
 }
 
+/* Abre un hilo de soporte y marca sus mensajes como leídos. */
 async function abrirHiloSoporte(operador) {
     _soporteOperador = operador;
     document.getElementById('soporte-titulo').textContent = 'Soporte · ' + operador.nombre;
@@ -2441,6 +2533,7 @@ async function abrirHiloSoporte(operador) {
     await refrescarNoLeidos();
 }
 
+/* Pinta los mensajes del hilo de soporte abierto. */
 async function pintarSoporteMensajes() {
     if (!_soporteOperador) return;
     const cont = document.getElementById('soporte-mensajes');
@@ -2475,6 +2568,7 @@ async function pintarSoporteMensajes() {
 /* ---- Adjunto pendiente del chat de soporte ---- */
 let _adjuntoSoporte = null;
 
+/* Guarda el archivo elegido como adjunto pendiente del soporte. */
 function ponerAdjuntoSoporte(archivo) {
     if (!archivo) return;
     const ext = extensionDe(archivo.name);
@@ -2485,6 +2579,7 @@ function ponerAdjuntoSoporte(archivo) {
     document.getElementById('soporte-adjunto-chip').hidden = false;
 }
 
+/* Descarta el adjunto pendiente del soporte. */
 function quitarAdjuntoSoporte() {
     _adjuntoSoporte = null;
     const entrada = document.getElementById('soporte-adjunto');
@@ -2493,6 +2588,7 @@ function quitarAdjuntoSoporte() {
     if (chip) chip.hidden = true;
 }
 
+/* Descarga un adjunto de un mensaje de soporte. */
 async function descargarAdjuntoDeSoporte(mensajeId) {
     try {
         const adj = await descargarAdjuntoSoporte(mensajeId);
@@ -2507,6 +2603,7 @@ async function descargarAdjuntoDeSoporte(mensajeId) {
     }
 }
 
+/* Envía el mensaje de soporte, con adjunto si lo hay. */
 async function enviarSoporte(evento) {
     evento.preventDefault();
     if (!_soporteOperador) return;
@@ -2536,6 +2633,8 @@ async function enviarSoporte(evento) {
 const RTC_CONFIG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 let _llamada = null; // { id, pc, stream, canal, soyIniciador, entrante }
 
+/* Pide acceso al micrófono. Si el navegador lo niega, la llamada no
+   puede empezar. */
 async function obtenerMicrofono() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         avisar('Este navegador no permite llamadas (sin acceso al micrófono).', 'error');
@@ -2558,6 +2657,8 @@ async function obtenerMicrofono() {
     }
 }
 
+/* Prepara la conexión de voz entre los dos extremos y engancha el
+   audio remoto cuando llega. */
 function _prepararConexion(llamadaId, stream, soyIniciador) {
     const pc = new RTCPeerConnection(RTC_CONFIG);
     stream.getTracks().forEach(t => pc.addTrack(t, stream));
@@ -2589,11 +2690,13 @@ function _prepararConexion(llamadaId, stream, soyIniciador) {
     return { pc, canal };
 }
 
+/* Texto de estado de la llamada (llamando, en curso, finalizada). */
 function ponerEstadoLlamada(texto) {
     const el = document.getElementById('llamada-estado');
     if (el) el.textContent = texto;
 }
 
+/* Muestra la ventana de llamada en el modo que corresponda. */
 function _mostrarModalLlamada(titulo, esEntrante) {
     pintarBotonesLlamada();   // botones limpios (sin silenciar) al iniciar
     document.getElementById('llamada-titulo').textContent = titulo;
@@ -2623,6 +2726,7 @@ async function iniciarLlamadaSoporte() {
 
 /* Aviso de llamada entrante (operador/cliente/acreedor) */
 let _llamadaEntrante = null;
+/* Atiende una llamada entrante y muestra el aviso al destinatario. */
 function recibirLlamada(fila) {
     if (_llamada) return; // ya en llamada: se ignora
     _llamadaEntrante = fila;
@@ -2631,6 +2735,7 @@ function recibirLlamada(fila) {
     ponerEstadoLlamada('La administración te está llamando.');
 }
 
+/* Acepta la llamada entrante y abre el audio en los dos sentidos. */
 async function aceptarLlamada() {
     if (!_llamadaEntrante) return;
     const fila = _llamadaEntrante;
@@ -2668,6 +2773,7 @@ function minimizarLlamada() {
         document.getElementById('llamada-estado').textContent || 'En llamada';
 }
 
+/* Devuelve la ventana de llamada a su tamaño tras minimizarla. */
 function restaurarLlamada() {
     document.getElementById('llamada-mini').hidden = true;
     if (_llamada) document.getElementById('modal-llamada').hidden = false;
@@ -2708,6 +2814,7 @@ function pintarBotonesLlamada() {
     }
 }
 
+/* Silencia o reactiva el micrófono propio. */
 function alternarMicrofono() {
     if (!_llamada || !_llamada.stream) return;
     const pista = _llamada.stream.getAudioTracks()[0];
@@ -2716,12 +2823,14 @@ function alternarMicrofono() {
     pintarBotonesLlamada();
 }
 
+/* Silencia o reactiva el audio que llega del otro extremo. */
 function alternarAltavoz() {
     const audio = document.getElementById('llamada-audio-remoto');
     audio.muted = !audio.muted;
     pintarBotonesLlamada();
 }
 
+/* Cuelga, libera el micrófono y cierra la conexión. */
 async function terminarLlamada(avisarAlOtro) {
     // Rechazo de una llamada entrante que no se aceptó
     if (_llamadaEntrante) {
@@ -2775,6 +2884,7 @@ async function avisarIngresoEnCampana() {
     } catch (e) { /* silencioso */ }
 }
 
+/* Arranca la campana y su consulta periódica de no leídos. */
 async function iniciarCampana() {
     await refrescarCampana();
     suscribirNotificaciones(async () => {
@@ -2785,6 +2895,7 @@ async function iniciarCampana() {
     });
 }
 
+/* Vuelve a contar las notificaciones sin leer y actualiza la insignia. */
 async function refrescarCampana() {
     try {
         if (ES_ADMIN) await notificacionesGenerarVencidos().catch(() => {});
@@ -2796,6 +2907,7 @@ async function refrescarCampana() {
     if (!document.getElementById('campana-dropdown').hidden) pintarCampanaLista();
 }
 
+/* Pinta el desplegable con las últimas notificaciones. */
 function pintarCampanaLista() {
     const lista = document.getElementById('campana-lista');
     if (!lista) return;
@@ -2816,6 +2928,7 @@ function pintarCampanaLista() {
             '</div>').join('');
 }
 
+/* Abre o cierra el desplegable de la campana. */
 async function alternarCampana() {
     const dd = document.getElementById('campana-dropdown');
     if (!dd.hidden) { dd.hidden = true; return; }
@@ -2878,6 +2991,7 @@ async function eliminarNotificacion(id, elemento) {
     }
 }
 
+/* Marca todas las notificaciones como leídas. */
 async function marcarCampanaLeidas() {
     try {
         await notificacionesMarcarLeidas(null);
@@ -2891,6 +3005,9 @@ async function marcarCampanaLeidas() {
 /* ============ CONFIRMACIÓN PROPIA DEL PORTAL (reemplaza window.confirm) ============ */
 let _confirmarResolver = null;
 
+/* Confirmación con el diseño del portal, en vez de confirm() del
+   navegador, que se puede bloquear y no sigue el tema. Devuelve una
+   promesa que resuelve a true o false. */
 function confirmarPortal(mensaje, titulo) {
     return new Promise((resolver) => {
         _confirmarResolver = resolver;
@@ -2905,6 +3022,8 @@ function confirmarPortal(mensaje, titulo) {
    que el navegador puede bloquear y no sigue el tema). */
 let _textoResolver = null;
 
+/* Pide un texto al usuario con el diseño del portal, en vez de
+   prompt(). Devuelve el texto o null si se cancela. */
 function pedirTextoPortal(titulo, ayuda, valorInicial) {
     return new Promise((resolver) => {
         _textoResolver = resolver;
@@ -2920,11 +3039,13 @@ function pedirTextoPortal(titulo, ayuda, valorInicial) {
     });
 }
 
+/* Resuelve la promesa del diálogo de texto y lo cierra. */
 function _responderTexto(valor) {
     document.getElementById('modal-texto').hidden = true;
     if (_textoResolver) { _textoResolver(valor); _textoResolver = null; }
 }
 
+/* Resuelve la promesa del diálogo de confirmación y lo cierra. */
 function _responderConfirmacion(valor) {
     document.getElementById('modal-confirmar').hidden = true;
     if (_confirmarResolver) { _confirmarResolver(valor); _confirmarResolver = null; }
@@ -2942,6 +3063,8 @@ async function verificarConsentimiento() {
     }
 }
 
+/* Registra la aceptación del tratamiento de datos por parte del
+   usuario. Queda con fecha y hora en la base. */
 async function aceptarConsentimientoAccion() {
     if (!document.getElementById('consentimiento-acepto').checked) {
         avisar('Debes marcar la casilla de autorización para continuar.', 'error');
@@ -3075,6 +3198,7 @@ function mostrarEditorDescripcion() {
     document.getElementById('descripcion-nueva').focus();
 }
 
+/* Cierra el editor de notas internas de la carpeta. */
 function ocultarEditorDescripcion() {
     document.getElementById('form-descripcion').hidden = true;
     if (carpetaAbierta) {
@@ -3082,6 +3206,7 @@ function ocultarEditorDescripcion() {
     }
 }
 
+/* Guarda las notas internas de la carpeta. */
 async function guardarDescripcion(evento) {
     evento.preventDefault();
     if (!carpetaAbierta || !puedeGestionarCarpeta(carpetaAbierta)) return;
@@ -3099,6 +3224,8 @@ async function guardarDescripcion(evento) {
    sus políticas RLS siguen intactas en la base de datos por si se retoma. */
 let _subPanelCarpeta = 'archivos';
 
+/* Arma las pestañas del detalle de la carpeta según lo que el usuario
+   pueda ver. Con una sola pestaña la barra no se dibuja. */
 function montarSubPestanasCarpeta(carpeta) {
     const barra = document.getElementById('sub-pestanas-carpeta');
     if (!barra) return;
@@ -3133,6 +3260,7 @@ function montarSubPestanasCarpeta(carpeta) {
 
 const PANELES_CARPETA = ['archivos', 'audiencias', 'recordatorios', 'notificaciones', 'calendario'];
 
+/* Muestra el panel de la pestaña elegida y oculta los demás. */
 function mostrarSubPanelCarpeta(panel) {
     document.getElementById('panel-archivos').hidden = (panel !== 'archivos');
     for (const p of ['audiencias', 'recordatorios', 'notificaciones', 'calendario']) {
@@ -3149,6 +3277,8 @@ function pintarPanelDeCarpeta(panel, carpeta) {
     else if (panel === 'calendario') pintarCalendario();
 }
 
+/* Cambia de pestaña dentro de la carpeta, comprobando antes que el rol
+   tenga acceso a ese panel. */
 function cambiarSubPestanaCarpeta(panel) {
     if (!PANELES_CARPETA.includes(panel)) return;
     // Paneles del personal: exigen poder gestionar la carpeta
@@ -3181,6 +3311,8 @@ let _subcarpetas = [];        // subcarpetas de la carpeta abierta
 let _subcarpetaAbierta = null; // null = raíz de la carpeta   // modo "Editar documentos" (reordenar la tabla)
 let _archivosCache = [];      // archivos de la carpeta abierta, ya ordenados
 
+/* Pinta la tabla de documentos de la carpeta: carga las subcarpetas,
+   filtra por la que esté abierta y actualiza las cifras del expediente. */
 async function pintarArchivos() {
     if (!carpetaAbierta) return;
     const archivos = await dbArchivosDeCarpeta(carpetaAbierta.id);
@@ -3265,6 +3397,8 @@ function destinoAdmiteExtension(destino, ext) {
     return destinoEsDeMedios(destino) ? esMedia : !esMedia;
 }
 
+/* Dice si un destino es la subcarpeta de audiencias, donde van las
+   grabaciones. */
 function destinoEsDeMedios(destino) {
     if (destino === null || destino === undefined || destino === '') return false;
     return esSubcarpetaDeMedios(nombreSubcarpeta(destino));
@@ -3277,6 +3411,7 @@ function motivoRechazo(destino, nombreArchivo) {
         : ' (el audio y el video van en la subcarpeta de audiencias)');
 }
 
+/* Nombre de una subcarpeta a partir de su id. */
 function nombreSubcarpeta(id) {
     const s = _subcarpetas.find(x => String(x.id) === String(id));
     return s ? s.nombre : '';
@@ -3291,6 +3426,8 @@ function archivosDeVistaActual() {
     return _archivosCache.filter(a => String(a.subcarpetaId) === String(_subcarpetaAbierta));
 }
 
+/* Dibuja las fichas de navegación de subcarpetas con el conteo de
+   documentos de cada una. */
 function pintarSubcarpetas() {
     const caja = document.getElementById('barra-subcarpetas');
     if (!caja || !carpetaAbierta) return;
@@ -3344,18 +3481,22 @@ function ajustarZonaSubida() {
     }
 }
 
+/* Trae las subcarpetas de la carpeta abierta. Si falla, deja la lista
+   vacía en vez de romper la vista. */
 async function cargarSubcarpetas() {
     if (!carpetaAbierta || typeof subcarpetasListar !== 'function') { _subcarpetas = []; return; }
     try { _subcarpetas = await subcarpetasListar(carpetaAbierta.id); }
     catch (e) { _subcarpetas = []; }
 }
 
+/* Abre una subcarpeta, o la raíz de la carpeta si no se pasa ninguna. */
 function abrirSubcarpeta(id) {
     _subcarpetaAbierta = (id === '' || id === undefined || id === null) ? null : Number(id);
     _editandoOrden = false;
     pintarArchivos();
 }
 
+/* Crea una subcarpeta y la deja abierta. */
 async function nuevaSubcarpetaAccion() {
     if (!carpetaAbierta) return;
     const nombre = await pedirTextoPortal('Nombre de la subcarpeta',
@@ -3373,6 +3514,7 @@ async function nuevaSubcarpetaAccion() {
     }
 }
 
+/* Renombra la subcarpeta abierta. */
 async function renombrarSubcarpetaAccion() {
     if (_subcarpetaAbierta === null) return;
     const actual = nombreSubcarpeta(_subcarpetaAbierta);
@@ -3389,6 +3531,8 @@ async function renombrarSubcarpetaAccion() {
     }
 }
 
+/* Elimina la subcarpeta abierta. Los documentos no se borran: vuelven
+   a la raíz de la carpeta, y la confirmación lo advierte. */
 async function eliminarSubcarpetaAccion() {
     if (_subcarpetaAbierta === null) return;
     const nombre = nombreSubcarpeta(_subcarpetaAbierta);
@@ -3410,6 +3554,8 @@ async function eliminarSubcarpetaAccion() {
     }
 }
 
+/* Mueve un documento a otra subcarpeta, comprobando antes que el
+   destino admita ese tipo de archivo. */
 async function moverArchivoAccion(archivoId, destino) {
     // Mover no puede saltarse la regla de la subida
     const arch = _archivosCache.find(x => String(x.id) === String(archivoId));
@@ -3432,6 +3578,7 @@ async function moverArchivoAccion(archivoId, destino) {
     }
 }
 
+/* Una fila de la tabla de documentos, con sus acciones según el rol. */
 function filaArchivo(a) {
     const ext = extensionDe(a.nombre);
     const gestiona = !!(carpetaAbierta && puedeGestionarCarpeta(carpetaAbierta));
@@ -3503,11 +3650,13 @@ function empezarEdicionOrden() {
     pintarArchivos();
 }
 
+/* Sale del modo de reordenar documentos sin guardar. */
 async function cancelarEdicionOrden() {
     _editandoOrden = false;
     await pintarArchivos();
 }
 
+/* Sube o baja un documento una posición mientras se reordena. */
 function moverArchivoEnOrden(id, delta) {
     const i = _archivosCache.findIndex(a => a.id === id);
     const j = i + delta;
@@ -3517,11 +3666,13 @@ function moverArchivoEnOrden(id, delta) {
     repintarFilasOrden();
 }
 
+/* Vuelve a dibujar la tabla durante el reordenamiento. */
 function repintarFilasOrden() {
     document.getElementById('lista-archivos').innerHTML = _archivosCache.map(filaArchivo).join('');
     activarArrastreOrden();
 }
 
+/* Guarda el orden manual de los documentos en el servidor. */
 async function guardarOrdenDocumentos() {
     if (!carpetaAbierta || !puedeGestionarCarpeta(carpetaAbierta)) return;
     try {
@@ -3537,6 +3688,7 @@ async function guardarOrdenDocumentos() {
 
 /* Arrastrar y soltar filas de la tabla en modo edición */
 let _filaArrastrada = null;
+/* Habilita arrastrar y soltar filas para reordenar. */
 function activarArrastreOrden() {
     const cuerpo = document.getElementById('lista-archivos');
     cuerpo.querySelectorAll('tr[draggable="true"]').forEach(tr => {
@@ -3566,6 +3718,7 @@ let _mesCalendario = null;      // primer día del mes mostrado
 let _audienciasCache = [];      // audiencias de la carpeta abierta
 let _asignadosCache = [];       // asignados (con correo) de la carpeta abierta
 
+/* Lista las audiencias marcadas de la carpeta. */
 async function pintarAudiencias(carpeta) {
     const panel = document.getElementById('panel-audiencias');
     if (!panel || !carpeta || !puedeGestionarCarpeta(carpeta)) return;
@@ -3633,6 +3786,8 @@ let _procesosCalLateral = [];   // procesos de la carpeta abierta (rangos del ca
 
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
+/* Dibuja el mes del calendario de audiencias, con los rangos de los
+   procesos si el usuario es personal o monitor. */
 function pintarCalendario() {
     const cont = document.getElementById('calendario-audiencias');
     if (!cont || !_mesCalendario) return;
@@ -3719,12 +3874,14 @@ function pintarCalendario() {
             : '');
 }
 
+/* Avanza o retrocede un mes en el calendario de audiencias. */
 function cambiarMesCalendario(delta) {
     if (!_mesCalendario) return;
     _mesCalendario = new Date(_mesCalendario.getFullYear(), _mesCalendario.getMonth() + Number(delta || 0), 1);
     pintarCalendario();
 }
 
+/* Fecha en formato largo en español, a partir de una cadena ISO. */
 function formatoFechaDia(iso) {
     // 'AAAA-MM-DD' → 'lunes, 20 de agosto de 2026' (sin correr el día por zona horaria)
     const [a, m, d] = String(iso).split('-').map(Number);
@@ -3733,6 +3890,7 @@ function formatoFechaDia(iso) {
     return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
+/* Quita una audiencia marcada del calendario. */
 async function eliminarAudiencia(id) {
     if (!carpetaAbierta || !puedeGestionarCarpeta(carpetaAbierta)) return;
     if (!await confirmarPortal('¿Quitar esta audiencia del calendario?')) return;
@@ -3748,6 +3906,7 @@ async function eliminarAudiencia(id) {
 /* ---- Modal "Notificar audiencia" ---- */
 let _audienciaExistenteId = null;   // si se notifica una ya marcada, no se duplica
 
+/* Abre el formulario para notificar una audiencia a las partes. */
 async function abrirModalAudiencia(prefijado) {
     if (!carpetaAbierta || !puedeGestionarCarpeta(carpetaAbierta)) return;
     _audienciaExistenteId = (prefijado && prefijado.id) || null;
@@ -3776,11 +3935,13 @@ async function abrirModalAudiencia(prefijado) {
         (p.correo ? escaparHtml(p.correo) : 'sin correo registrado') + ')</span></label>').join('');
 }
 
+/* Cierra el formulario de audiencia. */
 function cerrarModalAudiencia() {
     document.getElementById('modal-audiencia').hidden = true;
     _audienciaExistenteId = null;
 }
 
+/* Marca la audiencia y notifica a las partes de la carpeta. */
 async function enviarNotificacionAudiencia(evento) {
     evento.preventDefault();
     if (!carpetaAbierta || !puedeGestionarCarpeta(carpetaAbierta)) return;
@@ -3848,6 +4009,7 @@ async function refrescarAudiencias() {
 /* ============ RECORDATORIOS PERSONALES (privados del operador) ============ */
 let _recordatorioEditandoId = null;
 
+/* Lista los recordatorios privados del operador para esta carpeta. */
 async function pintarRecordatorios(carpeta) {
     const panel = document.getElementById('panel-recordatorios');
     if (!panel || !carpeta || !puedeGestionarCarpeta(carpeta)) return;
@@ -3888,6 +4050,7 @@ async function pintarRecordatorios(carpeta) {
 }
 let _recordatoriosPanelCache = [];
 
+/* Abre el formulario de recordatorio. */
 function abrirModalRecordatorio(recordatorio) {
     if (!carpetaAbierta || !puedeGestionarCarpeta(carpetaAbierta)) return;
     _recordatorioEditandoId = (recordatorio && recordatorio.id) || null;
@@ -3900,11 +4063,13 @@ function abrirModalRecordatorio(recordatorio) {
     document.getElementById('recordatorio-mensaje').focus();
 }
 
+/* Cierra el formulario de recordatorio. */
 function cerrarModalRecordatorio() {
     document.getElementById('modal-recordatorio').hidden = true;
     _recordatorioEditandoId = null;
 }
 
+/* Guarda el recordatorio privado del operador. */
 async function guardarRecordatorio(evento) {
     evento.preventDefault();
     if (!carpetaAbierta || !puedeGestionarCarpeta(carpetaAbierta)) return;
@@ -3927,6 +4092,7 @@ async function guardarRecordatorio(evento) {
     await pintarRecordatorios(carpetaAbierta);
 }
 
+/* Elimina un recordatorio previa confirmación. */
 async function eliminarRecordatorio(id) {
     if (!await confirmarPortal('¿Eliminar este recordatorio?')) return;
     try {
@@ -3943,12 +4109,14 @@ async function eliminarRecordatorio(id) {
    revela la siguiente, sin saturar la pantalla con una columna larga. */
 let _pilaRecordatorios = [];
 
+/* Muestra al entrar los recordatorios cuya fecha ya llegó. */
 async function mostrarRecordatoriosVigentes() {
     if (!ES_PERSONAL) return;
     try { _pilaRecordatorios = (await recordatoriosVigentes()) || []; } catch (e) { return; }
     pintarPilaRecordatorios();
 }
 
+/* Dibuja la pila de avisos de recordatorio en la esquina. */
 function pintarPilaRecordatorios() {
     const popup = document.getElementById('popup-recordatorios');
     if (!popup) return;
@@ -3987,6 +4155,7 @@ let _notifCarpetaCache = [];        // actividad de la carpeta abierta (partes)
 let _rolNotifCarpeta = 'cliente';   // sección activa: 'cliente' (deudor) | 'acreedor'
 let _acreedorNotifSel = '';         // acreedor elegido en la pestaña Acreedores ('' = todos)
 
+/* Pinta el panel de notificaciones de la carpeta con sus filtros. */
 async function pintarNotifCarpeta(carpeta) {
     const panel = document.getElementById('panel-notif-carpeta');
     if (!panel || !carpeta || !(puedeGestionarCarpeta(carpeta) || ES_MONITOR)) return;
@@ -4083,6 +4252,7 @@ async function descargarConstanciaAcreedores() {
     }
 }
 
+/* Filtra las notificaciones de la carpeta por rol destinatario. */
 function cambiarRolNotifCarpeta(rol) {
     if (rol !== 'cliente' && rol !== 'acreedor') return;
     _rolNotifCarpeta = rol;
@@ -4092,11 +4262,13 @@ function cambiarRolNotifCarpeta(rol) {
     pintarListaNotifCarpeta();
 }
 
+/* Filtra las notificaciones por acreedor concreto. */
 function cambiarAcreedorNotif(usuario) {
     _acreedorNotifSel = usuario || '';
     pintarListaNotifCarpeta();
 }
 
+/* Dibuja la lista ya filtrada de notificaciones de la carpeta. */
 function pintarListaNotifCarpeta() {
     const lista = document.getElementById('lista-notif-carpeta');
     if (!lista) return;
@@ -4171,6 +4343,8 @@ const EXTENSIONES_EXPEDIENTE = ['pdf', 'png', 'jpg', 'jpeg'];
 let _seleccionExpediente = [];   // ids en el ORDEN de selección
 
 let _promesaPdfLib = null;
+/* Carga pdf-lib desde CDN la primera vez que hace falta. La promesa se
+   guarda para no cargar la librería dos veces. */
 function cargarPdfLib() {
     if (window.PDFLib) return Promise.resolve(window.PDFLib);
     if (_promesaPdfLib) return _promesaPdfLib;
@@ -4189,6 +4363,7 @@ function cargarPdfLib() {
     return _promesaPdfLib;
 }
 
+/* Abre el selector de documentos del expediente unificado. */
 async function abrirModalExpediente() {
     if (!carpetaAbierta || !puedeGestionarCarpeta(carpetaAbierta)) return;
     _seleccionExpediente = [];
@@ -4223,11 +4398,14 @@ async function abrirModalExpediente() {
     pintarBotonExpediente();
 }
 
+/* Cierra el selector y limpia la selección. */
 function cerrarModalExpediente() {
     document.getElementById('modal-expediente').hidden = true;
     _seleccionExpediente = [];
 }
 
+/* Marca o desmarca un documento. El orden de marcado es el orden del
+   PDF final. */
 function alternarSeleccionExpediente(id, marcado) {
     if (marcado) {
         if (!_seleccionExpediente.includes(id)) _seleccionExpediente.push(id);
@@ -4237,6 +4415,7 @@ function alternarSeleccionExpediente(id, marcado) {
     pintarNumerosExpediente();
 }
 
+/* Sube o baja un documento dentro del orden del expediente. */
 function moverSeleccionExpediente(id, delta) {
     const i = _seleccionExpediente.indexOf(id);
     const j = i + delta;
@@ -4245,6 +4424,7 @@ function moverSeleccionExpediente(id, delta) {
     pintarNumerosExpediente();
 }
 
+/* Renumera las fichas del selector tras cada cambio de orden. */
 function pintarNumerosExpediente() {
     document.querySelectorAll('#expediente-lista .pt-expediente-item').forEach(item => {
         const id = Number(item.dataset.id);
@@ -4258,6 +4438,7 @@ function pintarNumerosExpediente() {
     pintarBotonExpediente();
 }
 
+/* Actualiza el botón con el número de documentos seleccionados. */
 function pintarBotonExpediente() {
     const boton = document.getElementById('boton-crear-expediente');
     boton.disabled = _seleccionExpediente.length === 0;
@@ -4266,6 +4447,76 @@ function pintarBotonExpediente() {
         : 'Generar PDF';
 }
 
+/* ---- Unir un PDF de origen al expediente ----
+   Devuelve { total, puestas }: cuántas páginas tenía el documento y
+   cuántas se lograron copiar.
+
+   Los PDF que llegan al portal vienen de escáneres, de juzgados y de
+   correos reenviados, y muchos traen referencias internas colgantes:
+   el visor de Acrobat las ignora sin protestar, pero pdf-lib lanza
+   «Expected instance of ..., but got instance of undefined» al
+   resolverlas. Por eso la carga usa throwOnInvalidObject:false, que
+   deja pasar el objeto roto en vez de abortar el archivo entero.
+
+   Aun así puede fallar la copia de una página concreta. Se intenta
+   primero en bloque, que es mucho más rápido, y solo si eso falla se
+   copia página por página, de modo que un documento con una hoja
+   dañada aporte igual las demás. */
+async function unirPdfAlExpediente(expediente, PDFLib, bytes) {
+    const doc = await PDFLib.PDFDocument.load(bytes, {
+        ignoreEncryption: true,     // PDF con permisos de solo lectura
+        throwOnInvalidObject: false, // referencias colgantes: se ignoran
+        updateMetadata: false        // no reescribir el productor del original
+    });
+    const indices = doc.getPageIndices();
+
+    // Camino rápido: todas las páginas de una vez
+    try {
+        const paginas = await expediente.copyPages(doc, indices);
+        for (const pagina of paginas) expediente.addPage(pagina);
+        return { total: indices.length, puestas: paginas.length };
+    } catch (e) {
+        // Cae al camino lento; la causa se reporta al final si nada entra
+    }
+
+    // Camino lento: se pierde solo la página que esté rota
+    let puestas = 0;
+    for (const i of indices) {
+        try {
+            const [pagina] = await expediente.copyPages(doc, [i]);
+            expediente.addPage(pagina);
+            puestas++;
+        } catch (e) { /* esa página no se pudo copiar */ }
+    }
+    if (puestas === 0) throw new Error('el archivo no tiene páginas legibles');
+    return { total: indices.length, puestas };
+}
+
+/* ---- Unir una imagen al expediente ----
+   La imagen se centra en una página tamaño carta con margen, sin
+   ampliarla por encima de su tamaño real (de ahí el tope de 1 en la
+   escala): estirar un escaneo de baja resolución solo lo emborrona. */
+async function unirImagenAlExpediente(expediente, bytes, ext) {
+    const img = ext === 'png'
+        ? await expediente.embedPng(bytes)
+        : await expediente.embedJpg(bytes);
+    const anchoPag = 612, altoPag = 792;   // carta, en puntos PostScript
+    const margen = 36;                      // media pulgada
+    const escala = Math.min(
+        (anchoPag - margen * 2) / img.width,
+        (altoPag - margen * 2) / img.height,
+        1
+    );
+    const pagina = expediente.addPage([anchoPag, altoPag]);
+    pagina.drawImage(img, {
+        x: (anchoPag - img.width * escala) / 2,
+        y: (altoPag - img.height * escala) / 2,
+        width: img.width * escala,
+        height: img.height * escala
+    });
+}
+
+/* Une los documentos seleccionados en un solo PDF y lo descarga. */
 async function crearExpediente() {
     if (!carpetaAbierta || !puedeGestionarCarpeta(carpetaAbierta) || _seleccionExpediente.length === 0) return;
     const boton = document.getElementById('boton-crear-expediente');
@@ -4277,36 +4528,45 @@ async function crearExpediente() {
         const expediente = await PDFLib.PDFDocument.create();
         let hechos = 0;
 
+        // Cada documento va en su propio try. Antes un solo archivo
+        // ilegible tumbaba el lote entero y el operador perdía los
+        // otros veinticinco; ahora se salta, se anota y se sigue.
+        const fallidos = [];    // no aportaron ninguna página
+        const parciales = [];   // aportaron algunas, no todas
+
         for (const id of _seleccionExpediente) {
             hechos++;
             boton.textContent = 'Uniendo ' + hechos + '/' + _seleccionExpediente.length + '…';
-            const archivo = await dbObtener('archivos', id);   // trae el contenido (blob)
-            if (!archivo || !archivo.blob) continue;
-            const ext = extensionDe(archivo.nombre);
-            const bytes = await archivo.blob.arrayBuffer();
+            let nombre = 'documento ' + hechos;
+            try {
+                const archivo = await dbObtener('archivos', id);   // trae el contenido (blob)
+                // El nombre se toma en cuanto se conoce: si la descarga
+                // vino vacía, el aviso debe decir cuál archivo fue
+                if (archivo && archivo.nombre) nombre = archivo.nombre;
+                if (!archivo || !archivo.blob) { fallidos.push(nombre); continue; }
+                const ext = extensionDe(nombre);
+                const bytes = await archivo.blob.arrayBuffer();
 
-            if (ext === 'pdf') {
-                const doc = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
-                const paginas = await expediente.copyPages(doc, doc.getPageIndices());
-                for (const p of paginas) expediente.addPage(p);
-            } else if (['png', 'jpg', 'jpeg'].includes(ext)) {
-                const img = ext === 'png' ? await expediente.embedPng(bytes) : await expediente.embedJpg(bytes);
-                // la imagen se ajusta a una página tamaño carta con margen
-                const [anchoPag, altoPag] = [612, 792];
-                const margen = 36;
-                const escala = Math.min((anchoPag - margen * 2) / img.width, (altoPag - margen * 2) / img.height, 1);
-                const pagina = expediente.addPage([anchoPag, altoPag]);
-                pagina.drawImage(img, {
-                    x: (anchoPag - img.width * escala) / 2,
-                    y: (altoPag - img.height * escala) / 2,
-                    width: img.width * escala,
-                    height: img.height * escala
-                });
+                if (ext === 'pdf') {
+                    const r = await unirPdfAlExpediente(expediente, PDFLib, bytes);
+                    if (r.puestas < r.total) {
+                        parciales.push(nombre + ' (' + r.puestas + ' de ' + r.total + ' páginas)');
+                    }
+                } else if (['png', 'jpg', 'jpeg'].includes(ext)) {
+                    await unirImagenAlExpediente(expediente, bytes, ext);
+                } else {
+                    fallidos.push(nombre);   // tipo que no se puede fusionar
+                }
+            } catch (e) {
+                // Se anota y se continúa: el resto del expediente se salva
+                console.warn('Expediente: no se pudo unir «' + nombre + '»', e);
+                fallidos.push(nombre);
             }
         }
 
         if (expediente.getPageCount() === 0) {
-            avisar('Ninguno de los documentos seleccionados se pudo unir.', 'error');
+            avisar('Ninguno de los documentos seleccionados se pudo unir. ' +
+                   'Revisa que sean PDF o imágenes y que no estén dañados.', 'error');
             return;
         }
         boton.textContent = 'Generando PDF…';
@@ -4321,9 +4581,22 @@ async function crearExpediente() {
         enlace.remove();
         setTimeout(() => URL.revokeObjectURL(url), 30000);
 
+        const unidos = _seleccionExpediente.length - fallidos.length;
         registrarActividad('generar-expediente',
-            carpetaAbierta.nombre + ' (' + _seleccionExpediente.length + ' documentos)', carpetaAbierta.id);
+            carpetaAbierta.nombre + ' (' + unidos + ' de ' + _seleccionExpediente.length + ' documentos)',
+            carpetaAbierta.id);
+
+        // El aviso dice exactamente qué quedó fuera y por qué, en vez de
+        // dar por bueno un expediente al que le faltan documentos
         avisar('Expediente generado: ' + expediente.getPageCount() + ' página(s) en un solo PDF.');
+        if (fallidos.length) {
+            avisar('No se pudo unir ' + fallidos.length + ' documento(s): ' +
+                   fallidos.join(', ') + '. Ábrelos y vuelve a guardarlos como PDF, ' +
+                   'o añádelos aparte.', 'error');
+        }
+        if (parciales.length) {
+            avisar('Se unieron parcialmente: ' + parciales.join('; ') + '.', 'error');
+        }
         cerrarModalExpediente();
     } catch (e) {
         avisar((e && e.message) || 'No se pudo generar el expediente.', 'error');
@@ -4400,6 +4673,7 @@ async function alternarDescargaPartes(id) {
     }
 }
 
+/* Descarga un documento, si el rol tiene permitido descargarlo. */
 async function descargarArchivo(id) {
     // El cliente y el acreedor solo bajan los documentos habilitados
     if (ES_CLIENTE || ES_ACREEDOR) {
@@ -4422,6 +4696,8 @@ async function descargarArchivo(id) {
     registrarActividad('descargar-archivo', archivo.nombre + (carpetaAbierta ? ' · ' + carpetaAbierta.nombre : ''), archivo.carpetaId);
 }
 
+/* Abre un documento en el visor. Word y Excel se renderizan dentro del
+   portal; el resto va al visor nativo del navegador. */
 async function verArchivo(id) {
     const archivo = await dbObtener('archivos', id);
     if (!archivo) return;
@@ -4445,12 +4721,14 @@ function abrirModalVisor(titulo) {
         '<p class="pt-nota" style="padding:2rem;">Cargando vista previa…</p>';
     document.getElementById('modal-visor').hidden = false;
 }
+/* Cierra el visor de Office y libera su contenido. */
 function cerrarModalVisor() {
     document.getElementById('modal-visor').hidden = true;
     document.getElementById('visor-cuerpo').innerHTML = '';
 }
 
 let _promesaDocx = null;
+/* Carga docx-preview desde CDN la primera vez que se abre un Word. */
 function cargarDocxPreview() {
     if (window.docx && window.docx.renderAsync) return Promise.resolve(window.docx);
     if (_promesaDocx) return _promesaDocx;
@@ -4464,6 +4742,8 @@ function cargarDocxPreview() {
     return _promesaDocx;
 }
 let _promesaXLSX = null;
+/* Carga SheetJS desde CDN la primera vez que se abre un Excel o se
+   exporta a xlsx. */
 function cargarSheetJS() {
     if (window.XLSX) return Promise.resolve(window.XLSX);
     if (_promesaXLSX) return _promesaXLSX;
@@ -4477,6 +4757,7 @@ function cargarSheetJS() {
     return _promesaXLSX;
 }
 
+/* Renderiza un documento de Word dentro del portal. */
 async function verDocumentoWord(archivo) {
     abrirModalVisor(archivo.nombre);
     try {
@@ -4491,6 +4772,8 @@ async function verDocumentoWord(archivo) {
     }
 }
 
+/* Renderiza una hoja de cálculo dentro del portal, con una pestaña por
+   hoja del libro. */
 async function verDocumentoExcel(archivo) {
     abrirModalVisor(archivo.nombre);
     try {
@@ -4533,6 +4816,8 @@ function cargarJSZip() {
 }
 
 const MARCAS_ACENTO_ZIP = new RegExp('[' + String.fromCharCode(0x300) + '-' + String.fromCharCode(0x36f) + ']', 'g');
+/* Convierte un nombre en algo que cualquier sistema de archivos acepte:
+   sin tildes, sin espacios y sin caracteres reservados. */
 function nombreArchivoSeguro(texto) {
     return String(texto)
         .normalize('NFD').replace(MARCAS_ACENTO_ZIP, '')
@@ -4541,6 +4826,8 @@ function nombreArchivoSeguro(texto) {
         .slice(0, 60) || 'carpeta';
 }
 
+/* Descarga toda la carpeta en un ZIP, respetando los permisos de
+   descarga de cada documento. */
 async function descargarCarpetaZip() {
     if (!carpetaAbierta) return;
     const boton = document.getElementById('boton-descargar-zip');
@@ -4602,6 +4889,8 @@ async function descargarCarpetaZip() {
     }
 }
 
+/* Elimina un documento previa confirmación. Borra el metadato y el
+   binario del almacenamiento. */
 async function eliminarArchivo(id) {
     // Solo admin u operador responsable de la carpeta abierta
     if (!carpetaAbierta || !puedeGestionarCarpeta(carpetaAbierta)) return;
@@ -4652,6 +4941,7 @@ async function abrirModalCarpeta(carpeta) {
     document.getElementById('modal-carpeta').hidden = false;
 }
 
+/* Cambia entre las pestañas de roles al asignar personas a la carpeta. */
 function cambiarTabRolCarpeta(grupo) {
     if (!['operadores', 'clientes', 'acreedores'].includes(grupo)) return;
     document.querySelectorAll('#carpeta-tabs-roles button').forEach(b =>
@@ -4661,11 +4951,13 @@ function cambiarTabRolCarpeta(grupo) {
     }
 }
 
+/* Cierra el formulario de carpeta. */
 function cerrarModalCarpeta() {
     document.getElementById('modal-carpeta').hidden = true;
     carpetaEditando = null;
 }
 
+/* Crea o actualiza la carpeta con sus personas asignadas. */
 async function guardarCarpeta(evento) {
     evento.preventDefault();
     if (!ES_ADMIN) return;
@@ -4697,6 +4989,8 @@ async function guardarCarpeta(evento) {
     await mostrarVistaCarpetas();
 }
 
+/* Activa o desactiva una carpeta. Desactivar no borra nada: la saca de
+   la vista de trabajo diario. */
 async function alternarCarpeta(id) {
     if (!ES_ADMIN) return;
     const carpeta = await dbObtener('carpetas', id);
@@ -4708,6 +5002,7 @@ async function alternarCarpeta(id) {
     await mostrarVistaCarpetas();
 }
 
+/* Elimina la carpeta con todos sus documentos, previa confirmación. */
 async function eliminarCarpeta(id) {
     if (!ES_ADMIN) return;
     const carpeta = await dbObtener('carpetas', id);
@@ -4725,6 +5020,8 @@ let _usuariosCache = [];        // todos los usuarios (para filtrar sin recargar
 let _filtroRolUsuarios = '';    // '' = todos los roles
 let _busquedaUsuarios = '';     // texto del buscador
 
+/* Abre la vista de usuarios (solo administrador). Pinta con la copia
+   guardada y corrige cuando responde el servidor. */
 async function mostrarVistaUsuarios() {
     if (!ES_ADMIN) return;
     mostrarVista('vista-usuarios');
@@ -4737,6 +5034,8 @@ async function mostrarVistaUsuarios() {
     if (!guardados || cambio) aplicarUsuarios(valor);
 }
 
+/* Vuelca la lista de usuarios en la vista y actualiza el resumen de
+   cuentas activas. */
 function aplicarUsuarios(usuarios) {
     // slice(): ordenar in situ mutaría la copia guardada en la caché
     _usuariosCache = usuarios.slice().sort((a, b) => a.usuario.localeCompare(b.usuario));
@@ -4751,6 +5050,7 @@ function aplicarUsuarios(usuarios) {
 
 const ORDEN_ROLES_USUARIOS = ['administrador', 'monitor', 'operador', 'cliente', 'acreedor'];
 
+/* Dibuja las tarjetas de usuario ya filtradas por rol y búsqueda. */
 function pintarListaUsuarios() {
     const q = _busquedaUsuarios.trim().toLowerCase();
     let usuarios = _usuariosCache.filter(u =>
@@ -4803,6 +5103,7 @@ function pintarListaUsuarios() {
     cuerpo.innerHTML = html;
 }
 
+/* Filtra la lista de usuarios por rol. */
 function cambiarFiltroRolUsuario(rol) {
     _filtroRolUsuarios = rol || '';
     document.querySelectorAll('#filtro-rol-usuarios button').forEach(b =>
@@ -4888,6 +5189,7 @@ let _actividadCache = [];
 let _rolNotifActivo = 'cliente';
 let _filtroNotifCarpeta = '';   // '' = toda la actividad; id = solo esa carpeta
 
+/* Abre el registro de actividad del portal (administrador y monitor). */
 async function mostrarVistaNotificaciones() {
     if (!ES_SUPERVISION) return; // administrador y monitor (solo lectura)
     mostrarVista('vista-notificaciones');
@@ -4915,6 +5217,7 @@ async function mostrarVistaNotificaciones() {
     pintarNotificaciones();
 }
 
+/* Filtra el registro de actividad por rol. */
 function cambiarRolNotif(rol) {
     if (!ROLES_NOTIF.includes(rol)) return;
     _rolNotifActivo = rol;
@@ -4923,6 +5226,7 @@ function cambiarRolNotif(rol) {
     pintarNotificaciones();
 }
 
+/* Dibuja el registro de actividad ya filtrado. */
 function pintarNotificaciones() {
     // Muestra TODA la actividad del rol: ingresos al portal, entradas a la
     // carpeta, vistas y descargas de documentos, descarga de la carpeta (ZIP),
@@ -4966,6 +5270,8 @@ function pintarNotificaciones() {
     lista.innerHTML = html;
 }
 
+/* Da de alta un usuario. La cuenta la crea una función de servidor con
+   la clave de servicio: el navegador nunca la ve. */
 async function crearUsuario(evento) {
     evento.preventDefault();
     if (!ES_ADMIN) return;
@@ -5002,6 +5308,7 @@ async function crearUsuario(evento) {
     await mostrarVistaUsuarios();
 }
 
+/* Comprobación básica de formato de correo. */
 function esCorreoValido(c) {
     return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(c || ''));
 }
@@ -5011,6 +5318,7 @@ function esCorreoValido(c) {
    pone una NUEVA y se la entrega al usuario que la olvidó. */
 let usuarioEditando = null;
 
+/* Abre la edición de un usuario existente. */
 function abrirModalUsuario(usuario) {
     if (!ES_ADMIN || !usuario) return;
     usuarioEditando = usuario;
@@ -5023,11 +5331,14 @@ function abrirModalUsuario(usuario) {
     document.getElementById('editar-nombre').focus();
 }
 
+/* Cierra el formulario de edición de usuario. */
 function cerrarModalUsuario() {
     document.getElementById('modal-usuario').hidden = true;
     usuarioEditando = null;
 }
 
+/* Guarda los cambios del usuario. La contraseña, si se cambia, la
+   restablece una función de servidor. */
 async function guardarEdicionUsuario(evento) {
     evento.preventDefault();
     if (!ES_ADMIN || !usuarioEditando) return;
@@ -5096,6 +5407,7 @@ async function esUltimoAdminActivo(nombreUsuario) {
     return adminsActivos.length <= 1;
 }
 
+/* Activa o desactiva una cuenta sin borrarla. */
 async function alternarUsuario(nombreUsuario) {
     if (!ES_ADMIN || nombreUsuario === sesion.usuario) return;
     const objetivo = await dbObtener('usuarios', nombreUsuario);
@@ -5113,6 +5425,7 @@ async function alternarUsuario(nombreUsuario) {
     await mostrarVistaUsuarios();
 }
 
+/* Elimina una cuenta previa confirmación. */
 async function eliminarUsuario(nombreUsuario) {
     if (!ES_ADMIN || nombreUsuario === sesion.usuario) return;
     const objetivo = await dbObtener('usuarios', nombreUsuario);
@@ -5460,11 +5773,13 @@ function escaparHtml(texto) {
     }[c]));
 }
 
+/* Extensión de un nombre de archivo, en minúsculas y sin el punto. */
 function extensionDe(nombre) {
     const partes = String(nombre).toLowerCase().split('.');
     return partes.length > 1 ? partes.pop() : '';
 }
 
+/* Icono que corresponde a un tipo de archivo. */
 function iconoArchivo(ext) {
     if (ext === 'pdf' || ext === 'doc' || ext === 'docx') return icono('documento');
     if (ext === 'xls' || ext === 'xlsx') return icono('hoja');
@@ -5474,6 +5789,7 @@ function iconoArchivo(ext) {
     return icono('adjunto');
 }
 
+/* Tamaño en bytes expresado en KB o MB. */
 function formatoTamano(bytes) {
     if (!bytes && bytes !== 0) return '—';
     if (bytes < 1024) return bytes + ' B';
@@ -5481,6 +5797,7 @@ function formatoTamano(bytes) {
     return (bytes / 1048576).toFixed(1) + ' MB';
 }
 
+/* Fecha y hora en formato local colombiano. */
 function formatoFecha(marca) {
     if (!marca) return '—';
     return new Date(marca).toLocaleString('es-CO', {
@@ -5490,6 +5807,8 @@ function formatoFecha(marca) {
 }
 
 let toastTemporizador = null;
+/* Muestra un aviso flotante. El tipo error lo pinta en rojo y lo deja
+   más tiempo en pantalla. */
 function avisar(mensaje, tipo) {
     const toast = document.getElementById('toast');
     if (!toast) { console.warn('Aviso (sin toast):', mensaje); return; }
