@@ -4364,6 +4364,32 @@ function cargarPdfLib() {
 }
 
 /* Abre el selector de documentos del expediente unificado. */
+/* pdf.js (el motor de PDF de Firefox) se usa solo como red de
+   seguridad del expediente: abre archivos que pdf-lib rechaza. Se
+   carga bajo demanda, igual que las demás librerías pesadas. */
+let _promesaPdfJs = null;
+function cargarPdfJs() {
+    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+    if (_promesaPdfJs) return _promesaPdfJs;
+    _promesaPdfJs = new Promise((resolver, rechazar) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
+        script.onload = () => {
+            if (!window.pdfjsLib) return rechazar(new Error('No se pudo cargar el lector de PDF.'));
+            // El worker hace el trabajo pesado fuera del hilo de la interfaz
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+            resolver(window.pdfjsLib);
+        };
+        script.onerror = () => {
+            _promesaPdfJs = null;
+            rechazar(new Error('Sin conexión para cargar el lector de PDF.'));
+        };
+        document.head.appendChild(script);
+    });
+    return _promesaPdfJs;
+}
+
 async function abrirModalExpediente() {
     if (!carpetaAbierta || !puedeGestionarCarpeta(carpetaAbierta)) return;
     _seleccionExpediente = [];
@@ -4447,49 +4473,402 @@ function pintarBotonExpediente() {
         : 'Generar PDF';
 }
 
-/* ---- Unir un PDF de origen al expediente ----
-   Devuelve { total, puestas }: cuántas páginas tenía el documento y
-   cuántas se lograron copiar.
+/* ---- Reparación de PDF a nivel de bytes ----
+   Antes de rendirse con un archivo, se intenta arreglarlo.
 
-   Los PDF que llegan al portal vienen de escáneres, de juzgados y de
-   correos reenviados, y muchos traen referencias internas colgantes:
-   el visor de Acrobat las ignora sin protestar, pero pdf-lib lanza
-   «Expected instance of ..., but got instance of undefined» al
-   resolverlas. Por eso la carga usa throwOnInvalidObject:false, que
-   deja pasar el objeto roto en vez de abortar el archivo entero.
+   Los dos daños que de verdad aparecen en los PDF que llegan de
+   juzgados, escáneres y correos reenviados son:
 
-   Aun así puede fallar la copia de una página concreta. Se intenta
-   primero en bloque, que es mucho más rápido, y solo si eso falla se
-   copia página por página, de modo que un documento con una hoja
-   dañada aporte igual las demás. */
-async function unirPdfAlExpediente(expediente, PDFLib, bytes) {
-    const doc = await PDFLib.PDFDocument.load(bytes, {
-        ignoreEncryption: true,     // PDF con permisos de solo lectura
-        throwOnInvalidObject: false, // referencias colgantes: se ignoran
-        updateMetadata: false        // no reescribir el productor del original
-    });
-    const indices = doc.getPageIndices();
+     a) El catálogo apunta a un árbol de páginas que no existe. El
+        archivo tiene todas sus páginas, pero la puerta de entrada
+        está rota, así que ninguna librería las encuentra.
+     b) El archivo viene cortado y se quedó sin tabla de referencias
+        ni trailer, de modo que no hay por dónde empezar a leerlo.
 
-    // Camino rápido: todas las páginas de una vez
+   La reparación busca los objetos reales recorriendo los bytes y
+   reescribe la puerta de entrada para que apunte a lo que sí está.
+
+   Regla de oro: los reemplazos se hacen SIN cambiar la longitud del
+   archivo, rellenando con espacios. Las posiciones de la tabla de
+   referencias son desplazamientos en bytes; si el archivo se corre un
+   solo byte, se rompe todo lo demás. */
+
+/* Un byte por unidad de código, ida y vuelta sin pérdida. TextDecoder
+   no sirve aquí: 'latin1' se resuelve a windows-1252, que no es una
+   correspondencia uno a uno y estropea el contenido binario. */
+function bytesATexto(bytes) {
+    const u = new Uint8Array(bytes);
+    let salida = '';
+    // Por trozos: pasar un array de millones de elementos a
+    // String.fromCharCode de una vez desborda la pila
+    for (let i = 0; i < u.length; i += 8192) {
+        salida += String.fromCharCode.apply(null, u.subarray(i, i + 8192));
+    }
+    return salida;
+}
+
+function textoABytes(texto) {
+    const u = new Uint8Array(texto.length);
+    for (let i = 0; i < texto.length; i++) u[i] = texto.charCodeAt(i) & 0xff;
+    return u;
+}
+
+/* Intenta reparar el PDF. Devuelve bytes nuevos, o null si no había
+   nada que arreglar o no se pudo. */
+function repararPdf(bytes) {
+    let t = bytesATexto(bytes);
+    let tocado = false;
+
+    // Todos los objetos que existen de verdad en el archivo
+    const objetos = new Map();   // número -> posición del encabezado
+    const reObj = /(\d+)\s+0\s+obj\b/g;
+    let m;
+    while ((m = reObj.exec(t)) !== null) objetos.set(Number(m[1]), m.index);
+    if (objetos.size === 0) return null;   // no hay nada que rescatar
+
+    // El cuerpo de un objeto, para poder mirar su tipo
+    const cuerpoDe = (num) => {
+        const ini = objetos.get(num);
+        if (ini === undefined) return '';
+        const fin = t.indexOf('endobj', ini);
+        return t.slice(ini, fin === -1 ? Math.min(ini + 2048, t.length) : fin);
+    };
+
+    // El árbol de páginas real: el /Type /Pages que tenga /Kids
+    let raizPaginas = null;
+    for (const num of objetos.keys()) {
+        const c = cuerpoDe(num);
+        if (/\/Type\s*\/Pages\b/.test(c) && /\/Kids/.test(c)) { raizPaginas = num; break; }
+    }
+    // El catálogo real
+    let catalogo = null;
+    for (const num of objetos.keys()) {
+        if (/\/Type\s*\/Catalog\b/.test(cuerpoDe(num))) { catalogo = num; break; }
+    }
+
+    /* Reescribe una referencia dejando el archivo del mismo largo.
+       Devuelve el texto nuevo, o null si el número no cabe. */
+    const reescribir = (texto, desde, largo, clave, numero) => {
+        const nuevo = '/' + clave + ' ' + numero + ' 0 R';
+        if (nuevo.length > largo) return null;
+        return texto.slice(0, desde) + nuevo + ' '.repeat(largo - nuevo.length) +
+               texto.slice(desde + largo);
+    };
+
+    // a) Catálogo apuntando a un árbol de páginas inexistente
+    if (catalogo !== null && raizPaginas !== null) {
+        const c = cuerpoDe(catalogo);
+        const ref = /\/Pages\s+(\d+)\s*0\s*R/.exec(c);
+        if (ref && !objetos.has(Number(ref[1])) && Number(ref[1]) !== raizPaginas) {
+            const desde = objetos.get(catalogo) + ref.index;
+            const arreglado = reescribir(t, desde, ref[0].length, 'Pages', raizPaginas);
+            if (arreglado) { t = arreglado; tocado = true; }
+        }
+    }
+
+    // b) Trailer cuyo /Root no lleva a ningún sitio
+    if (catalogo !== null) {
+        const posTrailer = t.lastIndexOf('trailer');
+        if (posTrailer !== -1) {
+            const cola = t.slice(posTrailer);
+            const ref = /\/Root\s+(\d+)\s*0\s*R/.exec(cola);
+            if (ref && !objetos.has(Number(ref[1]))) {
+                const desde = posTrailer + ref.index;
+                const arreglado = reescribir(t, desde, ref[0].length, 'Root', catalogo);
+                if (arreglado) { t = arreglado; tocado = true; }
+            }
+        } else {
+            // Sin trailer: archivo cortado. Se le pega uno al final para
+            // que el lector tenga por dónde entrar. Aquí sí cambia la
+            // longitud, pero da igual: ya no hay tabla que respetar.
+            const mayor = Math.max(...objetos.keys());
+            t += '\ntrailer\n<< /Size ' + (mayor + 1) + ' /Root ' + catalogo +
+                 ' 0 R >>\nstartxref\n0\n%%EOF\n';
+            tocado = true;
+        }
+    }
+
+    return tocado ? textoABytes(t).buffer : null;
+}
+
+/* ---- Reconstrucción completa del PDF ----
+   Para archivos que llegaron cortados: se quedaron sin tabla de
+   referencias, sin trailer y con parte de sus páginas ausentes.
+   Reparar la puerta de entrada no basta, porque el árbol de páginas
+   sigue nombrando folios que ya no están en el archivo.
+
+   Aquí se arma un PDF nuevo con lo que sí sobrevivió:
+
+     1. Se recogen los objetos que están completos, es decir, los que
+        tienen su «endobj». El último objeto de un archivo cortado
+        casi siempre está a medias y se descarta.
+     2. Se identifican el catálogo, el árbol de páginas y las páginas
+        que quedaron.
+     3. Se reescribe el árbol de páginas para que nombre solo esas.
+     4. Se emite el archivo con una tabla de referencias nueva,
+        calculada sobre las posiciones reales de este archivo.
+
+   Lo que falta no se puede inventar: si el archivo perdió dos folios,
+   entran los diez que quedaron. Diez folios valen más que ninguno. */
+function reconstruirPdf(bytes) {
+    const t = bytesATexto(bytes);
+
+    // 1) Objetos completos, con su texto tal cual
+    const objetos = new Map();   // número -> texto del cuerpo (sin encabezado)
+    const re = /(\d+)\s+0\s+obj\b/g;
+    let m;
+    while ((m = re.exec(t)) !== null) {
+        const fin = t.indexOf('endobj', m.index);
+        if (fin === -1) continue;                    // objeto a medias
+        const num = Number(m[1]);
+        const cuerpo = t.slice(m.index + m[0].length, fin);
+        objetos.set(num, cuerpo);                    // el último gana, como manda el formato
+    }
+    if (objetos.size === 0) return null;
+
+    // 2) Catálogo, árbol de páginas y páginas supervivientes
+    let catalogo = null, raiz = null;
+    const paginas = [];
+    for (const [num, cuerpo] of objetos) {
+        if (catalogo === null && /\/Type\s*\/Catalog\b/.test(cuerpo)) catalogo = num;
+        else if (raiz === null && /\/Type\s*\/Pages\b/.test(cuerpo)) raiz = num;
+        else if (/\/Type\s*\/Page\b/.test(cuerpo)) paginas.push(num);
+    }
+    if (!paginas.length) return null;                // sin páginas no hay nada que salvar
+    paginas.sort((a, b) => a - b);
+
+    // 3) Árbol de páginas y catálogo, escritos de nuevo desde cero
+    if (raiz === null) { raiz = Math.max(...objetos.keys()) + 1; }
+    objetos.set(raiz, '\n<< /Type /Pages /Kids [' +
+        paginas.map(n => ' ' + n + ' 0 R').join('') +
+        ' ] /Count ' + paginas.length + ' >>\n');
+    if (catalogo === null) { catalogo = raiz + 1; }
+    objetos.set(catalogo, '\n<< /Type /Catalog /Pages ' + raiz + ' 0 R >>\n');
+
+    // Cada página tiene que colgar del árbol que acabamos de escribir
+    for (const n of paginas) {
+        let c = objetos.get(n);
+        c = /\/Parent\s+\d+\s*0\s*R/.test(c)
+            ? c.replace(/\/Parent\s+\d+\s*0\s*R/, '/Parent ' + raiz + ' 0 R')
+            : c.replace('<<', '<< /Parent ' + raiz + ' 0 R');
+        objetos.set(n, c);
+    }
+
+    // 4) Archivo nuevo, anotando dónde queda cada objeto
+    const numeros = [...objetos.keys()].sort((a, b) => a - b);
+    const mayor = numeros[numeros.length - 1];
+    let salida = '%PDF-1.7\n';
+    const posicion = new Map();
+    for (const n of numeros) {
+        posicion.set(n, salida.length);
+        salida += n + ' 0 obj' + objetos.get(n) + 'endobj\n';
+    }
+
+    // Tabla de referencias: entradas de 20 bytes exactos, sin excepción
+    const inicioXref = salida.length;
+    salida += 'xref\n0 ' + (mayor + 1) + '\n';
+    salida += '0000000000 65535 f \n';
+    for (let n = 1; n <= mayor; n++) {
+        salida += posicion.has(n)
+            ? String(posicion.get(n)).padStart(10, '0') + ' 00000 n \n'
+            : '0000000000 65535 f \n';     // hueco: objeto que no sobrevivió
+    }
+    salida += 'trailer\n<< /Size ' + (mayor + 1) + ' /Root ' + catalogo + ' 0 R >>\n' +
+              'startxref\n' + inicioXref + '\n%%EOF\n';
+
+    return textoABytes(salida).buffer;
+}
+
+/* ---- Rescate: rasterizar el PDF con pdf.js ----
+   Último recurso para archivos que pdf-lib no puede copiar. pdf.js es
+   el motor que usa Firefox: reconstruye lo que puede y dibuja el
+   resto, así que abre prácticamente cualquier PDF que un visor abra.
+
+   Cada página se dibuja en un lienzo y se pega en el expediente como
+   imagen. Se pierde el texto seleccionable, pero el documento QUEDA
+   DENTRO del expediente, que es lo que importa: un expediente al que
+   le falta un folio no sirve.
+
+   La resolución objetivo son 150 puntos por pulgada, suficiente para
+   leer e imprimir un escaneo sin disparar el peso del archivo. */
+async function rasterizarPdfAlExpediente(expediente, bytes) {
+    const pdfjs = await cargarPdfJs();
+    // pdf.js transfiere el buffer al worker y lo deja inservible aquí,
+    // por eso recibe siempre una copia propia
+    const abrir = () => pdfjs.getDocument({
+        // pdf.js transfiere el buffer al worker y lo deja inservible aquí,
+        // por eso cada intento recibe una copia propia
+        data: new Uint8Array(bytes.slice(0)),
+        stopAtErrors: false,          // sigue aunque una página falle
+        isEvalSupported: false,       // no ejecuta JavaScript embebido
+        disableAutoFetch: true
+    }).promise;
+
+    // El worker de pdf.js es compartido y se cierra cuando se destruye el
+    // último documento. Abrir otro justo en ese momento falla con un error
+    // que no tiene que ver con el archivo, así que se reintenta una vez.
+    let doc;
     try {
-        const paginas = await expediente.copyPages(doc, indices);
-        for (const pagina of paginas) expediente.addPage(pagina);
-        return { total: indices.length, puestas: paginas.length };
+        doc = await abrir();
     } catch (e) {
-        // Cae al camino lento; la causa se reporta al final si nada entra
+        await new Promise(r => setTimeout(r, 120));
+        doc = await abrir();
+    }
+    const total = doc.numPages;
+    let puestas = 0;
+
+    const lienzo = document.createElement('canvas');
+    const ctx = lienzo.getContext('2d');
+
+    for (let n = 1; n <= total; n++) {
+        try {
+            const pagina = await doc.getPage(n);
+            const base = pagina.getViewport({ scale: 1 });
+            // 150 ppp sobre los 72 puntos por pulgada del PDF, con tope
+            // para que una página enorme no reviente la memoria
+            const escala = Math.min(150 / 72, 4000 / Math.max(base.width, base.height));
+            const vista = pagina.getViewport({ scale: escala });
+            lienzo.width = Math.floor(vista.width);
+            lienzo.height = Math.floor(vista.height);
+            // Fondo blanco: el PDF puede no pintarlo y el JPEG no tiene
+            // transparencia, quedaría negro
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, lienzo.width, lienzo.height);
+            // intent 'print' no es cosmético: con él pdf.js encadena el
+            // dibujo con microtareas en vez de requestAnimationFrame. Con
+            // rAF, una pestaña en segundo plano congela el render y el
+            // expediente se queda a medias hasta que el usuario vuelve.
+            await pagina.render({
+                canvasContext: ctx,
+                viewport: vista,
+                intent: 'print'
+            }).promise;
+
+            const dataUrl = lienzo.toDataURL('image/jpeg', 0.75);
+            const img = await expediente.embedJpg(dataUrl);
+            // La página del expediente conserva el tamaño real del original
+            const hoja = expediente.addPage([base.width, base.height]);
+            hoja.drawImage(img, { x: 0, y: 0, width: base.width, height: base.height });
+            puestas++;
+            pagina.cleanup();
+        } catch (e) {
+            console.warn('Expediente: no se pudo rasterizar la página ' + n, e);
+        }
+    }
+    try { await doc.destroy(); } catch (e) {}
+    if (puestas === 0) throw new Error('no se pudo dibujar ninguna página');
+    return { total, puestas, rasterizado: true };
+}
+
+/* ---- Unir un PDF de origen al expediente ----
+   Devuelve { total, puestas, rasterizado }: cuántas páginas tenía el
+   documento, cuántas entraron y si hubo que dibujarlas como imagen.
+
+   Se intentan cinco caminos, del mejor al más tolerante, y solo se
+   pasa al siguiente si el anterior no logró meter todas las páginas:
+
+     1. Copia en bloque con pdf-lib. Rápida y conserva el texto.
+     2. Copia página por página con pdf-lib. Salva las páginas sanas de
+        un documento que falla como conjunto.
+     3. Reparar la puerta de entrada a nivel de bytes y reintentar con
+        pdf-lib. Conserva el texto en archivos cuya única avería es esa.
+     4. Rehacer el archivo con los objetos que sobrevivieron, para los
+        que llegaron cortados.
+     5. Rasterizado con pdf.js. Dibuja lo que los otros cuatro rechazan.
+
+   El origen del archivo no importa: si un visor lo abre, entra en el
+   expediente. */
+async function unirPdfAlExpediente(expediente, PDFLib, bytes) {
+    let total = 0;
+    // Páginas que el camino 2 sí logró copiar. Se guardan por si los
+    // caminos siguientes tampoco funcionan: es preferible un documento
+    // al que le faltan folios que ningún documento.
+    let salvadasPorPagina = [];
+
+    try {
+        const doc = await PDFLib.PDFDocument.load(bytes.slice(0), {
+            ignoreEncryption: true,      // PDF con permisos de solo lectura
+            throwOnInvalidObject: false, // referencias colgantes: se ignoran
+            updateMetadata: false        // no reescribir el productor del original
+        });
+        const indices = doc.getPageIndices();
+        total = indices.length;
+
+        // 1) Todas las páginas de una vez
+        try {
+            const paginas = await expediente.copyPages(doc, indices);
+            for (const pagina of paginas) expediente.addPage(pagina);
+            return { total, puestas: paginas.length, rasterizado: false };
+        } catch (e) { /* sigue por el camino 2 */ }
+
+        // 2) Una por una: se aíslan las páginas problemáticas
+        const copiadas = [];
+        for (const i of indices) {
+            try {
+                const [pagina] = await expediente.copyPages(doc, [i]);
+                copiadas.push(pagina);
+            } catch (e) { copiadas.push(null); }
+        }
+        salvadasPorPagina = copiadas.filter(Boolean);
+        if (salvadasPorPagina.length === total && total > 0) {
+            for (const pagina of salvadasPorPagina) expediente.addPage(pagina);
+            return { total, puestas: total, rasterizado: false };
+        }
+        // Faltan páginas. Se intenta reparar el archivo para recuperarlas
+        // todas; si no se logra, al final se usan estas.
+    } catch (e) { /* ni siquiera se pudo leer: va directo al camino 3 */ }
+
+    // 3) Reparar la estructura y volver a intentarlo con pdf-lib, que
+    //    conserva el texto. Muchos archivos solo tienen rota la puerta
+    //    de entrada, no el contenido.
+    let reparados = null;
+    try { reparados = repararPdf(bytes); } catch (e) { reparados = null; }
+    if (reparados) {
+        try {
+            const doc = await PDFLib.PDFDocument.load(reparados.slice(0), {
+                ignoreEncryption: true, throwOnInvalidObject: false, updateMetadata: false
+            });
+            const indices = doc.getPageIndices();
+            if (indices.length) {
+                const paginas = await expediente.copyPages(doc, indices);
+                for (const pagina of paginas) expediente.addPage(pagina);
+                return { total: indices.length, puestas: paginas.length, rasterizado: false };
+            }
+        } catch (e) { /* sigue al camino 4 */ }
     }
 
-    // Camino lento: se pierde solo la página que esté rota
-    let puestas = 0;
-    for (const i of indices) {
+    // 4) Reconstruir el archivo con los objetos que sobrevivieron y
+    //    reintentar con pdf-lib
+    let rearmados = null;
+    try { rearmados = reconstruirPdf(bytes); } catch (e) { rearmados = null; }
+    if (rearmados) {
         try {
-            const [pagina] = await expediente.copyPages(doc, [i]);
-            expediente.addPage(pagina);
-            puestas++;
-        } catch (e) { /* esa página no se pudo copiar */ }
+            const doc = await PDFLib.PDFDocument.load(rearmados.slice(0), {
+                ignoreEncryption: true, throwOnInvalidObject: false, updateMetadata: false
+            });
+            const indices = doc.getPageIndices();
+            if (indices.length) {
+                const paginas = await expediente.copyPages(doc, indices);
+                for (const pagina of paginas) expediente.addPage(pagina);
+                return { total: total || indices.length, puestas: paginas.length, rasterizado: false };
+            }
+        } catch (e) { /* sigue al camino 5 */ }
     }
-    if (puestas === 0) throw new Error('el archivo no tiene páginas legibles');
-    return { total: indices.length, puestas };
+
+    // 5) Red de seguridad: dibujarlo con pdf.js, sobre la mejor versión
+    //    del archivo que se haya conseguido
+    try {
+        const r = await rasterizarPdfAlExpediente(expediente, rearmados || reparados || bytes);
+        return { total: r.total || total, puestas: r.puestas, rasterizado: true };
+    } catch (e) {
+        // Ni pdf.js pudo. Si el camino 2 había rescatado algunas páginas,
+        // entran esas antes que dejar el documento fuera del expediente.
+        if (salvadasPorPagina.length) {
+            for (const pagina of salvadasPorPagina) expediente.addPage(pagina);
+            return { total, puestas: salvadasPorPagina.length, rasterizado: false };
+        }
+        throw e;
+    }
 }
 
 /* ---- Unir una imagen al expediente ----
@@ -4531,8 +4910,9 @@ async function crearExpediente() {
         // Cada documento va en su propio try. Antes un solo archivo
         // ilegible tumbaba el lote entero y el operador perdía los
         // otros veinticinco; ahora se salta, se anota y se sigue.
-        const fallidos = [];    // no aportaron ninguna página
-        const parciales = [];   // aportaron algunas, no todas
+        const fallidos = [];    // ni pdf.js pudo abrirlos
+        const parciales = [];   // entraron, pero les faltan páginas
+        const rescatados = [];  // entraron dibujados como imagen
 
         for (const id of _seleccionExpediente) {
             hechos++;
@@ -4548,7 +4928,9 @@ async function crearExpediente() {
                 const bytes = await archivo.blob.arrayBuffer();
 
                 if (ext === 'pdf') {
+                    boton.textContent = 'Uniendo ' + hechos + '/' + _seleccionExpediente.length + '…';
                     const r = await unirPdfAlExpediente(expediente, PDFLib, bytes);
+                    if (r.rasterizado) rescatados.push(nombre);
                     if (r.puestas < r.total) {
                         parciales.push(nombre + ' (' + r.puestas + ' de ' + r.total + ' páginas)');
                     }
@@ -4589,10 +4971,17 @@ async function crearExpediente() {
         // El aviso dice exactamente qué quedó fuera y por qué, en vez de
         // dar por bueno un expediente al que le faltan documentos
         avisar('Expediente generado: ' + expediente.getPageCount() + ' página(s) en un solo PDF.');
+        if (rescatados.length) {
+            // No es un error: el documento SÍ entró. Se avisa porque esas
+            // páginas van como imagen y no se les puede buscar texto.
+            avisar(rescatados.length + ' documento(s) se unieron como imagen ' +
+                   'porque venían dañados: ' + rescatados.join(', ') +
+                   '. Se ven igual, pero no se les puede buscar texto.');
+        }
         if (fallidos.length) {
             avisar('No se pudo unir ' + fallidos.length + ' documento(s): ' +
-                   fallidos.join(', ') + '. Ábrelos y vuelve a guardarlos como PDF, ' +
-                   'o añádelos aparte.', 'error');
+                   fallidos.join(', ') + '. Puede que estén protegidos con ' +
+                   'contraseña o que el archivo esté incompleto.', 'error');
         }
         if (parciales.length) {
             avisar('Se unieron parcialmente: ' + parciales.join('; ') + '.', 'error');

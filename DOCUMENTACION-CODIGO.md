@@ -272,12 +272,42 @@ derecha.
 contenedores de tabla usan `overflow: visible` y el menú se voltea hacia arriba
 cuando está cerca del borde inferior.
 
-**pdf-lib con PDF de origen dudoso.** Los archivos que llegan de escáneres y
-juzgados traen referencias internas colgantes. `PDFCatalog.Pages()` lanza
-`Expected instance of ..., but got instance of undefined` al resolverlas.
-`unirPdfAlExpediente()` carga con `throwOnInvalidObject: false` y, si la copia en
-bloque falla, copia página por página. Cada documento va además en su propio
-`try`, para que uno roto no tumbe el lote entero.
+**PDF dañados en el expediente.** Un PDF con la estructura rota no se descarta:
+`unirPdfAlExpediente()` prueba cinco caminos, del que mejor conserva el
+documento al más tolerante, y solo pasa al siguiente si el anterior no metió
+todas las páginas.
+
+1. Copia en bloque con pdf-lib. Rápida y conserva el texto.
+2. Copia página por página con pdf-lib, para aislar una página problemática.
+3. `repararPdf()` arregla la puerta de entrada a nivel de bytes: si el catálogo
+   apunta a un árbol de páginas que no existe, o el trailer a un `/Root` que no
+   está, los reescribe apuntando a los objetos reales. Los reemplazos se hacen
+   sin cambiar la longitud del archivo, rellenando con espacios, porque la tabla
+   de referencias son desplazamientos en bytes.
+4. `reconstruirPdf()` rehace el archivo entero con los objetos que estén
+   completos: recalcula el árbol de páginas, emite una tabla de referencias
+   nueva y un trailer. Es lo que salva a los archivos que llegaron cortados.
+5. Rasterizado con pdf.js. Dibuja cada página y la pega como imagen. Se pierde
+   el texto seleccionable, pero el documento entra.
+
+Cada documento va además en su propio `try`, así que uno ilegible no tumba el
+lote. Si al final nada funciona pero el camino 2 había rescatado algunas
+páginas, entran esas.
+
+Verificado con seis averías reales: catálogo colgante, tabla de referencias
+destruida, `startxref` roto, `/Root` inválido, archivo truncado y cabecera de
+correo pegada delante. Las seis entran completas y conservando el texto; el
+truncado aporta las páginas que físicamente sobrevivieron.
+
+El rasterizado usa `intent: 'print'`, y eso no es cosmético: con ese modo pdf.js
+encadena el dibujo con microtareas en vez de `requestAnimationFrame`. Con rAF,
+una pestaña en segundo plano congela el render y el expediente se queda a
+medias hasta que el usuario vuelve.
+
+**pdf.js transfiere el buffer al worker.** Después de `getDocument({data})` el
+`ArrayBuffer` original queda vacío. Por eso cada intento recibe su propia copia
+con `bytes.slice(0)`. Reutilizar el buffer da un error engañoso que no tiene
+nada que ver con el archivo.
 
 **Las bibliotecas pesadas se cargan bajo demanda.** pdf-lib, docx-preview y
 SheetJS entran por CDN la primera vez que hacen falta, y la promesa se guarda
