@@ -1885,38 +1885,78 @@ body.pt-app .pt-buscador:focus-within{ border-color: var(--pt-marca-cian); }
 .pt-notaria-casilla input{ flex: 0 0 auto; margin: 0; }
 .pt-notaria-casilla b{ font-weight: 600; color: var(--pt-tinta); }
 
-/* ---- Vista de notarías ---- */
-/* La oficina abierta va primero y ocupa toda la fila: es el dato que se
-   viene a consultar y el botón que más se usa de la sección. */
-.pt-notaria-abierta{
+
+/* ---- Administrar oficinas, dentro de la pantalla de selección ----
+   Va sobre el panel oscuro, así que los colores no salen de los tokens
+   del tema: se apoyan en blancos translúcidos, como las tarjetas. */
+.pt-elegir__admin{
+    margin-top: 2.88rem;
+    padding-top: 2.08rem;
+    border-top: 1px solid rgba(255,255,255,.14);
+}
+.pt-elegir__admin[hidden]{ display: none; }
+.pt-elegir__admin-cab{
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1.6rem;
-    flex-wrap: wrap;
-    padding: 1.76rem 1.92rem;
-    margin-bottom: 1.6rem;
-    border: 1px solid var(--pt-borde);
-    border-radius: 20px;
-    background: var(--pt-superficie);
+    gap: 1.28rem;
+    margin-bottom: 1.28rem;
 }
-.pt-notaria-abierta:empty{ display: none; }
-.pt-notaria-abierta__txt{ display: flex; flex-direction: column; gap: 0.16rem; }
-.pt-notaria-abierta__eti{
+.pt-elegir__admin-cab span{
     font-size: 1.008rem;
     letter-spacing: .09em;
     text-transform: uppercase;
-    color: var(--pt-gris);
+    color: rgba(255,255,255,.62);
 }
-.pt-notaria-abierta__txt strong{
-    font-family: var(--pt-fuente-titulos);
-    font-size: 1.92rem;
-    font-weight: 600;
-    color: var(--pt-tinta);
+.pt-elegir__admin-cab .pt-boton{
+    background: var(--pt-marca-cian);
+    border-color: var(--pt-marca-cian);
+    color: var(--pt-blanco);
+}
+.pt-elegir__admin-lista{ display: flex; flex-direction: column; gap: 0.48rem; }
+.pt-elegir__admin-fila{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.12rem;
+    flex-wrap: wrap;
+    padding: 0.88rem 1.12rem;
+    border-radius: 14px;
+    background: rgba(255,255,255,.05);
+    font-size: 1.216rem;
+    color: var(--pt-azul-claro);
+}
+.pt-elegir__admin-txt b{ color: var(--pt-blanco); font-weight: 600; }
+.pt-elegir__admin-txt em{
+    font-style: normal;
+    font-size: 1.024rem;
+    color: rgba(255,255,255,.5);
+}
+.pt-elegir__admin-acc{ display: flex; gap: 0.48rem; }
+.pt-elegir__admin-acc button{
+    padding: 0.4rem 0.88rem;
+    border: 1px solid rgba(255,255,255,.24);
+    border-radius: 999px;
+    background: none;
+    font: inherit;
+    font-size: 1.088rem;
+    color: var(--pt-azul-claro);
+    cursor: pointer;
+    transition: border-color var(--pt-rapido), color var(--pt-rapido);
+}
+.pt-elegir__admin-acc button:hover{
+    border-color: var(--pt-blanco);
+    color: var(--pt-blanco);
+}
+.pt-elegir__admin-vacio{
+    font-size: 1.216rem;
+    color: rgba(255,255,255,.55);
 }
 
-/* La fila de la oficina abierta se distingue del resto sin gritar */
-.pt-fila--abierta{
-    border-color: color-mix(in srgb, var(--pt-marca-cian) 40%, var(--pt-borde));
-    background: var(--pt-superficie-2);
+/* Pie de la pantalla: volver al portal y cerrar sesión */
+.pt-elegir__pie{
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin-top: 2.4rem;
 }

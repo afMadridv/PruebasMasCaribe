@@ -308,10 +308,6 @@ function pintarEncabezado() {
     // Calendario: supervisión (todo) y operador (sus carpetas + recordatorios)
     document.getElementById('pestana-calendario').hidden = !(ES_SUPERVISION || ES_OPERADOR);
     document.getElementById('pestana-usuarios').hidden = !ES_ADMIN; // el monitor NUNCA la ve
-    // Notarías: el administrador las gestiona; los demás solo entran si
-    // tienen dos o más entre las que moverse. Con una sola no hay nada
-    // que elegir y la pestaña sobraría.
-    pintarVisibilidadNotarias();
     document.getElementById('pestana-notificaciones').hidden = !ES_SUPERVISION;
     document.getElementById('boton-nueva-carpeta').hidden = !ES_ADMIN;
 }
@@ -507,8 +503,6 @@ async function prepararNotarias() {
 
     // Sin notarías configuradas el portal funciona como antes, en una
     // sola oficina. Es lo que pasa antes de aplicar la migración.
-    pintarVisibilidadNotarias();
-
     if (!_notariasDisponibles.length) {
         _notariaActiva = null;
         pintarNotariaActiva();
@@ -570,6 +564,13 @@ function mostrarPantallaNotarias() {
     lista.innerHTML = html;
     pantalla.hidden = false;
     document.querySelector('.pt-marco').hidden = true;
+
+    // "Volver al portal" solo aparece si ya había una oficina abierta.
+    // Al entrar por primera vez todavía no hay a dónde volver.
+    const volver = document.getElementById('boton-volver-portal');
+    if (volver) volver.hidden = !_arranqueHecho;
+
+    pintarGestionNotarias();
 }
 
 function guardarNotariaActiva() {
@@ -612,18 +613,14 @@ async function elegirNotaria(valor) {
     // no sirve
     cacheOlvidar();
     if (!_arranqueHecho) { await completarArranque(); return; }
-
-    // Si el cambio se hizo desde la propia vista de notarías, se queda
-    // ahí para que se vea cuál quedó abierta. Desde cualquier otro sitio
-    // se va a Carpetas, que es lo que se espera al cambiar de oficina.
-    const enVistaNotarias = !document.getElementById('vista-notarias').hidden;
-    if (enVistaNotarias) { await pintarListaNotarias(); return; }
     await mostrarVistaCarpetas();
 }
 
 /* Vuelve a la pantalla de selección sin cerrar sesión */
 function cambiarNotaria() {
-    if (_notariasDisponibles.length < 2) return;
+    // El administrador entra siempre, aunque haya una sola oficina:
+    // esa pantalla es donde crea las demás.
+    if (!ES_ADMIN && _notariasDisponibles.length < 2) return;
     mostrarPantallaNotarias();
 }
 
@@ -639,7 +636,9 @@ function pintarNotariaActiva() {
     const n = notariaActual();
     const ciudad = n ? n.ciudad : 'Todas las notarías';
     const detalle = n ? n.nombre : 'Panorama general';
-    const puedeCambiar = _notariasDisponibles.length > 1;
+    // El administrador siempre puede volver a la pantalla de oficinas,
+    // porque es desde donde las administra
+    const puedeCambiar = ES_ADMIN || _notariasDisponibles.length > 1;
 
     caja.innerHTML = puedeCambiar
         ? '<button class="pt-notaria__boton" data-accion="cambiar-notaria" ' +
@@ -705,110 +704,47 @@ function pintarNotariasDeFormulario(marcadas) {
         '</label>').join('');
 }
 
-/* ---- Vista de notarías ----
-   Tiene apartado propio en el menú porque cambiar de oficina es algo
-   que se hace a diario. Estaba escondida dentro de Usuarios y, con la
-   barra lateral plegada, no había manera de volver a la selección. */
-
-/* La pestaña se ve si hay algo que hacer en ella: administrarla, o al
-   menos moverse entre dos oficinas. */
-function pintarVisibilidadNotarias() {
-    const pestana = document.getElementById('pestana-notarias');
-    if (!pestana) return;
-    const hayDondeElegir = _notariasDisponibles.length > 1;
-    pestana.hidden = !(ES_ADMIN || hayDondeElegir);
-}
-
-async function mostrarVistaNotarias() {
-    if (!ES_ADMIN && _notariasDisponibles.length < 2) return;
-    mostrarVista('vista-notarias');
-    const boton = document.getElementById('boton-nueva-notaria');
-    if (boton) boton.hidden = !ES_ADMIN;
-    await pintarListaNotarias();
-}
-
-/* Tarjeta con la oficina abierta y el botón para cambiarla. Es lo
-   primero de la vista porque es lo que más se usa. */
-function pintarNotariaAbierta() {
-    const caja = document.getElementById('notaria-abierta');
-    if (!caja) return;
-
-    if (!_notariasDisponibles.length) { caja.innerHTML = ''; return; }
-
-    const n = notariaActual();
-    const puedeCambiar = _notariasDisponibles.length > 1;
-    caja.innerHTML =
-        '<div class="pt-notaria-abierta__txt">' +
-            '<span class="pt-notaria-abierta__eti">Estás trabajando en</span>' +
-            '<strong>' + escaparHtml(n ? n.ciudad : 'Todas las notarías') + '</strong>' +
-            '<span class="pt-nota">' + escaparHtml(n ? n.nombre : 'Panorama general de todas las oficinas') + '</span>' +
-        '</div>' +
-        (puedeCambiar
-            ? '<button class="pt-boton pt-boton--primario" data-accion="cambiar-notaria">' +
-              'Cambiar de notaría</button>'
-            : '');
-}
-
-async function pintarListaNotarias() {
-    const cont = document.getElementById('lista-notarias');
-    const nota = document.getElementById('notarias-nota');
-    const vacio = document.getElementById('notarias-vacio');
-    if (!cont) return;
+/* ---- Gestión de oficinas, dentro de la pantalla de selección ----
+   Administrar la red de notarías es una tarea distinta de trabajar
+   dentro de una, así que vive fuera del portal: en la misma pantalla
+   donde se elige a cuál entrar. */
+async function pintarGestionNotarias() {
+    const caja = document.getElementById('pt-elegir-admin');
+    const lista = document.getElementById('pt-elegir-admin-lista');
+    if (!caja || !lista) return;
+    if (!ES_ADMIN) { caja.hidden = true; return; }
 
     await cargarCatalogoNotarias();
-    pintarNotariaAbierta();
+    caja.hidden = false;
 
-    // El operador y el monitor no administran nada: solo ven dónde
-    // pueden trabajar y cambian de una a otra.
-    const lista = ES_ADMIN
-        ? _notariasFormulario
-        : _notariasFormulario.filter(n =>
-            _notariasDisponibles.some(d => String(d.id) === String(n.id)));
-
-    if (nota) {
-        const activas = lista.filter(n => n.activa).length;
-        nota.textContent = !lista.length ? ''
-            : (ES_ADMIN
-                ? 'Oficinas que atiende el portal. La ciudad es lo que aparece junto al nombre ' +
-                  'del portal al entrar. ' + activas + ' de ' + lista.length + ' activas.'
-                : 'Oficinas donde puedes trabajar.');
-    }
-
-    if (!lista.length) {
-        cont.innerHTML = '';
-        if (vacio) {
-            vacio.hidden = false;
-            vacio.textContent = ES_ADMIN
-                ? 'Todavía no hay notarías. Crea la primera para empezar a repartir las carpetas.'
-                : 'No tienes notarías asignadas. Pídele al administrador que te asigne una.';
-        }
+    if (!_notariasFormulario.length) {
+        lista.innerHTML = '<p class="pt-elegir__admin-vacio">Todavía no hay oficinas. ' +
+            'Crea la primera para empezar a repartir las carpetas.</p>';
         return;
     }
-    if (vacio) vacio.hidden = true;
 
-    const abierta = (n) => String(_notariaActiva) === String(n.id);
-    cont.innerHTML = lista.map(n =>
-        '<div class="pt-fila' + (abierta(n) ? ' pt-fila--abierta' : '') + '">' +
-            '<div class="pt-fila__txt">' +
-                '<div class="pt-fila__nombre">' + escaparHtml(n.ciudad) +
-                    (abierta(n) ? ' <span class="pt-insignia">abierta</span>' : '') +
-                    (n.activa ? '' : ' <span class="pt-insignia">desactivada</span>') + '</div>' +
-                '<span class="pt-nota">' + escaparHtml(n.nombre) + '</span>' +
-            '</div>' +
-            '<div class="pt-celda-acciones">' +
-                (n.activa && !abierta(n)
-                    ? '<button class="pt-boton pt-boton--primario pt-boton--mini" ' +
-                      'data-accion="elegir-notaria" data-notaria="' + n.id + '">Entrar</button> '
-                    : '') +
-                (ES_ADMIN
-                    ? '<button class="pt-boton pt-boton--fantasma pt-boton--mini" ' +
-                          'data-accion="editar-notaria" data-id="' + n.id + '">Editar</button> ' +
-                      '<button class="pt-boton pt-boton--fantasma pt-boton--mini" ' +
-                          'data-accion="alternar-notaria" data-id="' + n.id + '">' +
-                          (n.activa ? 'Desactivar' : 'Activar') + '</button>'
-                    : '') +
-            '</div>' +
+    lista.innerHTML = _notariasFormulario.map(n =>
+        '<div class="pt-elegir__admin-fila">' +
+            '<span class="pt-elegir__admin-txt">' +
+                '<b>' + escaparHtml(n.ciudad) + '</b> · ' + escaparHtml(n.nombre) +
+                (n.activa ? '' : ' <em>desactivada</em>') +
+            '</span>' +
+            '<span class="pt-elegir__admin-acc">' +
+                '<button data-accion="editar-notaria" data-id="' + n.id + '">Editar</button>' +
+                '<button data-accion="alternar-notaria" data-id="' + n.id + '">' +
+                    (n.activa ? 'Desactivar' : 'Activar') + '</button>' +
+            '</span>' +
         '</div>').join('');
+}
+
+/* Vuelve al portal sin cambiar de oficina. Solo tiene sentido si ya
+   había una abierta: al entrar por primera vez no hay a dónde volver. */
+function volverAlPortal() {
+    if (_notariaActiva === null && !ES_ADMIN) return;
+    const pantalla = document.getElementById('pt-elegir');
+    const marco = document.querySelector('.pt-marco');
+    if (pantalla) pantalla.hidden = true;
+    if (marco) marco.hidden = false;
 }
 
 async function nuevaNotariaAccion() {
@@ -824,9 +760,10 @@ async function nuevaNotariaAccion() {
         registrarActividad('crear-notaria', nombre + ' · ' + ciudad);
         // La oficina nueva tiene que aparecer en el selector y en la lista
         _notariasDisponibles = await misNotarias();
-        pintarVisibilidadNotarias();
         pintarNotariaActiva();
-        await pintarListaNotarias();
+        // La oficina nueva tiene que aparecer arriba, entre las que se
+        // pueden elegir, y abajo en la lista de gestión
+        mostrarPantallaNotarias();
         avisar('Notaría «' + ciudad + ' · ' + nombre + '» creada.');
     } catch (e) {
         avisar((e && e.message) || 'No se pudo crear la notaría.', 'error');
@@ -846,7 +783,7 @@ async function editarNotariaAccion(id) {
         registrarActividad('editar-notaria', nombre + ' · ' + ciudad);
         _notariasDisponibles = await misNotarias();
         pintarNotariaActiva();
-        await pintarListaNotarias();
+        mostrarPantallaNotarias();
         avisar('Notaría actualizada.');
     } catch (e) {
         avisar((e && e.message) || 'No se pudo actualizar la notaría.', 'error');
@@ -866,9 +803,8 @@ async function alternarNotariaAccion(id) {
     try {
         await notariaEditar(n.id, null, null, !n.activa);
         _notariasDisponibles = await misNotarias();
-        pintarVisibilidadNotarias();
         pintarNotariaActiva();
-        await pintarListaNotarias();
+        mostrarPantallaNotarias();
         avisar(n.activa ? 'Notaría desactivada.' : 'Notaría activada.');
     } catch (e) {
         avisar((e && e.message) || 'No se pudo cambiar la notaría.', 'error');
@@ -880,7 +816,7 @@ function mostrarVista(idVista) {
     // Al cambiar de sección en móvil, la barra lateral se cierra sola
     alternarLateral(false);
     alternarCajonUsuario(false);
-    for (const id of ['vista-carpetas', 'vista-carpeta', 'vista-estados', 'vista-calendario', 'vista-usuarios', 'vista-notarias', 'vista-notificaciones']) {
+    for (const id of ['vista-carpetas', 'vista-carpeta', 'vista-estados', 'vista-calendario', 'vista-usuarios', 'vista-notificaciones']) {
         const el = document.getElementById(id);
         if (el) el.hidden = (id !== idVista);
     }
@@ -891,7 +827,6 @@ function mostrarVista(idVista) {
     document.getElementById('pestana-estados').classList.toggle('activa', idVista === 'vista-estados');
     document.getElementById('pestana-calendario').classList.toggle('activa', idVista === 'vista-calendario');
     document.getElementById('pestana-usuarios').classList.toggle('activa', idVista === 'vista-usuarios');
-    document.getElementById('pestana-notarias').classList.toggle('activa', idVista === 'vista-notarias');
     document.getElementById('pestana-notificaciones').classList.toggle('activa', idVista === 'vista-notificaciones');
     // El refresco automático de "Estados" solo corre mientras la vista está abierta
     if (idVista !== 'vista-estados') detenerAutoRefrescoEstados();
@@ -6383,7 +6318,7 @@ function conectarEventos() {
             // Notarías
             case 'elegir-notaria':    elegirNotaria(boton.dataset.notaria); break;
             case 'cambiar-notaria':   cambiarNotaria(); break;
-            case 'ver-notarias':      mostrarVistaNotarias(); break;
+            case 'volver-al-portal':  volverAlPortal(); break;
             case 'nueva-notaria':     nuevaNotariaAccion(); break;
             case 'editar-notaria':    editarNotariaAccion(id); break;
             case 'alternar-notaria':  alternarNotariaAccion(id); break;

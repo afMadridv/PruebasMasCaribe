@@ -25,8 +25,23 @@
       <p class="pt-nota">Cada notaría tiene sus propias carpetas y trámites.
          Puedes cambiar de una a otra en cualquier momento, sin cerrar sesión.</p>
       <div class="pt-elegir__lista" id="pt-elegir-lista"></div>
-      <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="salir"
-              style="margin-top:1.6rem;">Cerrar sesión</button>
+
+      <!-- Gestión de oficinas. Vive aquí, fuera del portal, porque
+           administrar la red de notarías es una tarea distinta de
+           trabajar dentro de una. Solo la ve el administrador. -->
+      <div class="pt-elegir__admin" id="pt-elegir-admin" hidden>
+        <div class="pt-elegir__admin-cab">
+          <span>Administrar oficinas</span>
+          <button class="pt-boton pt-boton--mini" data-accion="nueva-notaria">+ Nueva notaría</button>
+        </div>
+        <div class="pt-elegir__admin-lista" id="pt-elegir-admin-lista"></div>
+      </div>
+
+      <div class="pt-elegir__pie">
+        <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="volver-al-portal"
+                id="boton-volver-portal" hidden>Volver al portal</button>
+        <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="salir">Cerrar sesión</button>
+      </div>
     </div>
   </div>
 
@@ -56,7 +71,6 @@
             </button>
             <button id="pestana-calendario" data-accion="ver-calendario-vencimientos" hidden>Calendario</button>
             <button id="pestana-usuarios" data-accion="ver-usuarios" hidden>Usuarios</button>
-            <button id="pestana-notarias" data-accion="ver-notarias" hidden>Notarías</button>
             <button id="pestana-notificaciones" data-accion="ver-notificaciones" hidden>Actividad</button>
         </nav>
 
@@ -152,27 +166,6 @@
             </div>
             <p class="pt-nota" id="estados-nota"></p>
             <div id="contenido-estados"></div>
-        </section>
-
-        <!-- ===== VISTA: NOTARÍAS =====
-             Apartado propio, porque cambiar de oficina y administrarlas son
-             cosas que se hacen a diario y no deben estar escondidas dentro
-             de otra sección. -->
-        <section id="vista-notarias" hidden>
-            <div class="pt-barra-seccion">
-                <h2>Notarías</h2>
-                <div class="pt-barra-seccion__acciones">
-                    <button id="boton-nueva-notaria" class="pt-boton pt-boton--primario"
-                            data-accion="nueva-notaria" hidden>+ Nueva notaría</button>
-                </div>
-            </div>
-
-            <!-- La oficina abierta ahora mismo, con el botón para cambiarla -->
-            <div class="pt-notaria-abierta" id="notaria-abierta"></div>
-
-            <p class="pt-nota" id="notarias-nota" style="margin-bottom:1.2rem;"></p>
-            <div id="lista-notarias" class="pt-tabla-tarjeta"></div>
-            <div id="notarias-vacio" class="pt-vacio" hidden></div>
         </section>
 
         <!-- ===== VISTA: CALENDARIO DE VENCIMIENTOS (admin/monitor) ===== -->
