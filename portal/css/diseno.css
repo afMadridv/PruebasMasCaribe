@@ -1720,3 +1720,167 @@ body.pt-app .pt-buscador:focus-within{ border-color: var(--pt-marca-cian); }
     0%, 100%{ opacity: 1; }
     50%{ opacity: .55; }
 }
+
+
+/* ============================================================
+   13) NOTARÍAS
+   ------------------------------------------------------------
+   El portal atiende varias oficinas. Quien trabaja en dos o más
+   elige al entrar; quien trabaja en una sola no ve nada de esto.
+   ============================================================ */
+
+/* ---- Pantalla de selección ---- */
+.pt-elegir{
+    position: fixed;
+    inset: 0;
+    z-index: var(--pt-z-modal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2.4rem;
+    background: var(--pt-navy-900);
+    overflow-y: auto;
+}
+.pt-elegir[hidden]{ display: none; }
+.pt-elegir__caja{ width: 100%; max-width: 56rem; }
+.pt-elegir__marca{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 1.44rem;
+    font-weight: 600;
+    color: var(--pt-azul-claro);
+    margin-bottom: 2.4rem;
+}
+.pt-elegir__caja h1{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 2.72rem;
+    line-height: 1.2;
+    font-weight: 600;
+    color: var(--pt-blanco);
+    margin-bottom: 0.8rem;
+}
+.pt-elegir__caja > p.pt-nota{
+    color: var(--pt-azul-claro);
+    font-size: 1.28rem;
+    line-height: 1.6;
+    margin-bottom: 2.56rem;
+    max-width: 48ch;
+}
+.pt-elegir__lista{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(24rem, 1fr));
+    gap: 1.28rem;
+}
+/* Cada oficina, una tarjeta. Se pulsa entera, no un enlace pequeño:
+   es la primera decisión del día y conviene que sea cómoda. */
+.pt-elegir__item{
+    display: flex;
+    flex-direction: column;
+    gap: 0.32rem;
+    padding: 1.76rem 1.92rem;
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 20px;
+    background: rgba(255,255,255,.04);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--pt-rapido), border-color var(--pt-rapido);
+}
+.pt-elegir__item:hover{
+    background: rgba(255,255,255,.10);
+    border-color: var(--pt-marca-cian);
+}
+.pt-elegir__ciudad{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 1.76rem;
+    font-weight: 600;
+    color: var(--pt-blanco);
+}
+.pt-elegir__nombre{ font-size: 1.28rem; color: var(--pt-azul-claro); }
+.pt-elegir__detalle{
+    font-size: 1.12rem;
+    color: rgba(255,255,255,.55);
+    margin-top: 0.48rem;
+}
+.pt-elegir .pt-boton--fantasma{
+    border-color: rgba(255,255,255,.28);
+    color: var(--pt-azul-claro);
+}
+.pt-elegir .pt-boton--fantasma:hover{
+    border-color: var(--pt-blanco);
+    color: var(--pt-blanco);
+    background: rgba(255,255,255,.08);
+}
+
+@media (max-width: 620px){
+    .pt-elegir__caja h1{ font-size: 2.08rem; }
+    .pt-elegir__lista{ grid-template-columns: 1fr; }
+}
+
+/* ---- La notaría abierta, en la barra lateral ---- */
+.pt-notaria{ padding: 0 0.64rem; margin-top: -1.12rem; }
+.pt-notaria__boton,
+.pt-notaria__fijo{
+    display: flex;
+    flex-direction: column;
+    gap: 0.16rem;
+    width: 100%;
+    padding: 0.8rem 1.04rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: 14px;
+    background: var(--pt-superficie-2);
+    font: inherit;
+    text-align: left;
+}
+.pt-notaria__boton{
+    cursor: pointer;
+    transition: border-color var(--pt-rapido), background var(--pt-rapido);
+}
+.pt-notaria__boton:hover{
+    border-color: var(--pt-marca-cian);
+    background: var(--pt-superficie);
+}
+/* La flecha solo aparece donde hay a dónde cambiar */
+.pt-notaria__boton::after{
+    content: '⌄';
+    position: absolute;
+    right: 1.6rem;
+    color: var(--pt-gris);
+    font-size: 1.28rem;
+    line-height: 1;
+}
+.pt-notaria__boton{ position: relative; }
+.pt-notaria__ciudad{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 1.28rem;
+    font-weight: 600;
+    color: var(--pt-tinta);
+    padding-right: 1.6rem;
+}
+.pt-notaria__nombre{
+    font-size: 1.024rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--pt-gris);
+}
+
+/* ---- Casillas de notaría en el formulario de usuario ---- */
+.pt-notarias-casillas{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+    gap: 0.64rem;
+    margin-top: 0.48rem;
+}
+.pt-notaria-casilla{
+    display: flex;
+    align-items: center;
+    gap: 0.72rem;
+    padding: 0.8rem 1.04rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: 12px;
+    background: var(--pt-superficie);
+    font-size: 1.216rem;
+    cursor: pointer;
+}
+.pt-notaria-casilla:hover{ border-color: var(--pt-marca-cian); }
+.pt-notaria-casilla input{ flex: 0 0 auto; margin: 0; }
+.pt-notaria-casilla b{ font-weight: 600; color: var(--pt-tinta); }

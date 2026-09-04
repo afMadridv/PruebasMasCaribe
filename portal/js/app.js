@@ -100,11 +100,21 @@ window.addEventListener('unhandledrejection', (evento) => {
 /* Arranque de la aplicación. Pinta el encabezado, conecta los
    escuchadores de eventos y abre la vista de carpetas. Sin sesión
    válida no hace nada: de eso ya se encargó la comprobación de arriba. */
+let _arranqueHecho = false;
+
 async function iniciar() {
     if (!SESION_VALIDA) return;
     pintarEncabezado();
     conectarEventos();
     pintarLeyes();
+
+    // Con dos o más notarías hay que preguntar antes de pintar nada:
+    // no tiene sentido cargar carpetas de una oficina que quizá no sea
+    // la que el usuario quiere abrir.
+    const listo = await prepararNotarias();
+    if (!listo) return;
+
+    _arranqueHecho = true;
     await mostrarVistaCarpetas();
     // Recordatorios personales vigentes: ventana emergente en la esquina
     mostrarRecordatoriosVigentes();
@@ -383,6 +393,9 @@ function alternarCajonUsuario(abrir) {
     if (visible) {
         const primero = document.getElementById('nuevo-usuario');
         if (primero) primero.focus();
+        // Las casillas de notaría dependen del rol elegido, así que se
+        // pintan al abrir y se repintan cuando el rol cambia
+        cargarCatalogoNotarias().then(() => pintarNotariasDeFormulario([]));
     }
 }
 
@@ -435,6 +448,340 @@ if (typeof window.registrarActividad === 'function') {
         if (!ACCIONES_DE_LECTURA.has(accion)) cacheOlvidar();
         return _registrarOriginal(accion, objetivo, carpetaId);
     };
+}
+
+/* ============ NOTARÍAS ============
+   El portal atiende varias oficinas. Cada carpeta vive en una y cada
+   usuario trabaja en una o varias.
+
+   Una sola regla gobierna toda la interfaz: con dos o más notarías el
+   usuario elige al entrar, con una entra directo. No hay condiciones
+   por rol. Un operador de una sola ciudad no nota ningún cambio.
+
+   Dos conceptos que NO son lo mismo y conviene no mezclar:
+
+     - Notarías permitidas: seguridad. Las decide la base de datos, en
+       notarias_del_usuario(), y de ahí cuelga puede_ver_carpeta().
+     - Notaría activa: preferencia de pantalla. Vive en localStorage y
+       solo filtra lo que se muestra.
+
+   Si la activa fallara, lo peor que pasa es que se vea de más dentro
+   de lo que el usuario ya tenía permitido. Nunca de otra oficina. */
+
+const NOTARIA_ACTIVA = 'portal_notaria';
+let _notariasDisponibles = [];   // donde puede entrar quien tiene la sesión
+let _notariaActiva = null;       // id de la que está abierta; null = todas
+
+/* Datos de la notaría abierta, o null si se está viendo todo */
+function notariaActual() {
+    if (_notariaActiva === null) return null;
+    return _notariasDisponibles.find(n => String(n.id) === String(_notariaActiva)) || null;
+}
+
+/* ¿Una carpeta pertenece a la notaría abierta?
+   Con "todas las notarías" pasa cualquiera. */
+function esDeNotariaActiva(carpeta) {
+    if (_notariaActiva === null) return true;
+    return String(carpeta.notariaId) === String(_notariaActiva);
+}
+
+/* Deja solo las carpetas de la notaría abierta. Es un filtro de vista,
+   no de seguridad: lo que llega ya viene filtrado por la base. */
+function filtrarPorNotaria(carpetas) {
+    return (carpetas || []).filter(esDeNotariaActiva);
+}
+
+/* Carga las notarías del usuario y decide si hay que preguntar.
+   Devuelve true si el portal puede arrancar, false si se quedó en la
+   pantalla de selección esperando respuesta. */
+async function prepararNotarias() {
+    try {
+        _notariasDisponibles = await misNotarias();
+    } catch (e) {
+        _notariasDisponibles = [];
+    }
+
+    // Sin notarías configuradas el portal funciona como antes, en una
+    // sola oficina. Es lo que pasa antes de aplicar la migración.
+    if (!_notariasDisponibles.length) {
+        _notariaActiva = null;
+        pintarNotariaActiva();
+        return true;
+    }
+
+    // Una sola: se entra directo, sin preguntar nada
+    if (_notariasDisponibles.length === 1 && !ES_ADMIN) {
+        _notariaActiva = _notariasDisponibles[0].id;
+        guardarNotariaActiva();
+        pintarNotariaActiva();
+        return true;
+    }
+
+    // Si ya había elegido antes y la elección sigue siendo válida, se respeta
+    let guardada = null;
+    try { guardada = localStorage.getItem(NOTARIA_ACTIVA); } catch (e) {}
+    if (guardada === 'todas' && ES_ADMIN) {
+        _notariaActiva = null;
+        pintarNotariaActiva();
+        return true;
+    }
+    if (guardada && _notariasDisponibles.some(n => String(n.id) === String(guardada))) {
+        _notariaActiva = Number(guardada);
+        pintarNotariaActiva();
+        return true;
+    }
+
+    mostrarPantallaNotarias();
+    return false;
+}
+
+/* Pantalla de selección. Solo la ve quien tiene dos o más. */
+function mostrarPantallaNotarias() {
+    const pantalla = document.getElementById('pt-elegir');
+    const lista = document.getElementById('pt-elegir-lista');
+    if (!pantalla || !lista) return;
+
+    const tarjeta = (id, ciudad, nombre, detalle) =>
+        '<button class="pt-elegir__item" data-accion="elegir-notaria" data-notaria="' + id + '">' +
+            '<span class="pt-elegir__ciudad">' + escaparHtml(ciudad) + '</span>' +
+            '<span class="pt-elegir__nombre">' + escaparHtml(nombre) + '</span>' +
+            '<span class="pt-elegir__detalle">' + detalle + '</span>' +
+        '</button>';
+
+    let html = _notariasDisponibles.map(n =>
+        tarjeta(n.id, n.ciudad, n.nombre,
+                n.carpetas + (n.carpetas === 1 ? ' carpeta activa' : ' carpetas activas'))
+    ).join('');
+
+    // El administrador puede además mirar todo junto, para el panorama
+    // nacional en Estados y Calendario
+    if (ES_ADMIN && _notariasDisponibles.length > 1) {
+        const total = _notariasDisponibles.reduce((n, x) => n + x.carpetas, 0);
+        html += tarjeta('todas', 'Todas las notarías', 'Panorama general',
+                        total + ' carpetas activas en ' + _notariasDisponibles.length + ' oficinas');
+    }
+
+    lista.innerHTML = html;
+    pantalla.hidden = false;
+    document.querySelector('.pt-marco').hidden = true;
+}
+
+function guardarNotariaActiva() {
+    try {
+        localStorage.setItem(NOTARIA_ACTIVA,
+            _notariaActiva === null ? 'todas' : String(_notariaActiva));
+    } catch (e) {}
+}
+
+/* Arranca lo que quedó pendiente cuando el portal esperó a que el
+   usuario eligiera oficina */
+async function completarArranque() {
+    if (_arranqueHecho) return;
+    _arranqueHecho = true;
+    await mostrarVistaCarpetas();
+    mostrarRecordatoriosVigentes();
+    iniciarSoporte();
+    iniciarCampana();
+    verificarConsentimiento();
+    avisarCierresPendientes();
+    registrarConexion();
+    presenciaIniciar((enLinea) => {
+        _usuariosEnLinea = enLinea || new Set();
+        pintarEstadoConexion();
+    });
+}
+
+/* Elegir notaría desde la pantalla de selección o desde el selector */
+async function elegirNotaria(valor) {
+    _notariaActiva = (valor === 'todas') ? null : Number(valor);
+    guardarNotariaActiva();
+
+    const pantalla = document.getElementById('pt-elegir');
+    if (pantalla) pantalla.hidden = true;
+    const marco = document.querySelector('.pt-marco');
+    if (marco) marco.hidden = false;
+
+    pintarNotariaActiva();
+    // Lo que se ve cambia por completo: la caché de la oficina anterior
+    // no sirve
+    cacheOlvidar();
+    if (_arranqueHecho) await mostrarVistaCarpetas();
+    else await completarArranque();
+}
+
+/* Vuelve a la pantalla de selección sin cerrar sesión */
+function cambiarNotaria() {
+    if (_notariasDisponibles.length < 2) return;
+    mostrarPantallaNotarias();
+}
+
+/* La ciudad junto al nombre del portal, en la barra lateral y en el
+   título de la pestaña. Con varias oficinas es un botón; con una sola
+   es una etiqueta, porque no hay a dónde cambiar. */
+function pintarNotariaActiva() {
+    const caja = document.getElementById('pt-notaria');
+    if (!caja) return;
+
+    if (!_notariasDisponibles.length) { caja.hidden = true; return; }
+
+    const n = notariaActual();
+    const ciudad = n ? n.ciudad : 'Todas las notarías';
+    const detalle = n ? n.nombre : 'Panorama general';
+    const puedeCambiar = _notariasDisponibles.length > 1;
+
+    caja.innerHTML = puedeCambiar
+        ? '<button class="pt-notaria__boton" data-accion="cambiar-notaria" ' +
+              'title="Cambiar de notaría">' +
+              '<span class="pt-notaria__ciudad">' + escaparHtml(ciudad) + '</span>' +
+              '<span class="pt-notaria__nombre">' + escaparHtml(detalle) + '</span>' +
+          '</button>'
+        : '<div class="pt-notaria__fijo">' +
+              '<span class="pt-notaria__ciudad">' + escaparHtml(ciudad) + '</span>' +
+              '<span class="pt-notaria__nombre">' + escaparHtml(detalle) + '</span>' +
+          '</div>';
+    caja.hidden = false;
+
+    document.title = 'Portal Documental' + (n ? ' ' + n.ciudad : '') + ' | Carpetas';
+}
+
+/* ---- Casillas de notaría en el formulario de usuario ----
+   El operador puede marcar varias; los demás roles una sola, así que
+   las casillas se comportan como botones de opción. El administrador
+   no necesita ninguna: las tiene todas por su rol. */
+let _notariasFormulario = [];   // catálogo completo, para el administrador
+
+async function cargarCatalogoNotarias() {
+    try { _notariasFormulario = await notariasListar(); }
+    catch (e) { _notariasFormulario = []; }
+}
+
+function notariasMarcadasEnFormulario() {
+    return [...document.querySelectorAll('#nuevas-notarias input:checked')]
+        .map(x => Number(x.value));
+}
+
+/* Dibuja las casillas según el rol elegido y marca las que ya tenga */
+function pintarNotariasDeFormulario(marcadas) {
+    const caja = document.getElementById('nuevas-notarias');
+    const campo = document.getElementById('campo-nuevas-notarias');
+    const etiqueta = document.getElementById('etiqueta-nuevas-notarias');
+    if (!caja || !campo) return;
+
+    const rol = (document.getElementById('nuevo-rol') || {}).value || 'cliente';
+    const activas = _notariasFormulario.filter(n => n.activa);
+
+    // Sin notarías configuradas, o siendo administrador, no hay nada que elegir
+    if (!activas.length || rol === 'administrador') {
+        campo.hidden = true;
+        caja.innerHTML = '';
+        return;
+    }
+    campo.hidden = false;
+
+    const varias = rol === 'operador';
+    etiqueta.textContent = varias
+        ? 'Notarías donde puede trabajar (puede marcar varias)'
+        : 'Notaría';
+
+    const yaMarcadas = (marcadas || []).map(String);
+    caja.innerHTML = activas.map(n =>
+        '<label class="pt-notaria-casilla">' +
+            '<input type="' + (varias ? 'checkbox' : 'radio') + '" ' +
+                   'name="notaria-usuario" value="' + n.id + '"' +
+                   (yaMarcadas.includes(String(n.id)) ? ' checked' : '') + '>' +
+            '<span><b>' + escaparHtml(n.ciudad) + '</b> · ' + escaparHtml(n.nombre) + '</span>' +
+        '</label>').join('');
+}
+
+/* ---- Panel de notarías (solo administrador) ---- */
+async function pintarListaNotarias() {
+    const cont = document.getElementById('lista-notarias');
+    const resumen = document.getElementById('notarias-resumen');
+    if (!cont) return;
+
+    await cargarCatalogoNotarias();
+    const activas = _notariasFormulario.filter(n => n.activa).length;
+    if (resumen) {
+        resumen.textContent = _notariasFormulario.length
+            ? activas + ' de ' + _notariasFormulario.length + ' activas'
+            : 'Todavía no hay notarías registradas.';
+    }
+
+    if (!_notariasFormulario.length) {
+        cont.innerHTML = '<div class="pt-vacio">Crea la primera notaría para empezar a repartir las carpetas.</div>';
+        return;
+    }
+
+    cont.innerHTML = _notariasFormulario.map(n =>
+        '<div class="pt-fila">' +
+            '<div class="pt-fila__txt">' +
+                '<div class="pt-fila__nombre">' + escaparHtml(n.ciudad) + '</div>' +
+                '<span class="pt-nota">' + escaparHtml(n.nombre) +
+                    (n.activa ? '' : ' · desactivada') + '</span>' +
+            '</div>' +
+            '<div class="pt-celda-acciones">' +
+                '<button class="pt-boton pt-boton--fantasma pt-boton--mini" ' +
+                    'data-accion="editar-notaria" data-id="' + n.id + '">Editar</button> ' +
+                '<button class="pt-boton pt-boton--fantasma pt-boton--mini" ' +
+                    'data-accion="alternar-notaria" data-id="' + n.id + '">' +
+                    (n.activa ? 'Desactivar' : 'Activar') + '</button>' +
+            '</div>' +
+        '</div>').join('');
+}
+
+async function nuevaNotariaAccion() {
+    if (!ES_ADMIN) return;
+    const ciudad = await pedirTextoPortal('Ciudad de la notaría',
+        'Es lo que aparece junto a "Portal Documental" al entrar. Por ejemplo: Santa Marta.', '');
+    if (!ciudad) return;
+    const nombre = await pedirTextoPortal('Nombre de la notaría',
+        'Por ejemplo: Notaría 2.', '');
+    if (!nombre) return;
+    try {
+        await notariaCrear(nombre, ciudad);
+        registrarActividad('crear-notaria', nombre + ' · ' + ciudad);
+        await pintarListaNotarias();
+        avisar('Notaría «' + ciudad + ' · ' + nombre + '» creada.');
+    } catch (e) {
+        avisar((e && e.message) || 'No se pudo crear la notaría.', 'error');
+    }
+}
+
+async function editarNotariaAccion(id) {
+    if (!ES_ADMIN) return;
+    const n = _notariasFormulario.find(x => String(x.id) === String(id));
+    if (!n) return;
+    const ciudad = await pedirTextoPortal('Ciudad de la notaría', '', n.ciudad);
+    if (!ciudad) return;
+    const nombre = await pedirTextoPortal('Nombre de la notaría', '', n.nombre);
+    if (!nombre) return;
+    try {
+        await notariaEditar(n.id, nombre, ciudad, n.activa);
+        registrarActividad('editar-notaria', nombre + ' · ' + ciudad);
+        await pintarListaNotarias();
+        avisar('Notaría actualizada.');
+    } catch (e) {
+        avisar((e && e.message) || 'No se pudo actualizar la notaría.', 'error');
+    }
+}
+
+/* Desactivar en vez de borrar: una notaría con expedientes no se elimina,
+   se saca de circulación. Borrarla dejaría carpetas sin oficina. */
+async function alternarNotariaAccion(id) {
+    if (!ES_ADMIN) return;
+    const n = _notariasFormulario.find(x => String(x.id) === String(id));
+    if (!n) return;
+    if (n.activa && !await confirmarPortal(
+        'Al desactivar «' + n.ciudad + ' · ' + n.nombre + '» deja de aparecer al entrar. ' +
+        'Sus carpetas no se borran, pero nadie podrá abrirlas hasta reactivarla. ¿Continuar?',
+        'Desactivar notaría')) return;
+    try {
+        await notariaEditar(n.id, null, null, !n.activa);
+        await pintarListaNotarias();
+        avisar(n.activa ? 'Notaría desactivada.' : 'Notaría activada.');
+    } catch (e) {
+        avisar((e && e.message) || 'No se pudo cambiar la notaría.', 'error');
+    }
 }
 
 /* ============ NAVEGACIÓN ENTRE VISTAS ============ */
@@ -499,7 +846,9 @@ function aplicarCarpetas(todas, procesos, usuarios) {
         nombrePorUsuario = {};
         for (const u of usuarios) nombrePorUsuario[u.usuario] = u.nombre;
     }
-    const visibles = todas.filter(puedeVerCarpeta);
+    // Doble filtro: permiso (lo real, ya viene de la base) y notaría
+    // abierta (preferencia de pantalla)
+    const visibles = filtrarPorNotaria(todas.filter(puedeVerCarpeta));
     visibles.sort((a, b) => b.fecha - a.fecha);
 
     _conteoArchivos = {};
@@ -1035,7 +1384,8 @@ async function mostrarVistaEstados() {
 
 /* Vuelca carpetas y procesos en las variables de la vista Estados */
 function aplicarEstados(carpetas, procesos) {
-    _estadosCarpetas = carpetas.filter(puedeVerCarpeta).sort((a, b) => b.fecha - a.fecha);
+    _estadosCarpetas = filtrarPorNotaria(carpetas.filter(puedeVerCarpeta))
+        .sort((a, b) => b.fecha - a.fecha);
     _estadosProcesos = {};
     for (const p of procesos) (_estadosProcesos[p.carpetaId] = _estadosProcesos[p.carpetaId] || []).push(p);
 }
@@ -1781,7 +2131,7 @@ async function mostrarVistaCalendarioVenc() {
     const cCarp = cacheLeer('carpetas'), cProc = cacheLeer('procesos');
     const hayCopia = !!(cCarp && cProc);
     if (hayCopia) {
-        _estadosCarpetas = cCarp.filter(puedeVerCarpeta);
+        _estadosCarpetas = filtrarPorNotaria(cCarp.filter(puedeVerCarpeta));
         _estadosProcesos = {};
         for (const p of cProc) (_estadosProcesos[p.carpetaId] = _estadosProcesos[p.carpetaId] || []).push(p);
         _recordatoriosCalCache = cacheLeer('recordatorios') || [];
@@ -1800,7 +2150,7 @@ async function mostrarVistaCalendarioVenc() {
                 : Promise.resolve({ valor: [], cambio: false })
         ]);
         if (hayCopia && !rCarp.cambio && !rProc.cambio && !rRec.cambio) return;
-        _estadosCarpetas = rCarp.valor.filter(puedeVerCarpeta);
+        _estadosCarpetas = filtrarPorNotaria(rCarp.valor.filter(puedeVerCarpeta));
         _estadosProcesos = {};
         for (const p of rProc.valor) (_estadosProcesos[p.carpetaId] = _estadosProcesos[p.carpetaId] || []).push(p);
         _recordatoriosCalCache = rRec.valor || [];
@@ -3084,10 +3434,13 @@ async function aceptarConsentimientoAccion() {
 async function cambiarPanelUsuarios(panel) {
     const gestion = document.getElementById('panel-usuarios-gestion');
     const consent = document.getElementById('panel-consentimientos');
+    const notar = document.getElementById('panel-notarias');
     document.querySelectorAll('#sub-pestanas-usuarios button').forEach(b =>
         b.classList.toggle('activa', b.dataset.panel === panel));
     gestion.hidden = (panel !== 'gestion');
     consent.hidden = (panel !== 'consentimientos');
+    if (notar) notar.hidden = (panel !== 'notarias');
+    if (panel === 'notarias') { await pintarListaNotarias(); return; }
     if (panel === 'consentimientos') {
         let lista = [];
         try { lista = await consentimientosListar(); } catch (e) {
@@ -5366,8 +5719,17 @@ async function guardarCarpeta(evento) {
         registrarActividad('editar-carpeta', nombre);
         avisar('Carpeta actualizada.');
     } else {
+        // La carpeta nace en la notaría que esté abierta. Con "todas las
+        // notarías" no hay una sola a la que asignarla, así que se pide
+        // elegir antes: una carpeta sin oficina no la vería nadie.
+        if (_notariasDisponibles.length && _notariaActiva === null) {
+            avisar('Abre una notaría concreta para crear la carpeta. ' +
+                   'Desde "Todas las notarías" no se sabe a cuál pertenece.', 'error');
+            return;
+        }
         await dbAgregar('carpetas', {
             nombre, descripcion, activa, asignados, operadores,
+            notariaId: _notariaActiva,
             creadaPor: sesion.usuario,
             fecha: Date.now()
         });
@@ -5670,6 +6032,18 @@ async function crearUsuario(evento) {
     const clave = document.getElementById('nueva-clave').value;
     const rol = document.getElementById('nuevo-rol').value;
     const correo = document.getElementById('nuevo-correo').value.trim();
+    const notarias = notariasMarcadasEnFormulario();
+
+    // El administrador ve todas las oficinas por su rol; a los demás hay
+    // que decirles en cuál trabajan
+    if (rol !== 'administrador' && _notariasDisponibles.length && !notarias.length) {
+        avisar('Elige la notaría donde va a trabajar este usuario.', 'error');
+        return;
+    }
+    if (rol !== 'administrador' && rol !== 'operador' && notarias.length > 1) {
+        avisar('Este rol trabaja en una sola notaría.', 'error');
+        return;
+    }
 
     if (!usuario || !nombre || clave.length < 8 || !ROLES_VALIDOS.includes(rol)) {
         avisar('Revisa los datos: la contraseña necesita mínimo 8 caracteres.', 'error');
@@ -5686,7 +6060,7 @@ async function crearUsuario(evento) {
         return;
     }
     try {
-        const aviso = await crearUsuarioDatos(usuario, nombre, rol, clave, correo);
+        const aviso = await crearUsuarioDatos(usuario, nombre, rol, clave, correo, notarias);
         avisar(aviso || ('Usuario "' + usuario + '" creado.'), aviso ? 'error' : undefined);
     } catch (e) {
         avisar(e.message || 'No se pudo crear el usuario.', 'error');
@@ -5718,6 +6092,43 @@ function abrirModalUsuario(usuario) {
     document.getElementById('editar-notificar').checked = false;
     document.getElementById('modal-usuario').hidden = false;
     document.getElementById('editar-nombre').focus();
+    // Las notarías se traen aparte: son otra tabla
+    pintarNotariasDeEdicion(usuario);
+}
+
+/* Casillas de notaría del usuario que se está editando. Aquí es donde
+   a un operador se le añaden ciudades, o a un cliente se le cambia de
+   oficina. Las carpetas no se mueven con él: pertenecen a la notaría
+   donde se abrieron, no a la persona. */
+async function pintarNotariasDeEdicion(usuario) {
+    const campo = document.getElementById('campo-editar-notarias');
+    const caja = document.getElementById('editar-notarias');
+    const etiqueta = document.getElementById('etiqueta-editar-notarias');
+    if (!campo || !caja) return;
+
+    await cargarCatalogoNotarias();
+    const activas = _notariasFormulario.filter(n => n.activa);
+    // El administrador las tiene todas por su rol: no hay nada que marcar
+    if (!activas.length || usuario.rol === 'administrador') {
+        campo.hidden = true; caja.innerHTML = ''; return;
+    }
+    campo.hidden = false;
+
+    let suyas = [];
+    try { suyas = (await notariasDePerfil(usuario.usuario)).map(String); }
+    catch (e) { suyas = []; }
+
+    const varias = usuario.rol === 'operador';
+    etiqueta.textContent = varias
+        ? 'Notarías donde puede trabajar (puede marcar varias)'
+        : 'Notaría';
+    caja.innerHTML = activas.map(n =>
+        '<label class="pt-notaria-casilla">' +
+            '<input type="' + (varias ? 'checkbox' : 'radio') + '" ' +
+                   'name="notaria-editar" value="' + n.id + '"' +
+                   (suyas.includes(String(n.id)) ? ' checked' : '') + '>' +
+            '<span><b>' + escaparHtml(n.ciudad) + '</b> · ' + escaparHtml(n.nombre) + '</span>' +
+        '</label>').join('');
 }
 
 /* Cierra el formulario de edición de usuario. */
@@ -5745,6 +6156,19 @@ async function guardarEdicionUsuario(evento) {
 
     try {
         await dbGuardar('usuarios', { ...usuarioEditando, nombre, correo });
+
+        // Notarías: se guardan aparte porque viven en otra tabla
+        const campoNot = document.getElementById('campo-editar-notarias');
+        if (campoNot && !campoNot.hidden) {
+            const marcadas = [...document.querySelectorAll('#editar-notarias input:checked')]
+                .map(x => Number(x.value));
+            if (!marcadas.length) {
+                avisar('El usuario necesita al menos una notaría.', 'error');
+                return;
+            }
+            await perfilNotariasFijar(usuarioEditando.usuario, marcadas);
+        }
+
         if (clave) {
             await restablecerClave(usuarioEditando, clave);
             // Si el usuario tenía una solicitud de restablecimiento pendiente,
@@ -5866,6 +6290,13 @@ function conectarEventos() {
             // Barra lateral en pantallas angostas
             case 'abrir-lateral':     mostrarLateral(); break;
             case 'plegar-lateral':    plegarLateral(true); break;
+
+            // Notarías
+            case 'elegir-notaria':    elegirNotaria(boton.dataset.notaria); break;
+            case 'cambiar-notaria':   cambiarNotaria(); break;
+            case 'nueva-notaria':     nuevaNotariaAccion(); break;
+            case 'editar-notaria':    editarNotariaAccion(id); break;
+            case 'alternar-notaria':  alternarNotariaAccion(id); break;
             case 'cerrar-lateral':    alternarLateral(false); break;
 
             // Menú «⋯» de acciones secundarias de una carpeta
@@ -6037,6 +6468,9 @@ function conectarEventos() {
 
     document.getElementById('form-carpeta').addEventListener('submit', guardarCarpeta);
     document.getElementById('form-usuario').addEventListener('submit', crearUsuario);
+    // El rol decide si se puede marcar una notaría o varias
+    const selRol = document.getElementById('nuevo-rol');
+    if (selRol) selRol.addEventListener('change', () => pintarNotariasDeFormulario(notariasMarcadasEnFormulario()));
     // Modal de texto (nombre de subcarpeta y similares)
     const formTexto = document.getElementById('form-texto');
     if (formTexto) {

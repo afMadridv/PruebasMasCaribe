@@ -94,6 +94,7 @@
         return data.map(p => ({
             usuario: p.usuario, nombre: p.nombre, rol: p.rol,
             activo: p.activo, correo: p.correo || '', creado: Date.parse(p.creado), _id: p.id,
+            notariaId: p.notaria_id || null,
             primerLogin: p.primer_login !== false,
             ultimaConexion: p.ultima_conexion ? Date.parse(p.ultima_conexion) : null
         }));
@@ -140,6 +141,7 @@
             fechaFinTramite: c.fecha_fin_tramite || null,
             fechaDesactivacion: c.fecha_desactivacion_programada || null,
             activa: c.activa, creadaPor: c.creada_por, fecha: Date.parse(c.fecha),
+            notariaId: c.notaria_id || null,
             asignados: (rAsignados.data || [])
                 .filter(a => a.carpeta_id === c.id)
                 .map(a => usuarioPorId[a.perfil_id] || a.perfil_id),
@@ -260,6 +262,8 @@
                 nombre: valor.nombre,
                 descripcion: valor.descripcion || '',
                 activa: !!valor.activa,
+                // La carpeta cae en la notaría que el portal tenga abierta
+                notaria_id: valor.notariaId || null,
                 creada_por: ses._id || null
             }).select('id').single();
             if (error) fallar(error);
@@ -669,9 +673,91 @@
        sea un administrador activo). Así el registro público de Supabase
        ("Allow new users to sign up") puede quedar APAGADO: nadie de
        internet puede crearse una cuenta. */
-    window.crearUsuarioDatos = async (usuario, nombre, rol, clave, correo) => {
+    /* ============ NOTARÍAS ============
+       Gemelas de las de db.js. El portal llama siempre a estos nombres
+       sin saber cuál de los dos modos está activo.
+
+       Quién puede entrar a qué notaría lo decide la base, en
+       notarias_del_usuario(). Lo de aquí solo transporta. */
+
+    /* Uuid de un perfil a partir de su nombre de usuario. Las funciones
+       de notarías reciben uuid, pero el portal trabaja con nombres. */
+    async function _idDePerfil(usuario) {
+        const { data, error } = await nube.from('perfiles')
+            .select('id').eq('usuario', usuario).maybeSingle();
+        if (error) fallar(error);
+        if (!data) throw new Error('El usuario no existe.');
+        return data.id;
+    }
+
+    /* Notarías donde puede entrar quien tiene la sesión abierta, con el
+       conteo de carpetas activas para la pantalla de selección */
+    window.misNotarias = async () => {
+        const { data, error } = await nube.rpc('mis_notarias');
+        if (error) fallar(error);
+        return (data || []).map(n => ({
+            id: n.id, nombre: n.nombre, ciudad: n.ciudad,
+            activa: n.activa !== false, carpetas: Number(n.carpetas || 0)
+        }));
+    };
+
+    /* Todas las notarías visibles, para los formularios del administrador */
+    window.notariasListar = async () => {
+        const { data, error } = await nube.from('notarias')
+            .select('id, nombre, ciudad, activa').order('ciudad');
+        if (error) fallar(error);
+        return (data || []).map(n => ({
+            id: n.id, nombre: n.nombre, ciudad: n.ciudad, activa: n.activa !== false
+        }));
+    };
+
+    window.notariaCrear = async (nombre, ciudad) => {
+        const { data, error } = await nube.rpc('notaria_crear', {
+            p_nombre: nombre, p_ciudad: ciudad
+        });
+        if (error) fallar(error);
+        return data;
+    };
+
+    window.notariaEditar = async (id, nombre, ciudad, activa) => {
+        const { error } = await nube.rpc('notaria_editar', {
+            p_id: id, p_nombre: nombre || null,
+            p_ciudad: ciudad || null,
+            p_activa: (activa === undefined ? null : activa)
+        });
+        if (error) fallar(error);
+    };
+
+    /* Reemplaza la lista completa de notarías de un usuario */
+    window.perfilNotariasFijar = async (usuario, ids) => {
+        const perfil = await _idDePerfil(usuario);
+        const { error } = await nube.rpc('perfil_notarias_fijar', {
+            p_perfil: perfil, p_notarias: (ids || []).map(Number)
+        });
+        if (error) fallar(error);
+    };
+
+    window.notariasDePerfil = async (usuario) => {
+        const perfil = await _idDePerfil(usuario);
+        const { data, error } = await nube.rpc('notarias_de_perfil', { p_perfil: perfil });
+        if (error) fallar(error);
+        return (data || []).map(x => (typeof x === 'object' ? x.notarias_de_perfil : x)).map(Number);
+    };
+
+    window.carpetaFijarNotaria = async (carpetaId, notariaId) => {
+        const { error } = await nube.rpc('carpeta_fijar_notaria', {
+            p_carpeta: carpetaId, p_notaria: notariaId
+        });
+        if (error) fallar(error);
+    };
+
+    window.crearUsuarioDatos = async (usuario, nombre, rol, clave, correo, notarias) => {
         const { data, error } = await nube.functions.invoke('crear-usuario', {
-            body: { usuario, nombre, rol, clave, correo, dominio: cfg.DOMINIO_USUARIOS }
+            body: {
+                usuario, nombre, rol, clave, correo,
+                notarias: (notarias || []).map(Number),
+                dominio: cfg.DOMINIO_USUARIOS
+            }
         });
         if (error) {
             let detalle = '';

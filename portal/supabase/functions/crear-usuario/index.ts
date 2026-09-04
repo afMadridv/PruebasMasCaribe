@@ -68,6 +68,11 @@ Deno.serve(async (req: Request) => {
     const rol = String(body?.rol || 'cliente');
     const clave = String(body?.clave || '');
     const correo = String(body?.correo || '').trim();
+    // Notarías donde va a trabajar. Monitor, cliente y acreedor llevan una
+    // sola; el operador puede llevar varias.
+    const notarias = Array.isArray(body?.notarias)
+      ? body.notarias.map((n: unknown) => Number(n)).filter((n: number) => Number.isFinite(n) && n > 0)
+      : [];
     const dominio = String(body?.dominio || 'portal.fundacion');
 
     if (!/^[a-z0-9._-]{1,30}$/.test(usuario)) {
@@ -75,6 +80,16 @@ Deno.serve(async (req: Request) => {
     }
     if (!nombre) return json({ error: 'Falta el nombre completo.' }, 400);
     if (!ROLES_VALIDOS.includes(rol)) return json({ error: 'Rol no válido.' }, 400);
+    // El administrador ve todas las notarías por su rol, así que no
+    // necesita que se le asigne ninguna. Los demás sí.
+    if (rol !== 'administrador') {
+      if (notarias.length === 0) {
+        return json({ error: 'Falta indicar la notaría.' }, 400);
+      }
+      if (rol !== 'operador' && notarias.length > 1) {
+        return json({ error: 'Este rol trabaja en una sola notaría.' }, 400);
+      }
+    }
     if (clave.length < 8) return json({ error: 'La contraseña debe tener al menos 8 caracteres.' }, 400);
 
     // 5) Crear la cuenta con el Admin API (correo confirmado: entra directo).
@@ -100,9 +115,21 @@ Deno.serve(async (req: Request) => {
     const cambios: Record<string, unknown> = {};
     if (rol !== 'cliente') cambios.rol = rol;
     if (correo) cambios.correo = correo;
+    // La primera de la lista queda como notaría de origen
+    if (notarias.length > 0) cambios.notaria_id = notarias[0];
     if (Object.keys(cambios).length > 0) {
       const { error: updErr } = await admin.from('perfiles').update(cambios).eq('id', id);
       if (updErr) return json({ error: 'Usuario creado, pero no se pudo guardar el rol/correo: ' + updErr.message }, 500);
+    }
+
+    // El operador con varias ciudades necesita una fila por notaría.
+    // Para los demás roles basta con la de origen que ya quedó arriba.
+    if (rol === 'operador' && notarias.length > 0) {
+      const filas = notarias.map((n: number) => ({ perfil_id: id, notaria_id: n }));
+      const { error: notErr } = await admin.from('perfil_notarias').insert(filas);
+      if (notErr) {
+        return json({ error: 'Usuario creado, pero no se pudieron asignar las notarías: ' + notErr.message }, 500);
+      }
     }
 
     return json({ ok: true, id });

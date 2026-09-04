@@ -4,7 +4,7 @@
    esto se reemplaza por un backend real (Supabase).
    ============================================ */
 const DB_NOMBRE = 'portal_documental';
-const DB_VERSION = 11; // v11: subcarpetas dentro de la carpeta
+const DB_VERSION = 12; // v12: notarías (varias oficinas en un solo portal)
 
 let _db = null;
 
@@ -19,7 +19,7 @@ function abrirDB() {
         peticion.onupgradeneeded = (e) => {
             const db = e.target.result;
             // Al cambiar de versión se reinician los datos de práctica
-            for (const nombre of ['usuarios', 'carpetas', 'archivos', 'actividad', 'chat', 'hoja', 'mensajes', 'audiencias', 'recordatorios', 'procesos', 'subcarpetas']) {
+            for (const nombre of ['usuarios', 'carpetas', 'archivos', 'actividad', 'chat', 'hoja', 'mensajes', 'audiencias', 'recordatorios', 'procesos', 'subcarpetas', 'notarias']) {
                 if (db.objectStoreNames.contains(nombre)) db.deleteObjectStore(nombre);
             }
             db.createObjectStore('usuarios', { keyPath: 'usuario' });
@@ -43,6 +43,8 @@ function abrirDB() {
             // Subcarpetas: agrupan los documentos dentro de una carpeta
             const subcarpetas = db.createObjectStore('subcarpetas', { keyPath: 'id', autoIncrement: true });
             subcarpetas.createIndex('porCarpeta', 'carpetaId', { unique: false });
+            // Notarías: cada carpeta vive en una, cada usuario trabaja en una o varias
+            db.createObjectStore('notarias', { keyPath: 'id', autoIncrement: true });
         };
 
         peticion.onsuccess = () => { _db = peticion.result; resolver(_db); };
@@ -677,11 +679,17 @@ async function consentimientosListar() {
 
 /* Crea un usuario (versión local). En modo nube, nube.js
    reemplaza esta función por el registro en Supabase. */
-async function crearUsuarioDatos(usuario, nombre, rol, clave, correo) {
+async function crearUsuarioDatos(usuario, nombre, rol, clave, correo, notarias) {
+    // El operador puede llevar varias notarías; los demás roles una
+    // sola, que queda como su oficina de origen. El administrador no
+    // lleva ninguna: las tiene todas por su rol.
+    const lista = (notarias || []).map(Number).filter(Boolean);
     await dbAgregar('usuarios', {
         usuario, nombre, rol,
         activo: true,
         correo: correo || null,
+        notariaId: lista.length ? lista[0] : null,
+        notarias: rol === 'operador' ? lista : [],
         clave: await protegerClave(clave),
         creado: Date.now()
     });
@@ -698,15 +706,127 @@ async function restablecerClave(usuario, nuevaClave) {
 }
 
 /* Crea los usuarios y carpetas de demostración la primera vez */
+/* ============ NOTARÍAS (modo práctica) ============
+   Gemelas de las de nube.js. La regla que gobierna la interfaz es la
+   misma en los dos modos: con dos o más notarías el usuario elige al
+   entrar, con una entra directo.
+
+   El administrador las tiene todas por su rol, sin filas asignadas.
+   Monitor, cliente y acreedor trabajan en la suya. El operador puede
+   tener varias, guardadas en su propio campo 'notarias'. */
+
+/* Notarías donde puede trabajar un usuario, por su nombre de usuario */
+async function _notariasDeUsuario(usuario) {
+    const u = await dbObtener('usuarios', usuario);
+    if (!u) return [];
+    if (u.rol === 'administrador') {
+        const todas = await dbTodos('notarias');
+        return todas.map(n => n.id);
+    }
+    // El operador puede tener varias; el resto solo la de origen
+    const propias = Array.isArray(u.notarias) ? u.notarias.slice() : [];
+    if (u.notariaId && !propias.includes(u.notariaId)) propias.push(u.notariaId);
+    return propias;
+}
+
+/* Notarías donde puede entrar quien tiene la sesión abierta, con el
+   conteo de carpetas activas de cada una para la pantalla de selección */
+async function misNotarias() {
+    const ses = sesionActual();
+    if (!ses) return [];
+    const permitidas = await _notariasDeUsuario(ses.usuario);
+    const todas = await dbTodos('notarias');
+    const carpetas = await dbTodos('carpetas');
+    return todas
+        .filter(n => n.activa !== false && permitidas.includes(n.id))
+        .map(n => ({
+            id: n.id, nombre: n.nombre, ciudad: n.ciudad, activa: n.activa !== false,
+            carpetas: carpetas.filter(c => c.notariaId === n.id && c.activa).length
+        }))
+        .sort((a, b) => (a.ciudad + a.nombre).localeCompare(b.ciudad + b.nombre));
+}
+
+/* Todas las notarías, para los formularios del administrador */
+async function notariasListar() {
+    const todas = await dbTodos('notarias');
+    return todas
+        .map(n => ({ id: n.id, nombre: n.nombre, ciudad: n.ciudad, activa: n.activa !== false }))
+        .sort((a, b) => (a.ciudad + a.nombre).localeCompare(b.ciudad + b.nombre));
+}
+
+async function notariaCrear(nombre, ciudad) {
+    return dbAgregar('notarias', {
+        nombre: String(nombre).trim(),
+        ciudad: String(ciudad).trim(),
+        activa: true,
+        creada: Date.now()
+    });
+}
+
+async function notariaEditar(id, nombre, ciudad, activa) {
+    const n = await dbObtener('notarias', Number(id));
+    if (!n) throw new Error('La notaría no existe.');
+    if (nombre) n.nombre = String(nombre).trim();
+    if (ciudad) n.ciudad = String(ciudad).trim();
+    if (activa !== undefined && activa !== null) n.activa = !!activa;
+    return dbGuardar('notarias', n);
+}
+
+/* Fija en qué notarías trabaja un usuario. Reemplaza la lista entera:
+   lo que no venga se le quita. */
+async function perfilNotariasFijar(usuario, ids) {
+    const u = await dbObtener('usuarios', usuario);
+    if (!u) throw new Error('El usuario no existe.');
+    const lista = (ids || []).map(Number).filter(Boolean);
+
+    if (u.rol === 'administrador') {
+        // Las tiene todas por su rol; asignárselas una por una no aporta
+        u.notarias = [];
+    } else if (u.rol !== 'operador') {
+        if (lista.length !== 1) throw new Error('Este rol trabaja en una sola notaría.');
+        u.notariaId = lista[0];
+        u.notarias = [];
+    } else {
+        if (!lista.length) throw new Error('El operador necesita al menos una notaría.');
+        u.notarias = lista;
+        u.notariaId = lista[0];
+    }
+    return dbGuardar('usuarios', u);
+}
+
+/* Notarías de un usuario concreto, para marcar las casillas al editarlo */
+async function notariasDePerfil(usuario) {
+    return _notariasDeUsuario(usuario);
+}
+
+/* Mueve una carpeta a otra notaría */
+async function carpetaFijarNotaria(carpetaId, notariaId) {
+    const c = await dbObtener('carpetas', Number(carpetaId));
+    if (!c) throw new Error('La carpeta no existe.');
+    c.notariaId = Number(notariaId);
+    return dbGuardar('carpetas', c);
+}
+
 async function sembrarDatosIniciales() {
     const existentes = await dbTodos('usuarios');
     if (existentes.length > 0) return;
 
+    // Dos notarías, para poder probar la pantalla de selección
+    const santaMarta = await dbAgregar('notarias', {
+        nombre: 'Notaría 2', ciudad: 'Santa Marta', activa: true, creada: Date.now()
+    });
+    const barranquilla = await dbAgregar('notarias', {
+        nombre: 'Notaría 5', ciudad: 'Barranquilla', activa: true, creada: Date.now()
+    });
+
     const usuariosDemo = [
-        { usuario: 'administrador', nombre: 'Ana Administradora', rol: 'administrador', clave: 'administrador123', correo: 'ana@ejemplo.com' },
-        { usuario: 'operador',      nombre: 'Carlos Operador',    rol: 'operador',      clave: 'operador123',      correo: 'carlos@ejemplo.com' },
-        { usuario: 'cliente',       nombre: 'Pedro Cliente',      rol: 'cliente',       clave: 'cliente123',       correo: 'pedro@ejemplo.com' },
-        { usuario: 'acreedor',      nombre: 'Banco Acreedor',     rol: 'acreedor',      clave: 'acreedor123',      correo: 'banco@ejemplo.com' }
+        // El administrador no lleva notarías asignadas: las tiene todas por su rol
+        { usuario: 'administrador', nombre: 'Ana Administradora', rol: 'administrador', clave: 'administrador123', correo: 'ana@ejemplo.com', notariaId: santaMarta, notarias: [] },
+        // El operador trabaja en las dos ciudades: al entrar tendrá que elegir
+        { usuario: 'operador',      nombre: 'Carlos Operador',    rol: 'operador',      clave: 'operador123',      correo: 'carlos@ejemplo.com', notariaId: santaMarta, notarias: [santaMarta, barranquilla] },
+        // Cliente y acreedor, una sola: entran directo, sin pantalla de selección
+        { usuario: 'cliente',       nombre: 'Pedro Cliente',      rol: 'cliente',       clave: 'cliente123',       correo: 'pedro@ejemplo.com', notariaId: santaMarta, notarias: [] },
+        { usuario: 'acreedor',      nombre: 'Banco Acreedor',     rol: 'acreedor',      clave: 'acreedor123',      correo: 'banco@ejemplo.com', notariaId: santaMarta, notarias: [] }
     ];
     for (const u of usuariosDemo) {
         await dbAgregar('usuarios', {
@@ -715,6 +835,8 @@ async function sembrarDatosIniciales() {
             rol: u.rol,
             activo: true,
             correo: u.correo,
+            notariaId: u.notariaId,
+            notarias: u.notarias,
             clave: await protegerClave(u.clave),
             creado: Date.now()
         });
@@ -724,6 +846,7 @@ async function sembrarDatosIniciales() {
         nombre: 'Insolvencia — Pedro Cliente (Exp. 001-2026)',
         descripcion: 'Notas internas: audiencia de conciliación pendiente de fecha.',
         activa: true,
+        notariaId: santaMarta,
         asignados: ['cliente', 'acreedor'],
         operadores: ['operador'],
         creadaPor: 'administrador',
@@ -733,8 +856,21 @@ async function sembrarDatosIniciales() {
         nombre: 'Conciliación — Caso de práctica (Exp. 002-2026)',
         descripcion: 'Carpeta sin operador asignado y desactivada: solo la ve el administrador.',
         activa: false,
+        notariaId: santaMarta,
         asignados: ['cliente'],
         operadores: [],
+        creadaPor: 'administrador',
+        fecha: Date.now()
+    });
+    // En la otra ciudad, para comprobar que al cambiar de notaría
+    // cambia lo que se ve
+    await dbAgregar('carpetas', {
+        nombre: 'Insolvencia — Marta Gómez (Exp. 010-2026)',
+        descripcion: 'Expediente de la notaría de Barranquilla.',
+        activa: true,
+        notariaId: barranquilla,
+        asignados: [],
+        operadores: ['operador'],
         creadaPor: 'administrador',
         fecha: Date.now()
     });
