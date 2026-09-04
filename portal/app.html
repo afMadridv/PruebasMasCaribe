@@ -56,6 +56,7 @@
             </button>
             <button id="pestana-calendario" data-accion="ver-calendario-vencimientos" hidden>Calendario</button>
             <button id="pestana-usuarios" data-accion="ver-usuarios" hidden>Usuarios</button>
+            <button id="pestana-notarias" data-accion="ver-notarias" hidden>Notarías</button>
             <button id="pestana-notificaciones" data-accion="ver-notificaciones" hidden>Actividad</button>
         </nav>
 
@@ -151,6 +152,27 @@
             </div>
             <p class="pt-nota" id="estados-nota"></p>
             <div id="contenido-estados"></div>
+        </section>
+
+        <!-- ===== VISTA: NOTARÍAS =====
+             Apartado propio, porque cambiar de oficina y administrarlas son
+             cosas que se hacen a diario y no deben estar escondidas dentro
+             de otra sección. -->
+        <section id="vista-notarias" hidden>
+            <div class="pt-barra-seccion">
+                <h2>Notarías</h2>
+                <div class="pt-barra-seccion__acciones">
+                    <button id="boton-nueva-notaria" class="pt-boton pt-boton--primario"
+                            data-accion="nueva-notaria" hidden>+ Nueva notaría</button>
+                </div>
+            </div>
+
+            <!-- La oficina abierta ahora mismo, con el botón para cambiarla -->
+            <div class="pt-notaria-abierta" id="notaria-abierta"></div>
+
+            <p class="pt-nota" id="notarias-nota" style="margin-bottom:1.2rem;"></p>
+            <div id="lista-notarias" class="pt-tabla-tarjeta"></div>
+            <div id="notarias-vacio" class="pt-vacio" hidden></div>
         </section>
 
         <!-- ===== VISTA: CALENDARIO DE VENCIMIENTOS (admin/monitor) ===== -->
@@ -325,19 +347,6 @@
             <div class="pt-sub-pestanas" id="sub-pestanas-usuarios">
                 <button class="activa" data-accion="usuarios-panel" data-panel="gestion"><span data-icono="usuario" data-icono-tam="17"></span> Usuarios</button>
                 <button data-accion="usuarios-panel" data-panel="consentimientos"><span data-icono="documento" data-icono-tam="17"></span> Consentimientos</button>
-                <button data-accion="usuarios-panel" data-panel="notarias"><span data-icono="carpeta" data-icono-tam="17"></span> Notarías</button>
-            </div>
-
-            <!-- Alta y edición de notarías (solo administrador) -->
-            <div id="panel-notarias" hidden>
-                <p class="pt-nota" style="margin-bottom:1.2rem;">Oficinas que atiende el portal.
-                    La ciudad es lo que aparece junto al nombre del portal cuando se entra.</p>
-                <div class="pt-barra-archivos">
-                    <span class="pt-nota" id="notarias-resumen"></span>
-                    <button class="pt-boton pt-boton--primario pt-boton--mini"
-                            data-accion="nueva-notaria">+ Nueva notaría</button>
-                </div>
-                <div id="lista-notarias" class="pt-tabla-tarjeta"></div>
             </div>
             <div id="panel-consentimientos" hidden>
                 <p class="pt-nota" style="margin-bottom:1.2rem;">Aceptaciones de la política de manejo de datos de

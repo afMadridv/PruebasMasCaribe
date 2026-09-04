@@ -1884,3 +1884,39 @@ body.pt-app .pt-buscador:focus-within{ border-color: var(--pt-marca-cian); }
 .pt-notaria-casilla:hover{ border-color: var(--pt-marca-cian); }
 .pt-notaria-casilla input{ flex: 0 0 auto; margin: 0; }
 .pt-notaria-casilla b{ font-weight: 600; color: var(--pt-tinta); }
+
+/* ---- Vista de notarías ---- */
+/* La oficina abierta va primero y ocupa toda la fila: es el dato que se
+   viene a consultar y el botón que más se usa de la sección. */
+.pt-notaria-abierta{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.6rem;
+    flex-wrap: wrap;
+    padding: 1.76rem 1.92rem;
+    margin-bottom: 1.6rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: 20px;
+    background: var(--pt-superficie);
+}
+.pt-notaria-abierta:empty{ display: none; }
+.pt-notaria-abierta__txt{ display: flex; flex-direction: column; gap: 0.16rem; }
+.pt-notaria-abierta__eti{
+    font-size: 1.008rem;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--pt-gris);
+}
+.pt-notaria-abierta__txt strong{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 1.92rem;
+    font-weight: 600;
+    color: var(--pt-tinta);
+}
+
+/* La fila de la oficina abierta se distingue del resto sin gritar */
+.pt-fila--abierta{
+    border-color: color-mix(in srgb, var(--pt-marca-cian) 40%, var(--pt-borde));
+    background: var(--pt-superficie-2);
+}
