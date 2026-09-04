@@ -93,7 +93,9 @@ create or replace function public.notarias_del_usuario()
 returns setof bigint
 language sql stable security definer set search_path = public
 as $$
-    -- El administrador las ve todas por su rol
+    -- El administrador las ve todas por su rol. El monitor NO: aunque
+    -- lee todas las carpetas, se le asigna una oficina como a los
+    -- demás, que es lo que se pidió.
     select n.id
       from public.notarias n
      where public.es_admin()
@@ -141,6 +143,9 @@ as $$
         )
         and (
             public.es_admin()
+            -- El monitor ve todo en solo lectura. Estaba en la base pero
+            -- no en esquema.sql: sin esta línea perdería el acceso.
+            or public.es_monitor()
             or public.es_operador_de(carpeta)
             or exists (
                 select 1
@@ -179,7 +184,7 @@ create policy "asignados ven sus carpetas activas" on public.carpetas
 
 drop policy if exists "monitor ve todas las carpetas" on public.carpetas;
 create policy "monitor ve todas las carpetas" on public.carpetas
-    for select using (public.rol_actual() = 'monitor' and public.puede_ver_notaria(notaria_id));
+    for select using (public.es_monitor() and public.puede_ver_notaria(notaria_id));
 
 -- ------------------------------------------------------------
 -- 5) Seguridad de las tablas nuevas
@@ -379,7 +384,17 @@ begin
     end loop;
 end $$;
 
--- notarias_del_usuario y puede_ver_notaria las llaman las políticas por
--- dentro; no hace falta que el cliente pueda invocarlas directamente.
-revoke execute on function public.notarias_del_usuario() from authenticated;
-revoke execute on function public.puede_ver_notaria(bigint) from authenticated;
+-- notarias_del_usuario y puede_ver_notaria SÍ necesitan EXECUTE para
+-- 'authenticated', aunque solo las llamen las políticas.
+--
+-- Las políticas RLS se evalúan con los privilegios de QUIEN CONSULTA,
+-- no con los del dueño de la tabla. puede_ver_notaria aparece en las
+-- cuatro políticas de lectura de carpetas y notarias_del_usuario en la
+-- de notarias: sin este permiso, leer carpetas falla con
+-- "permission denied for function puede_ver_notaria" para todos los
+-- roles, y el portal se queda sin datos.
+--
+-- Exponerlas no filtra nada: ambas resuelven desde auth.uid(), así que
+-- cada usuario solo obtiene lo suyo.
+grant execute on function public.notarias_del_usuario()     to authenticated;
+grant execute on function public.puede_ver_notaria(bigint)  to authenticated;
