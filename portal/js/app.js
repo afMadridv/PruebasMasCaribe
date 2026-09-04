@@ -491,6 +491,26 @@ function filtrarPorNotaria(carpetas) {
     return (carpetas || []).filter(esDeNotariaActiva);
 }
 
+/* ¿Trabaja este usuario en la notaría indicada?
+   Los usuarios de cada oficina son distintos: un cliente de Santa Marta
+   no aparece en Medellín. La excepción es el operador al que se le
+   dieron varias, y el administrador, que está en todas.
+
+   Con notaria en null se está mirando "Todas las notarías" y pasan
+   todos. */
+function usuarioEnNotaria(u, notaria) {
+    if (notaria === null || notaria === undefined) return true;
+    if (!u) return false;
+    if (u.rol === 'administrador') return true;
+    const suyas = (u.notarias && u.notarias.length)
+        ? u.notarias
+        : (u.notariaId ? [u.notariaId] : []);
+    // Sin notarías configuradas todavía (antes de la migración) no se
+    // filtra nada: el portal se comporta como una sola oficina
+    if (!suyas.length) return !_notariasDisponibles.length;
+    return suyas.some(n => String(n) === String(notaria));
+}
+
 /* Carga las notarías del usuario y decide si hay que preguntar.
    Devuelve true si el portal puede arrancar, false si se quedó en la
    pantalla de selección esperando respuesta. */
@@ -614,6 +634,16 @@ async function elegirNotaria(valor) {
     cacheOlvidar();
     if (!_arranqueHecho) { await completarArranque(); return; }
     await mostrarVistaCarpetas();
+}
+
+/* Resumen de cuántas cuentas hay en la oficina abierta. Se recalcula
+   sobre lo que de verdad se ve, no sobre el total del sistema. */
+function resumenUsuariosDeNotaria() {
+    const enOficina = _usuariosCache.filter(u => usuarioEnNotaria(u, _notariaActiva));
+    const activas = enOficina.filter(u => u.activo !== false).length;
+    const n = notariaActual();
+    return activas + (activas === 1 ? ' cuenta activa' : ' cuentas activas') +
+           ' de ' + enOficina.length + (n ? ' en ' + n.ciudad : '');
 }
 
 /* Vuelve a la pantalla de selección sin cerrar sesión */
@@ -5678,8 +5708,14 @@ async function abrirModalCarpeta(carpeta) {
     document.getElementById('carpeta-descripcion').value = carpeta ? (carpeta.descripcion || '') : '';
     document.getElementById('carpeta-activa').checked = carpeta ? !!carpeta.activa : true;
 
-    // Listas para asignar: operadores responsables y clientes/acreedores
-    const usuarios = await dbTodos('usuarios');
+    // Listas para asignar: operadores responsables y clientes/acreedores.
+    // Solo sale la gente de la notaría de la carpeta: asignar un cliente
+    // de Medellín a un expediente de Santa Marta rompería el aislamiento
+    // entre oficinas. Al editar manda la notaría de la carpeta, no la que
+    // esté abierta, por si se llegó desde "Todas las notarías".
+    const notariaDeLaCarpeta = carpeta ? (carpeta.notariaId ?? null) : _notariaActiva;
+    const usuarios = (await dbTodos('usuarios'))
+        .filter(u => usuarioEnNotaria(u, notariaDeLaCarpeta));
     const filaCheque = (u, marcados) =>
         '<label><input type="checkbox" value="' + escaparHtml(u.usuario) + '"' +
         (marcados.includes(u.usuario) ? ' checked' : '') + '> ' +
@@ -5690,17 +5726,17 @@ async function abrirModalCarpeta(carpeta) {
     const operadores = usuarios.filter(u => u.rol === 'operador');
     const operadoresMarcados = carpeta ? (carpeta.operadores || []) : [];
     document.getElementById('carpeta-operadores').innerHTML = operadores.length === 0
-        ? '<p class="pt-nota">No hay operadores creados todavía.</p>'
+        ? '<p class="pt-nota">No hay operadores en esta notaría. Créalos desde Usuarios, o dale acceso a esta oficina a alguien que ya exista.</p>'
         : operadores.map(u => filaCheque(u, operadoresMarcados)).join('');
 
     const marcados = carpeta ? (carpeta.asignados || []) : [];
     const clientes = usuarios.filter(u => u.rol === 'cliente');
     document.getElementById('carpeta-clientes').innerHTML = clientes.length === 0
-        ? '<p class="pt-nota">No hay clientes creados todavía.</p>'
+        ? '<p class="pt-nota">No hay clientes en esta notaría. Créalos desde Usuarios, o dale acceso a esta oficina a alguien que ya exista.</p>'
         : clientes.map(u => filaCheque(u, marcados)).join('');
     const acreedores = usuarios.filter(u => u.rol === 'acreedor');
     document.getElementById('carpeta-acreedores').innerHTML = acreedores.length === 0
-        ? '<p class="pt-nota">No hay acreedores creados todavía.</p>'
+        ? '<p class="pt-nota">No hay acreedores en esta notaría. Créalos desde Usuarios, o dale acceso a esta oficina a alguien que ya exista.</p>'
         : acreedores.map(u => filaCheque(u, marcados)).join('');
 
     cambiarTabRolCarpeta('operadores');
@@ -5815,11 +5851,7 @@ function aplicarUsuarios(usuarios) {
     // slice(): ordenar in situ mutaría la copia guardada en la caché
     _usuariosCache = usuarios.slice().sort((a, b) => a.usuario.localeCompare(b.usuario));
     const resumen = document.getElementById('usuarios-resumen');
-    if (resumen) {
-        const activas = _usuariosCache.filter(u => u.activo !== false).length;
-        resumen.textContent = activas + (activas === 1 ? ' cuenta activa' : ' cuentas activas') +
-            ' de ' + _usuariosCache.length;
-    }
+    if (resumen) resumen.textContent = resumenUsuariosDeNotaria();
     pintarListaUsuarios();
 }
 
@@ -5829,6 +5861,9 @@ const ORDEN_ROLES_USUARIOS = ['administrador', 'monitor', 'operador', 'cliente',
 function pintarListaUsuarios() {
     const q = _busquedaUsuarios.trim().toLowerCase();
     let usuarios = _usuariosCache.filter(u =>
+        // Cada oficina tiene su propia gente. Solo el operador con varias
+        // asignadas, y el administrador, aparecen en más de una.
+        usuarioEnNotaria(u, _notariaActiva) &&
         (!_filtroRolUsuarios || u.rol === _filtroRolUsuarios) &&
         (!q || (u.usuario || '').toLowerCase().includes(q) ||
                (u.nombre || '').toLowerCase().includes(q) ||

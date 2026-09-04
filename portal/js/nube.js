@@ -89,12 +89,24 @@
 
     /* ============ ADAPTADORES DE DATOS ============ */
     async function listarPerfiles() {
-        const { data, error } = await nube.from('perfiles').select('*').order('usuario');
+        // Las notarías extra del operador viven en otra tabla, así que se
+        // traen a la vez. RLS decide qué filas llegan: el administrador
+        // las ve todas, cada quien la suya.
+        const [rPerfiles, rNotarias] = await Promise.all([
+            nube.from('perfiles').select('*').order('usuario'),
+            nube.from('perfil_notarias').select('perfil_id, notaria_id')
+        ]);
+        const { data, error } = rPerfiles;
         if (error) fallar(error);
+        const extra = {};
+        for (const f of (rNotarias.data || [])) {
+            (extra[f.perfil_id] = extra[f.perfil_id] || []).push(f.notaria_id);
+        }
         return data.map(p => ({
             usuario: p.usuario, nombre: p.nombre, rol: p.rol,
             activo: p.activo, correo: p.correo || '', creado: Date.parse(p.creado), _id: p.id,
             notariaId: p.notaria_id || null,
+            notarias: extra[p.id] || (p.notaria_id ? [p.notaria_id] : []),
             primerLogin: p.primer_login !== false,
             ultimaConexion: p.ultima_conexion ? Date.parse(p.ultima_conexion) : null
         }));
