@@ -737,11 +737,20 @@ async function misNotarias() {
     const permitidas = await _notariasDeUsuario(ses.usuario);
     const todas = await dbTodos('notarias');
     const carpetas = await dbTodos('carpetas');
+    const procesos = await dbTodos('procesos');
     return todas
         .filter(n => n.activa !== false && permitidas.includes(n.id))
         .map(n => ({
             id: n.id, nombre: n.nombre, ciudad: n.ciudad, activa: n.activa !== false,
-            carpetas: carpetas.filter(c => c.notariaId === n.id && c.activa).length
+            carpetas: carpetas.filter(c => c.notariaId === n.id && c.activa).length,
+            // Procesos sin completar en semáforo rojo o naranja, para que
+            // la pantalla de selección diga dónde aprieta
+            porVencer: procesos.filter(pr => {
+                if (pr.completado || pr.pausado) return false;
+                const c = carpetas.find(x => x.id === pr.carpetaId);
+                if (!c || !c.activa || c.notariaId !== n.id) return false;
+                return pr.semaforo === 'rojo' || pr.semaforo === 'naranja';
+            }).length
         }))
         .sort((a, b) => (a.ciudad + a.nombre).localeCompare(b.ciudad + b.nombre));
 }

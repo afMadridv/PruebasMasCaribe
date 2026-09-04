@@ -1729,93 +1729,6 @@ body.pt-app .pt-buscador:focus-within{ border-color: var(--pt-marca-cian); }
    elige al entrar; quien trabaja en una sola no ve nada de esto.
    ============================================================ */
 
-/* ---- Pantalla de selección ---- */
-.pt-elegir{
-    position: fixed;
-    inset: 0;
-    z-index: var(--pt-z-modal);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2.4rem;
-    background: var(--pt-navy-900);
-    overflow-y: auto;
-}
-.pt-elegir[hidden]{ display: none; }
-.pt-elegir__caja{ width: 100%; max-width: 56rem; }
-.pt-elegir__marca{
-    font-family: var(--pt-fuente-titulos);
-    font-size: 1.44rem;
-    font-weight: 600;
-    color: var(--pt-azul-claro);
-    margin-bottom: 2.4rem;
-}
-.pt-elegir__caja h1{
-    font-family: var(--pt-fuente-titulos);
-    font-size: 2.72rem;
-    line-height: 1.2;
-    font-weight: 600;
-    color: var(--pt-blanco);
-    margin-bottom: 0.8rem;
-}
-.pt-elegir__caja > p.pt-nota{
-    color: var(--pt-azul-claro);
-    font-size: 1.28rem;
-    line-height: 1.6;
-    margin-bottom: 2.56rem;
-    max-width: 48ch;
-}
-.pt-elegir__lista{
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(24rem, 1fr));
-    gap: 1.28rem;
-}
-/* Cada oficina, una tarjeta. Se pulsa entera, no un enlace pequeño:
-   es la primera decisión del día y conviene que sea cómoda. */
-.pt-elegir__item{
-    display: flex;
-    flex-direction: column;
-    gap: 0.32rem;
-    padding: 1.76rem 1.92rem;
-    border: 1px solid rgba(255,255,255,.18);
-    border-radius: 20px;
-    background: rgba(255,255,255,.04);
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-    transition: background var(--pt-rapido), border-color var(--pt-rapido);
-}
-.pt-elegir__item:hover{
-    background: rgba(255,255,255,.10);
-    border-color: var(--pt-marca-cian);
-}
-.pt-elegir__ciudad{
-    font-family: var(--pt-fuente-titulos);
-    font-size: 1.76rem;
-    font-weight: 600;
-    color: var(--pt-blanco);
-}
-.pt-elegir__nombre{ font-size: 1.28rem; color: var(--pt-azul-claro); }
-.pt-elegir__detalle{
-    font-size: 1.12rem;
-    color: rgba(255,255,255,.55);
-    margin-top: 0.48rem;
-}
-.pt-elegir .pt-boton--fantasma{
-    border-color: rgba(255,255,255,.28);
-    color: var(--pt-azul-claro);
-}
-.pt-elegir .pt-boton--fantasma:hover{
-    border-color: var(--pt-blanco);
-    color: var(--pt-blanco);
-    background: rgba(255,255,255,.08);
-}
-
-@media (max-width: 620px){
-    .pt-elegir__caja h1{ font-size: 2.08rem; }
-    .pt-elegir__lista{ grid-template-columns: 1fr; }
-}
-
 /* ---- La notaría abierta, en la barra lateral ---- */
 .pt-notaria{ padding: 0 0.64rem; margin-top: -1.12rem; }
 .pt-notaria__boton,
@@ -1886,77 +1799,332 @@ body.pt-app .pt-buscador:focus-within{ border-color: var(--pt-marca-cian); }
 .pt-notaria-casilla b{ font-weight: 600; color: var(--pt-tinta); }
 
 
-/* ---- Administrar oficinas, dentro de la pantalla de selección ----
-   Va sobre el panel oscuro, así que los colores no salen de los tokens
-   del tema: se apoyan en blancos translúcidos, como las tarjetas. */
-.pt-elegir__admin{
-    margin-top: 2.88rem;
-    padding-top: 2.08rem;
-    border-top: 1px solid rgba(255,255,255,.14);
+/* ---- Pantalla de selección de oficina ----
+   Panel partido, como el ingreso: la marca a la izquierda y la decisión
+   a la derecha. A diferencia del ingreso, el panel derecho sigue el tema
+   claro u oscuro, porque a esta pantalla se entra a diario. */
+.pt-elegir{
+    position: fixed;
+    inset: 0;
+    z-index: var(--pt-z-modal);
+    display: grid;
+    grid-template-columns: 1fr 1.15fr;
+    background: var(--pt-fondo);
+    overflow-y: auto;
 }
+.pt-elegir[hidden]{ display: none; }
+
+/* Panel de marca: siempre oscuro, es el chrome de la casa */
+.pt-elegir__marca{
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 3.2rem;
+    padding: 4.16rem 4.48rem;
+    background: var(--pt-navy-900);
+    color: var(--pt-blanco);
+}
+.pt-elegir__logo{
+    display: flex;
+    align-items: center;
+    gap: 1.12rem;
+    font-family: var(--pt-fuente-titulos);
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--pt-blanco);
+}
+.pt-elegir__logo i{
+    width: 26px; height: 26px;
+    border-radius: 12px;
+    background: var(--pt-marca-cian);
+    flex: 0 0 auto;
+}
+.pt-elegir__centro h1{
+    font-family: var(--pt-fuente-titulos);
+    font-size: clamp(2.4rem, 3vw, 3.36rem);
+    line-height: 1.15;
+    font-weight: 600;
+    color: var(--pt-blanco);
+    margin-bottom: 1.44rem;
+    max-width: 16ch;
+}
+.pt-elegir__centro > p{
+    font-size: 1.312rem;
+    line-height: 1.65;
+    color: var(--pt-azul-claro);
+    max-width: 44ch;
+    margin-bottom: 2.72rem;
+}
+.pt-elegir__sesion{
+    padding: 1.44rem 1.6rem;
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 18px;
+    background: rgba(255,255,255,.04);
+    max-width: 34rem;
+}
+.pt-elegir__sesion-eti{
+    display: block;
+    font-size: 0.96rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.5);
+    margin-bottom: 0.8rem;
+}
+.pt-elegir__sesion-yo{ display: flex; align-items: center; gap: 0.96rem; }
+.pt-elegir__sesion-yo b{
+    display: block;
+    font-size: 1.28rem;
+    font-weight: 600;
+    color: var(--pt-blanco);
+}
+.pt-elegir__sesion-yo small{
+    display: block;
+    font-size: 0.96rem;
+    letter-spacing: .06em;
+    color: var(--pt-azul-claro);
+}
+.pt-elegir__estado{
+    display: flex;
+    align-items: center;
+    gap: 0.72rem;
+    font-size: 1.152rem;
+    color: var(--pt-azul-claro);
+}
+.pt-elegir__estado i{
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #35C46B;
+    flex: 0 0 auto;
+}
+
+/* Panel de decisión: sigue el tema del usuario */
+.pt-elegir__panel{
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2.72rem;
+    padding: 4.16rem clamp(2.4rem, 3.5vw, 4.16rem);
+    background: var(--pt-fondo);
+}
+.pt-elegir__tema{ position: absolute; top: 2.24rem; right: 2.24rem; }
+.pt-elegir__eti{
+    display: block;
+    font-size: 1.008rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--pt-gris);
+    margin-bottom: 1.12rem;
+}
+.pt-elegir__lista{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+    gap: 1.12rem;
+}
+
+/* Una oficina. Las cifras van dentro para poder decidir sin entrar. */
+.pt-oficina{
+    display: flex;
+    flex-direction: column;
+    gap: 0.32rem;
+    padding: 1.44rem 1.6rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: 18px;
+    background: var(--pt-superficie);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color var(--pt-rapido), box-shadow var(--pt-rapido);
+}
+.pt-oficina:hover{ border-color: var(--pt-marca-cian); }
+.pt-oficina.activa{
+    border-color: var(--pt-marca-cian);
+    box-shadow: inset 0 0 0 1px var(--pt-marca-cian);
+}
+.pt-oficina__cab{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+}
+.pt-oficina__ciudad{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--pt-tinta);
+}
+/* El tic solo se dibuja en la oficina marcada */
+.pt-oficina__tic{
+    position: relative;
+    width: 20px; height: 20px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--pt-marca-cian);
+    opacity: 0;
+    transition: opacity var(--pt-rapido);
+}
+.pt-oficina.activa .pt-oficina__tic{ opacity: 1; }
+.pt-oficina__tic::after{
+    content: "";
+    position: absolute;
+    left: 7px; top: 4px;
+    width: 4px; height: 8px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+.pt-oficina__nombre{ font-size: 1.216rem; color: var(--pt-gris); }
+.pt-oficina__cifras{
+    display: flex;
+    gap: 2.24rem;
+    margin-top: 1.12rem;
+    padding-top: 1.04rem;
+    border-top: 1px solid var(--pt-borde);
+}
+.pt-oficina__cifra b{
+    display: block;
+    font-family: var(--pt-fuente-titulos);
+    font-size: 1.92rem;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--pt-tinta);
+}
+.pt-oficina__cifra small{
+    display: block;
+    font-size: 0.928rem;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--pt-gris);
+    margin-top: 0.16rem;
+}
+/* Lo que aprieta va en ámbar, como en el resto del portal */
+.pt-oficina__cifra--alerta b{ color: var(--pt-ambar); }
+.pt-oficina__cifras--texto{
+    display: block;
+    font-size: 1.152rem;
+    line-height: 1.55;
+    color: var(--pt-gris);
+}
+.pt-elegir__entrar{ width: 100%; margin-top: 1.44rem; }
+
+/* ---- Administrar oficinas ---- */
 .pt-elegir__admin[hidden]{ display: none; }
 .pt-elegir__admin-cab{
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 1.28rem;
-    margin-bottom: 1.28rem;
 }
-.pt-elegir__admin-cab span{
-    font-size: 1.008rem;
-    letter-spacing: .09em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,.62);
+.pt-elegir__admin-cab .pt-elegir__eti{ margin-bottom: 0; }
+.pt-elegir__admin-lista{
+    display: flex;
+    flex-direction: column;
+    margin-top: 1.12rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: 18px;
+    background: var(--pt-superficie);
+    overflow: hidden;
 }
-.pt-elegir__admin-cab .pt-boton{
-    background: var(--pt-marca-cian);
-    border-color: var(--pt-marca-cian);
-    color: var(--pt-blanco);
-}
-.pt-elegir__admin-lista{ display: flex; flex-direction: column; gap: 0.48rem; }
 .pt-elegir__admin-fila{
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 1.12rem;
     flex-wrap: wrap;
-    padding: 0.88rem 1.12rem;
-    border-radius: 14px;
-    background: rgba(255,255,255,.05);
+    padding: 1.04rem 1.44rem;
+    border-top: 1px solid var(--pt-borde);
     font-size: 1.216rem;
-    color: var(--pt-azul-claro);
+    color: var(--pt-gris);
 }
-.pt-elegir__admin-txt b{ color: var(--pt-blanco); font-weight: 600; }
+.pt-elegir__admin-fila:first-child{ border-top: none; }
+.pt-elegir__admin-fila.apagada{ opacity: .6; }
+.pt-elegir__admin-txt b{ color: var(--pt-tinta); font-weight: 600; }
 .pt-elegir__admin-txt em{
     font-style: normal;
     font-size: 1.024rem;
-    color: rgba(255,255,255,.5);
+    color: var(--pt-ambar);
 }
 .pt-elegir__admin-acc{ display: flex; gap: 0.48rem; }
 .pt-elegir__admin-acc button{
-    padding: 0.4rem 0.88rem;
-    border: 1px solid rgba(255,255,255,.24);
+    padding: 0.4rem 0.96rem;
+    border: 1px solid var(--pt-borde);
     border-radius: 999px;
-    background: none;
+    background: var(--pt-superficie);
     font: inherit;
     font-size: 1.088rem;
-    color: var(--pt-azul-claro);
+    color: var(--pt-gris);
     cursor: pointer;
     transition: border-color var(--pt-rapido), color var(--pt-rapido);
 }
 .pt-elegir__admin-acc button:hover{
-    border-color: var(--pt-blanco);
-    color: var(--pt-blanco);
+    border-color: var(--pt-marca-cian);
+    color: var(--pt-tinta);
 }
 .pt-elegir__admin-vacio{
+    padding: 1.44rem;
     font-size: 1.216rem;
-    color: rgba(255,255,255,.55);
+    color: var(--pt-gris);
 }
 
-/* Pie de la pantalla: volver al portal y cerrar sesión */
-.pt-elegir__pie{
+.pt-elegir__pie{ display: flex; gap: 0.8rem; flex-wrap: wrap; margin-top: auto; }
+
+/* En pantallas angostas el panel de marca se vuelve cabecera corta */
+@media (max-width: 940px){
+    .pt-elegir{ grid-template-columns: 1fr; }
+    .pt-elegir__marca{ padding: 2.72rem 2.24rem 2.24rem; gap: 1.6rem; }
+    .pt-elegir__centro h1{ font-size: 2.08rem; max-width: none; }
+    .pt-elegir__centro > p{ display: none; }
+    .pt-elegir__sesion{ max-width: none; }
+    .pt-elegir__estado{ display: none; }
+    .pt-elegir__panel{ padding: 2.72rem 2.24rem 3.52rem; }
+    .pt-elegir__lista{ grid-template-columns: 1fr; }
+}
+
+/* ---- Casillas de notaría en los formularios de usuario ----
+   Estaban rotas: el cuadro se estiraba a todo el alto de la tarjeta y
+   el texto se salía por el lado. La casilla lleva tamaño fijo y el
+   texto ocupa el resto, con min-width 0 para que pueda partirse. */
+.pt-notarias-casillas{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+    gap: 0.64rem;
+    margin-top: 0.64rem;
+}
+.pt-notaria-casilla{
     display: flex;
-    gap: 0.8rem;
-    flex-wrap: wrap;
-    margin-top: 2.4rem;
+    align-items: center;
+    gap: 0.88rem;
+    min-width: 0;
+    padding: 0.96rem 1.12rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: 14px;
+    background: var(--pt-superficie);
+    font-size: 1.216rem;
+    line-height: 1.4;
+    cursor: pointer;
+    transition: border-color var(--pt-rapido), background var(--pt-rapido);
+}
+.pt-notaria-casilla:hover{ border-color: var(--pt-marca-cian); }
+/* Las casillas viven dentro de un .pt-campo, y esa regla les impone
+   min-height 36px y padding de campo de texto. Por eso el cuadro salía
+   estirado. Se gana en especificidad para devolverle su tamaño real. */
+body.pt-app .pt-campo .pt-notaria-casilla input,
+.pt-notaria-casilla input{
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    margin: 0;
+    min-height: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    accent-color: var(--pt-marca-cian);
+    cursor: pointer;
+}
+.pt-notaria-casilla span{ min-width: 0; }
+.pt-notaria-casilla b{ font-weight: 600; color: var(--pt-tinta); }
+/* La marcada se distingue sin depender solo del cuadro */
+.pt-notaria-casilla:has(input:checked){
+    border-color: var(--pt-marca-cian);
+    background: var(--pt-superficie-2);
 }

@@ -709,7 +709,11 @@
         if (error) fallar(error);
         return (data || []).map(n => ({
             id: n.id, nombre: n.nombre, ciudad: n.ciudad,
-            activa: n.activa !== false, carpetas: Number(n.carpetas || 0)
+            activa: n.activa !== false,
+            carpetas: Number(n.carpetas || 0),
+            // Procesos vencidos o a un paso de vencer, para decidir a qué
+            // oficina entrar sin abrirlas una por una
+            porVencer: Number(n.por_vencer || 0)
         }));
     };
 

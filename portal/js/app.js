@@ -555,42 +555,115 @@ async function prepararNotarias() {
     return false;
 }
 
-/* Pantalla de selección. Solo la ve quien tiene dos o más. */
+/* Oficina marcada en la pantalla, todavía sin confirmar. Se separa de
+   _notariaActiva porque marcar no es entrar: el usuario puede mirar las
+   cifras de varias antes de decidir. */
+let _notariaMarcada = null;
+
+/* Pantalla de selección. La ve quien tiene dos o más oficinas, y el
+   administrador siempre, porque es donde las administra. */
 function mostrarPantallaNotarias() {
     const pantalla = document.getElementById('pt-elegir');
     const lista = document.getElementById('pt-elegir-lista');
     if (!pantalla || !lista) return;
 
-    const tarjeta = (id, ciudad, nombre, detalle) =>
-        '<button class="pt-elegir__item" data-accion="elegir-notaria" data-notaria="' + id + '">' +
-            '<span class="pt-elegir__ciudad">' + escaparHtml(ciudad) + '</span>' +
-            '<span class="pt-elegir__nombre">' + escaparHtml(nombre) + '</span>' +
-            '<span class="pt-elegir__detalle">' + detalle + '</span>' +
-        '</button>';
+    // Se parte de la que ya esté abierta, o de la primera
+    _notariaMarcada = (_notariaActiva !== null)
+        ? String(_notariaActiva)
+        : (ES_ADMIN && _notariasDisponibles.length > 1 ? 'todas'
+           : (_notariasDisponibles[0] ? String(_notariasDisponibles[0].id) : null));
 
-    let html = _notariasDisponibles.map(n =>
-        tarjeta(n.id, n.ciudad, n.nombre,
-                n.carpetas + (n.carpetas === 1 ? ' carpeta activa' : ' carpetas activas'))
-    ).join('');
+    lista.innerHTML = _notariasDisponibles.map(n => tarjetaNotaria(n)).join('') +
+        // El administrador puede además mirar todo junto, para el
+        // panorama general en Estados y Calendario
+        (ES_ADMIN && _notariasDisponibles.length > 1 ? tarjetaTodasLasNotarias() : '');
 
-    // El administrador puede además mirar todo junto, para el panorama
-    // nacional en Estados y Calendario
-    if (ES_ADMIN && _notariasDisponibles.length > 1) {
-        const total = _notariasDisponibles.reduce((n, x) => n + x.carpetas, 0);
-        html += tarjeta('todas', 'Todas las notarías', 'Panorama general',
-                        total + ' carpetas activas en ' + _notariasDisponibles.length + ' oficinas');
+    // Quién está conectado, en el panel de la izquierda
+    const avatar = document.getElementById('elegir-avatar');
+    if (avatar) avatar.textContent = inicialesDe(sesion.nombre || sesion.usuario);
+    const nom = document.getElementById('elegir-nombre');
+    if (nom) nom.textContent = sesion.nombre || sesion.usuario;
+    const rol = document.getElementById('elegir-rol');
+    if (rol) rol.textContent = (ETIQUETAS_ROL[sesion.rol] || sesion.rol).toUpperCase();
+
+    const estado = document.getElementById('elegir-estado');
+    if (estado) {
+        const activas = _notariasDisponibles.length;
+        estado.innerHTML = '<i></i>' + activas +
+            (activas === 1 ? ' oficina activa' : ' oficinas activas');
     }
 
-    lista.innerHTML = html;
     pantalla.hidden = false;
     document.querySelector('.pt-marco').hidden = true;
 
-    // "Volver al portal" solo aparece si ya había una oficina abierta.
-    // Al entrar por primera vez todavía no hay a dónde volver.
+    // "Volver al portal" solo si ya había una oficina abierta. Al entrar
+    // por primera vez todavía no hay a dónde volver.
     const volver = document.getElementById('boton-volver-portal');
     if (volver) volver.hidden = !_arranqueHecho;
 
+    pintarSeleccionNotaria();
     pintarGestionNotarias();
+}
+
+/* Una oficina, con las cifras que permiten decidir sin entrar */
+function tarjetaNotaria(n) {
+    return '<button class="pt-oficina" data-accion="marcar-notaria" data-notaria="' + n.id + '">' +
+        '<span class="pt-oficina__cab">' +
+            '<span class="pt-oficina__ciudad">' + escaparHtml(n.ciudad) + '</span>' +
+            '<span class="pt-oficina__tic" aria-hidden="true"></span>' +
+        '</span>' +
+        '<span class="pt-oficina__nombre">' + escaparHtml(n.nombre) + '</span>' +
+        '<span class="pt-oficina__cifras">' +
+            '<span class="pt-oficina__cifra">' +
+                '<b>' + n.carpetas + '</b><small>carpetas activas</small></span>' +
+            '<span class="pt-oficina__cifra' + (n.porVencer ? ' pt-oficina__cifra--alerta' : '') + '">' +
+                '<b>' + (n.porVencer || '—') + '</b><small>por vencer</small></span>' +
+        '</span>' +
+    '</button>';
+}
+
+function tarjetaTodasLasNotarias() {
+    const carpetas = _notariasDisponibles.reduce((t, n) => t + n.carpetas, 0);
+    return '<button class="pt-oficina pt-oficina--todas" data-accion="marcar-notaria" data-notaria="todas">' +
+        '<span class="pt-oficina__cab">' +
+            '<span class="pt-oficina__ciudad">Todas las notarías</span>' +
+            '<span class="pt-oficina__tic" aria-hidden="true"></span>' +
+        '</span>' +
+        '<span class="pt-oficina__nombre">Panorama general</span>' +
+        '<span class="pt-oficina__cifras pt-oficina__cifras--texto">' +
+            carpetas + ' carpetas activas en ' + _notariasDisponibles.length + ' oficinas' +
+            '<br>Solo lectura consolidada' +
+        '</span>' +
+    '</button>';
+}
+
+/* Marca una oficina sin entrar todavía */
+function marcarNotaria(valor) {
+    _notariaMarcada = String(valor);
+    pintarSeleccionNotaria();
+}
+
+/* Refleja la marca en las tarjetas y en el botón de entrar */
+function pintarSeleccionNotaria() {
+    document.querySelectorAll('#pt-elegir-lista .pt-oficina').forEach(b =>
+        b.classList.toggle('activa', b.dataset.notaria === _notariaMarcada));
+
+    const boton = document.getElementById('boton-entrar-notaria');
+    if (!boton) return;
+    if (!_notariaMarcada) {
+        boton.disabled = true;
+        boton.textContent = 'Entrar';
+        return;
+    }
+    boton.disabled = false;
+    const n = _notariasDisponibles.find(x => String(x.id) === _notariaMarcada);
+    boton.textContent = n ? 'Entrar a ' + n.ciudad : 'Ver todas las notarías';
+}
+
+/* Confirma la oficina marcada */
+async function entrarNotariaMarcada() {
+    if (!_notariaMarcada) return;
+    await elegirNotaria(_notariaMarcada);
 }
 
 function guardarNotariaActiva() {
@@ -754,14 +827,15 @@ async function pintarGestionNotarias() {
     }
 
     lista.innerHTML = _notariasFormulario.map(n =>
-        '<div class="pt-elegir__admin-fila">' +
+        '<div class="pt-elegir__admin-fila' + (n.activa ? '' : ' apagada') + '">' +
             '<span class="pt-elegir__admin-txt">' +
                 '<b>' + escaparHtml(n.ciudad) + '</b> · ' + escaparHtml(n.nombre) +
                 (n.activa ? '' : ' <em>desactivada</em>') +
             '</span>' +
             '<span class="pt-elegir__admin-acc">' +
                 '<button data-accion="editar-notaria" data-id="' + n.id + '">Editar</button>' +
-                '<button data-accion="alternar-notaria" data-id="' + n.id + '">' +
+                '<button data-accion="alternar-notaria" data-id="' + n.id + '" ' +
+                        'title="' + (n.activa ? 'Desactivar' : 'Activar') + '">' +
                     (n.activa ? 'Desactivar' : 'Activar') + '</button>' +
             '</span>' +
         '</div>').join('');
@@ -777,47 +851,82 @@ function volverAlPortal() {
     if (marco) marco.hidden = false;
 }
 
-async function nuevaNotariaAccion() {
+/* ---- Alta y edición de notarías ----
+   Un solo formulario con ciudad, nombre y si está activa. Antes eran
+   dos preguntas encadenadas, que no dejaban corregir la primera al
+   llegar a la segunda ni cambiar el estado sin pasar por otro menú. */
+let _notariaEditando = null;
+
+function abrirModalNotaria(notaria) {
     if (!ES_ADMIN) return;
-    const ciudad = await pedirTextoPortal('Ciudad de la notaría',
-        'Es lo que aparece junto a "Portal Documental" al entrar. Por ejemplo: Santa Marta.', '');
-    if (!ciudad) return;
-    const nombre = await pedirTextoPortal('Nombre de la notaría',
-        'Por ejemplo: Notaría 2.', '');
-    if (!nombre) return;
-    try {
-        await notariaCrear(nombre, ciudad);
-        registrarActividad('crear-notaria', nombre + ' · ' + ciudad);
-        // La oficina nueva tiene que aparecer en el selector y en la lista
-        _notariasDisponibles = await misNotarias();
-        pintarNotariaActiva();
-        // La oficina nueva tiene que aparecer arriba, entre las que se
-        // pueden elegir, y abajo en la lista de gestión
-        mostrarPantallaNotarias();
-        avisar('Notaría «' + ciudad + ' · ' + nombre + '» creada.');
-    } catch (e) {
-        avisar((e && e.message) || 'No se pudo crear la notaría.', 'error');
+    _notariaEditando = notaria || null;
+    document.getElementById('modal-notaria-titulo').textContent =
+        notaria ? 'Editar notaría' : 'Nueva notaría';
+    document.getElementById('notaria-ciudad').value = notaria ? notaria.ciudad : '';
+    document.getElementById('notaria-nombre').value = notaria ? notaria.nombre : '';
+    document.getElementById('notaria-activa').checked = notaria ? notaria.activa !== false : true;
+
+    // Al desactivar una oficina con carpetas conviene decir qué implica
+    const aviso = document.getElementById('notaria-aviso');
+    if (aviso) {
+        const abierta = notaria && String(_notariaActiva) === String(notaria.id);
+        aviso.hidden = !abierta;
+        aviso.textContent = abierta
+            ? 'Esta es la oficina que tienes abierta. Si la desactivas tendrás que elegir otra.'
+            : '';
     }
+    document.getElementById('modal-notaria').hidden = false;
+    document.getElementById('notaria-ciudad').focus();
 }
 
-async function editarNotariaAccion(id) {
+function cerrarModalNotaria() {
+    document.getElementById('modal-notaria').hidden = true;
+    _notariaEditando = null;
+}
+
+async function guardarNotaria(evento) {
+    evento.preventDefault();
     if (!ES_ADMIN) return;
-    const n = _notariasFormulario.find(x => String(x.id) === String(id));
-    if (!n) return;
-    const ciudad = await pedirTextoPortal('Ciudad de la notaría', '', n.ciudad);
-    if (!ciudad) return;
-    const nombre = await pedirTextoPortal('Nombre de la notaría', '', n.nombre);
-    if (!nombre) return;
-    try {
-        await notariaEditar(n.id, nombre, ciudad, n.activa);
-        registrarActividad('editar-notaria', nombre + ' · ' + ciudad);
-        _notariasDisponibles = await misNotarias();
-        pintarNotariaActiva();
-        mostrarPantallaNotarias();
-        avisar('Notaría actualizada.');
-    } catch (e) {
-        avisar((e && e.message) || 'No se pudo actualizar la notaría.', 'error');
+    const ciudad = document.getElementById('notaria-ciudad').value.trim();
+    const nombre = document.getElementById('notaria-nombre').value.trim();
+    const activa = document.getElementById('notaria-activa').checked;
+    if (!ciudad || !nombre) {
+        avisar('La notaría necesita ciudad y nombre.', 'error');
+        return;
     }
+    try {
+        if (_notariaEditando) {
+            await notariaEditar(_notariaEditando.id, nombre, ciudad, activa);
+            registrarActividad('editar-notaria', ciudad + ' · ' + nombre);
+        } else {
+            const id = await notariaCrear(nombre, ciudad);
+            registrarActividad('crear-notaria', ciudad + ' · ' + nombre);
+            if (!activa) await notariaEditar(id, null, null, false);
+        }
+    } catch (e) {
+        avisar((e && e.message) || 'No se pudo guardar la notaría.', 'error');
+        return;
+    }
+    cerrarModalNotaria();
+
+    // Si se desactivó la oficina abierta hay que soltarla: seguir dentro
+    // de una notaría apagada dejaría el portal en un estado imposible
+    const era = _notariaEditando;
+    _notariasDisponibles = await misNotarias();
+    if (era && !activa && String(_notariaActiva) === String(era.id)) {
+        _notariaActiva = null;
+        guardarNotariaActiva();
+    }
+    pintarNotariaActiva();
+    mostrarPantallaNotarias();
+    avisar('Notaría «' + ciudad + ' · ' + nombre + '» guardada.');
+}
+
+function nuevaNotariaAccion() { abrirModalNotaria(null); }
+
+function editarNotariaAccion(id) {
+    const n = _notariasFormulario.find(x => String(x.id) === String(id));
+    if (n) abrirModalNotaria(n);
 }
 
 /* Desactivar en vez de borrar: una notaría con expedientes no se elimina,
@@ -833,6 +942,11 @@ async function alternarNotariaAccion(id) {
     try {
         await notariaEditar(n.id, null, null, !n.activa);
         _notariasDisponibles = await misNotarias();
+        // Si se apagó la oficina abierta hay que soltarla
+        if (n.activa && String(_notariaActiva) === String(n.id)) {
+            _notariaActiva = null;
+            guardarNotariaActiva();
+        }
         pintarNotariaActiva();
         mostrarPantallaNotarias();
         avisar(n.activa ? 'Notaría desactivada.' : 'Notaría activada.');
@@ -6352,6 +6466,9 @@ function conectarEventos() {
 
             // Notarías
             case 'elegir-notaria':    elegirNotaria(boton.dataset.notaria); break;
+            case 'marcar-notaria':    marcarNotaria(boton.dataset.notaria); break;
+            case 'entrar-notaria':    entrarNotariaMarcada(); break;
+            case 'cerrar-modal-notaria': cerrarModalNotaria(); break;
             case 'cambiar-notaria':   cambiarNotaria(); break;
             case 'volver-al-portal':  volverAlPortal(); break;
             case 'nueva-notaria':     nuevaNotariaAccion(); break;
@@ -6528,6 +6645,8 @@ function conectarEventos() {
 
     document.getElementById('form-carpeta').addEventListener('submit', guardarCarpeta);
     document.getElementById('form-usuario').addEventListener('submit', crearUsuario);
+    const formNotaria = document.getElementById('form-notaria');
+    if (formNotaria) formNotaria.addEventListener('submit', guardarNotaria);
     // El rol decide si se puede marcar una notaría o varias
     const selRol = document.getElementById('nuevo-rol');
     if (selRol) selRol.addEventListener('change', () => pintarNotariasDeFormulario(notariasMarcadasEnFormulario()));

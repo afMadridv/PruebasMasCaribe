@@ -16,22 +16,52 @@
 <body class="pt-app">
 
   <!-- ===== ELEGIR NOTARÍA =====
-       Solo aparece cuando el usuario trabaja en dos o más. Con una sola
-       se entra directo y el portal se ve igual que siempre. -->
+       Panel partido, igual que el ingreso: la marca a la izquierda y la
+       decisión a la derecha. Solo aparece con dos o más oficinas, o para
+       el administrador, que la usa para administrarlas. -->
   <div class="pt-elegir" id="pt-elegir" hidden>
-    <div class="pt-elegir__caja">
-      <div class="pt-elegir__marca">Portal Documental</div>
-      <h1>¿En qué notaría vas a trabajar?</h1>
-      <p class="pt-nota">Cada notaría tiene sus propias carpetas y trámites.
-         Puedes cambiar de una a otra en cualquier momento, sin cerrar sesión.</p>
-      <div class="pt-elegir__lista" id="pt-elegir-lista"></div>
 
-      <!-- Gestión de oficinas. Vive aquí, fuera del portal, porque
-           administrar la red de notarías es una tarea distinta de
-           trabajar dentro de una. Solo la ve el administrador. -->
+    <aside class="pt-elegir__marca">
+      <div class="pt-elegir__logo"><i aria-hidden="true"></i> Portal Documental</div>
+
+      <div class="pt-elegir__centro">
+        <h1>¿En qué notaría vas a trabajar?</h1>
+        <p>Cada notaría tiene sus propias carpetas y trámites.
+           Puedes cambiar de una a otra en cualquier momento, sin cerrar sesión.</p>
+
+        <div class="pt-elegir__sesion">
+          <span class="pt-elegir__sesion-eti">Sesión</span>
+          <div class="pt-elegir__sesion-yo">
+            <span class="pt-avatar" id="elegir-avatar"></span>
+            <div>
+              <b id="elegir-nombre"></b>
+              <small id="elegir-rol"></small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="pt-elegir__estado" id="elegir-estado"></p>
+    </aside>
+
+    <div class="pt-elegir__panel">
+      <!-- Interruptor de tema, en la esquina, como en el ingreso -->
+      <button class="pt-boton pt-boton--mini pt-boton--tema pt-elegir__tema"
+              data-accion="alternar-tema" data-icono-tam="18"
+              aria-label="Cambiar de tema" title="Cambiar de tema"></button>
+
+      <div class="pt-elegir__bloque">
+        <span class="pt-elegir__eti">Elige una oficina</span>
+        <div class="pt-elegir__lista" id="pt-elegir-lista"></div>
+        <button class="pt-boton pt-boton--primario pt-elegir__entrar"
+                id="boton-entrar-notaria" data-accion="entrar-notaria" disabled>Entrar</button>
+      </div>
+
+      <!-- Gestión de oficinas. Vive fuera del portal porque administrar
+           la red es una tarea distinta de trabajar dentro de una. -->
       <div class="pt-elegir__admin" id="pt-elegir-admin" hidden>
         <div class="pt-elegir__admin-cab">
-          <span>Administrar oficinas</span>
+          <span class="pt-elegir__eti">Administrar oficinas</span>
           <button class="pt-boton pt-boton--mini" data-accion="nueva-notaria">+ Nueva notaría</button>
         </div>
         <div class="pt-elegir__admin-lista" id="pt-elegir-admin-lista"></div>
@@ -42,6 +72,37 @@
                 id="boton-volver-portal" hidden>Volver al portal</button>
         <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="salir">Cerrar sesión</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: CREAR / EDITAR NOTARÍA =====
+       Un solo formulario con todo, en vez de encadenar preguntas. -->
+  <div id="modal-notaria" class="pt-modal" hidden>
+    <div class="pt-modal__caja">
+      <h3 id="modal-notaria-titulo">Nueva notaría</h3>
+      <form id="form-notaria">
+        <label class="pt-campo">
+          <span>Ciudad</span>
+          <input type="text" id="notaria-ciudad" required maxlength="60"
+                 placeholder="Santa Marta">
+          <small class="pt-nota">Es lo que aparece junto a «Portal Documental» al entrar.</small>
+        </label>
+        <label class="pt-campo">
+          <span>Nombre de la notaría</span>
+          <input type="text" id="notaria-nombre" required maxlength="80"
+                 placeholder="Notaría 2">
+        </label>
+        <label class="pt-interruptor">
+          <input type="checkbox" id="notaria-activa" checked>
+          <span>Activa: aparece al entrar y se le pueden crear carpetas</span>
+        </label>
+        <p class="pt-nota" id="notaria-aviso" hidden></p>
+        <div class="pt-modal__acciones">
+          <button type="button" class="pt-boton pt-boton--fantasma"
+                  data-accion="cerrar-modal-notaria">Cancelar</button>
+          <button type="submit" class="pt-boton pt-boton--primario">Guardar</button>
+        </div>
+      </form>
     </div>
   </div>
 
