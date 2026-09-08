@@ -500,8 +500,8 @@ body.pt-app{
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.pt-panorama__num--alerta{ color: var(--pt-rojo); }
-.pt-panorama__num--aviso{ color: var(--pt-ambar); }
+.pt-panorama__num--alerta{ color: var(--pt-rojo-txt); }
+.pt-panorama__num--aviso{ color: var(--pt-ambar-txt); }
 
 @media (max-width: 1100px){ .pt-panorama{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
 @media (max-width: 560px){ .pt-panorama{ grid-template-columns: 1fr; } }
@@ -624,7 +624,7 @@ body.pt-app{
     cursor: pointer;
 }
 .pt-menu__lista button:hover{ background: var(--pt-superficie-2); }
-.pt-menu__lista button.pt-menu__peligro{ color: var(--pt-rojo); }
+.pt-menu__lista button.pt-menu__peligro{ color: var(--pt-rojo-txt); }
 
 /* En pantallas medianas la fila se pliega a dos líneas */
 @media (max-width: 980px){
@@ -667,10 +667,10 @@ body.pt-app{
 }
 /* Cada columna toma un tinte de su color. El borde plano va primero
    como respaldo para navegadores sin color-mix. */
-.pt-columna--rojo{    border-color: color-mix(in srgb, var(--pt-rojo)   32%, var(--pt-borde)); }
-.pt-columna--naranja{ border-color: color-mix(in srgb, var(--pt-ambar)  38%, var(--pt-borde)); }
+.pt-columna--rojo{    border-color: color-mix(in srgb, var(--pt-rojo-txt)   32%, var(--pt-borde)); }
+.pt-columna--naranja{ border-color: color-mix(in srgb, var(--pt-ambar-txt)  38%, var(--pt-borde)); }
 .pt-columna--cian{    border-color: color-mix(in srgb, var(--pt-marca-cian) 32%, var(--pt-borde)); }
-.pt-columna--verde{   border-color: color-mix(in srgb, var(--pt-verde)  28%, var(--pt-borde)); }
+.pt-columna--verde{   border-color: color-mix(in srgb, var(--pt-verde-txt)  28%, var(--pt-borde)); }
 
 .pt-columna__cab{
     display: flex;
@@ -731,13 +731,13 @@ body.pt-app{
     border-radius: 50%;
     flex: 0 0 auto;
 }
-.pt-grupo__punto--rojo{ background: var(--pt-rojo); }
-.pt-grupo__punto--naranja{ background: var(--pt-ambar); }
+.pt-grupo__punto--rojo{ background: var(--pt-rojo-txt); }
+.pt-grupo__punto--naranja{ background: var(--pt-ambar-txt); }
 .pt-grupo__punto--cian{ background: var(--pt-marca-cian); }
-.pt-grupo__punto--verde{ background: var(--pt-verde); }
+.pt-grupo__punto--verde{ background: var(--pt-verde-txt); }
 .pt-grupo__punto--gris{ background: var(--pt-gris); }
 
-/* ---- Tarjeta de trámite: nombre y anillo arriba, detalle abajo ---- */
+/* ---- Tarjeta de trámite: nombre arriba, plazo y detalle abajo ---- */
 .pt-tramite{
     display: flex;
     flex-direction: column;
@@ -755,11 +755,15 @@ body.pt-app{
     justify-content: space-between;
     gap: 1.04rem;
 }
+/* min-width:0 para que el título pueda encogerse dentro del flex en vez
+   de forzar el ancho de la columna del tablero */
+.pt-tramite__titulo{ min-width: 0; }
 .pt-tramite__nombre{
     font-weight: 600;
     font-size: 1.352rem;
     line-height: 1.35;
     color: var(--pt-tinta);
+    overflow-wrap: break-word;
 }
 .pt-tramite__op{
     font-size: 1.16rem;
@@ -778,26 +782,8 @@ body.pt-app{
 .pt-tramite__acciones{ display: flex; align-items: center; gap: 0.56rem; }
 .pt-tramite__ver{ flex: 1; justify-content: center; }
 
-/* ---- Anillo del conteo 60/90 ---- */
-.pt-anillo{ position: relative; width: 52px; height: 52px; flex: 0 0 auto; }
-.pt-anillo svg{ transform: rotate(-90deg); display: block; }
-.pt-anillo__pista{ stroke: var(--pt-superficie-2); }
-.pt-anillo__arco{ transition: stroke-dashoffset var(--pt-normal); }
-.pt-anillo__arco--verde{ stroke: var(--pt-verde); }
-.pt-anillo__arco--naranja{ stroke: var(--pt-ambar); }
-.pt-anillo__arco--rojo{ stroke: var(--pt-rojo); }
-.pt-anillo__arco--gris{ stroke: var(--pt-gris); }
-.pt-anillo__txt{
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.056rem;
-    font-weight: 700;
-    color: var(--pt-tinta);
-    letter-spacing: -.02em;
-}
+/* El anillo del conteo 60/90 vivía aquí. Lo sustituyó .pt-plazo, que
+   dice la fecha de vencimiento en vez de cuántos días van. */
 
 /* ---- Pie del tablero ---- */
 .pt-tablero__pie{
@@ -854,8 +840,8 @@ body.pt-app{
     color: var(--pt-gris);
     margin-top: 0.192rem;
 }
-.pt-cifra__num--alerta{ color: var(--pt-rojo); }
-.pt-cifra__num--aviso{ color: var(--pt-ambar); }
+.pt-cifra__num--alerta{ color: var(--pt-rojo-txt); }
+.pt-cifra__num--aviso{ color: var(--pt-ambar-txt); }
 
 /* Migas de pan sobre el título */
 .pt-migas{
@@ -1082,8 +1068,8 @@ body.pt-app{
     background: var(--pt-superficie-2);
     color: var(--pt-gris);
 }
-.pt-agenda__plazo--rojo{ background: var(--pt-rojo-suave); color: var(--pt-rojo); }
-.pt-agenda__plazo--naranja{ background: var(--pt-ambar-suave); color: var(--pt-ambar); }
+.pt-agenda__plazo--rojo{ background: var(--pt-rojo-suave); color: var(--pt-rojo-txt); }
+.pt-agenda__plazo--naranja{ background: var(--pt-ambar-suave); color: var(--pt-ambar-txt); }
 .pt-agenda__vacio{ font-size: 1.248rem; color: var(--pt-gris); }
 
 /* ---- Caja de acción sugerida: la única con relleno de marca ---- */
@@ -1293,7 +1279,6 @@ body.pt-app .pt-tabla-envoltura{ border-radius: 18px; }
     font-size: 2rem;      /* 20px */
     font-weight: 600;
 }
-.pt-anillo__txt{ font-size: 1.048rem; }
 .pt-agenda__dia{ font-family: var(--pt-fuente-texto); font-size: 1.68rem; }
 
 /* Nombre de trámite en el tablero: Lora, como en el diseño */
@@ -1997,7 +1982,7 @@ body.pt-app .pt-buscador:focus-within{ border-color: var(--pt-marca-cian); }
     margin-top: 0.16rem;
 }
 /* Lo que aprieta va en ámbar, como en el resto del portal */
-.pt-oficina__cifra--alerta b{ color: var(--pt-ambar); }
+.pt-oficina__cifra--alerta b{ color: var(--pt-ambar-txt); }
 .pt-oficina__cifras--texto{
     display: block;
     font-size: 1.152rem;
@@ -2041,7 +2026,7 @@ body.pt-app .pt-buscador:focus-within{ border-color: var(--pt-marca-cian); }
 .pt-elegir__admin-txt em{
     font-style: normal;
     font-size: 1.024rem;
-    color: var(--pt-ambar);
+    color: var(--pt-ambar-txt);
 }
 .pt-elegir__admin-acc{ display: flex; gap: 0.48rem; }
 .pt-elegir__admin-acc button{
@@ -2127,4 +2112,205 @@ body.pt-app .pt-campo .pt-notaria-casilla input,
 .pt-notaria-casilla:has(input:checked){
     border-color: var(--pt-marca-cian);
     background: var(--pt-superficie-2);
+}
+
+/* ============================================================
+   14) CARPETAS EN TARJETAS
+   ------------------------------------------------------------
+   Vuelven a ser tarjetas en rejilla en vez de filas anchas: caben
+   más en pantalla y cada carpeta se lee entera sin recorrer
+   columnas. La tarjeta completa abre el expediente.
+   ============================================================ */
+.pt-rejilla-carpetas{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(30rem, 1fr));
+    gap: 1.28rem;
+}
+.pt-tarjeta-carpeta{
+    display: flex;
+    flex-direction: column;
+    gap: 0.72rem;
+    padding: 1.52rem 1.6rem 1.28rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: 20px;
+    background: var(--pt-superficie);
+    cursor: pointer;
+    transition: border-color var(--pt-rapido), box-shadow var(--pt-rapido);
+}
+.pt-tarjeta-carpeta:hover{ border-color: var(--pt-azul); }
+.pt-tarjeta-carpeta:focus-visible{
+    outline: 2px solid var(--pt-marca-cian);
+    outline-offset: 2px;
+}
+.pt-tarjeta-carpeta--inactiva{ opacity: .62; }
+
+.pt-tarjeta-carpeta__cab{
+    display: flex;
+    align-items: center;
+    gap: 0.64rem;
+}
+.pt-tarjeta-carpeta__ic{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px; height: 32px;
+    flex: 0 0 auto;
+    border-radius: 12px;
+    background: var(--pt-superficie-2);
+    color: var(--pt-gris);
+}
+/* El menú se va al extremo y no propaga el clic a la tarjeta */
+.pt-tarjeta-carpeta__cab .pt-menu{ margin-left: auto; }
+.pt-tarjeta-carpeta__cab .pt-insignia{ margin-left: auto; }
+.pt-tarjeta-carpeta__cab .pt-insignia + .pt-menu{ margin-left: 0; }
+
+.pt-tarjeta-carpeta__nombre{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 1.44rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--pt-tinta);
+    margin: 0;
+}
+.pt-tarjeta-carpeta__tipo{
+    align-self: flex-start;
+    padding: 0.16rem 0.72rem;
+    border-radius: 999px;
+    background: var(--pt-superficie-2);
+    font-size: 1.024rem;
+    color: var(--pt-gris);
+}
+.pt-tarjeta-carpeta__proceso{ font-size: 1.184rem; color: var(--pt-gris); }
+
+/* ---- El plazo: la fecha, no el conteo ---- */
+.pt-tarjeta-carpeta__plazo{
+    font-size: 1.184rem;
+    color: var(--pt-gris);
+    padding-top: 0.64rem;
+    border-top: 1px solid var(--pt-borde);
+}
+.pt-tarjeta-carpeta__plazo strong{ color: var(--pt-tinta); font-weight: 600; }
+.pt-tarjeta-carpeta__plazo--sin{ color: var(--pt-gris); font-style: italic; }
+.pt-tarjeta-carpeta__prorroga{
+    font-size: 1.024rem;
+    padding: 0.08rem 0.56rem;
+    border-radius: 999px;
+    background: var(--pt-ambar-suave);
+    color: var(--pt-ambar-txt);
+}
+
+/* ---- Quiénes están en el expediente ---- */
+.pt-gente{
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding-top: 0.64rem;
+    border-top: 1px solid var(--pt-borde);
+}
+.pt-gente__grupo{ display: flex; align-items: baseline; gap: 0.64rem; min-width: 0; }
+.pt-gente__eti{
+    flex: 0 0 auto;
+    font-size: 0.928rem;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--pt-gris);
+}
+.pt-gente__nombres{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.32rem;
+    min-width: 0;
+}
+.pt-gente__chip{
+    padding: 0.16rem 0.64rem;
+    border-radius: 999px;
+    background: var(--pt-superficie-2);
+    font-size: 1.088rem;
+    color: var(--pt-tinta);
+    max-width: 18rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pt-tarjeta-carpeta__pie{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    margin-top: auto;
+    padding-top: 0.96rem;
+    border-top: 1px solid var(--pt-borde);
+}
+.pt-tarjeta-carpeta__docs{ font-size: 1.152rem; color: var(--pt-gris); }
+.pt-tarjeta-carpeta__docs b{ color: var(--pt-tinta); font-weight: 600; }
+
+@media (max-width: 640px){
+    .pt-rejilla-carpetas{ grid-template-columns: 1fr; }
+}
+
+/* ---- El plazo de los 60 días, en la tarjeta del tablero ----
+   Sustituye al anillo con "8/60": la fecha es lo que se necesita.
+
+   Ocupa una fila entera bajo el nombre. Estuvo al lado del nombre y no
+   cabía: la fecha empujaba el título hasta dejarlo en una palabra por
+   línea y se salía de la columna. Rejilla de dos huecos (etiqueta y
+   fecha) con el resto debajo a lo ancho; el color va en la barra
+   izquierda para leerse de un vistazo sin teñir el bloque entero. */
+.pt-plazo{
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: 0.56rem;
+    row-gap: 0.16rem;
+    padding: 0.64rem 0.88rem;
+    border-radius: 12px;
+    border-left: 3px solid var(--pt-gris);
+    background: var(--pt-superficie-2);
+}
+.pt-plazo__eti{
+    font-size: 0.928rem;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--pt-gris);
+    white-space: nowrap;
+}
+.pt-plazo__fecha{
+    font-family: var(--pt-fuente-titulos);
+    font-size: 1.28rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--pt-tinta);
+    overflow-wrap: break-word;
+}
+/* El resto ("52 días hábiles · prórroga") baja a su propia línea */
+.pt-plazo__resto{
+    grid-column: 1 / -1;
+    font-size: 1.024rem;
+    line-height: 1.4;
+    color: var(--pt-gris);
+}
+.pt-plazo--rojo{ border-left-color: var(--pt-rojo-txt); }
+.pt-plazo--rojo .pt-plazo__fecha{ color: var(--pt-rojo-txt); }
+.pt-plazo--naranja{ border-left-color: var(--pt-ambar-txt); }
+.pt-plazo--naranja .pt-plazo__fecha{ color: var(--pt-ambar-txt); }
+.pt-plazo--verde{ border-left-color: var(--pt-verde-txt); }
+.pt-plazo--verde .pt-plazo__fecha{ color: var(--pt-verde-txt); }
+.pt-plazo--sin .pt-plazo__fecha,
+.pt-plazo--gris .pt-plazo__fecha{ color: var(--pt-gris); font-size: 1.152rem; }
+
+/* ---- Quiénes están en el expediente, en el detalle de la carpeta ---- */
+.pt-detalle-gente{
+    margin-top: 1.12rem;
+    padding-top: 1.12rem;
+    border-top: 1px dashed var(--pt-borde);
+}
+.pt-detalle-gente[hidden]{ display: none; }
+.pt-detalle-gente .pt-gente{ border-top: none; padding-top: 0; gap: 0.64rem; }
+.pt-detalle-gente .pt-gente__chip{ max-width: none; }
+.pt-detalle-gente .pt-gente__chip em{
+    font-style: normal;
+    font-size: 0.96rem;
+    color: var(--pt-gris);
+    margin-left: 0.32rem;
 }

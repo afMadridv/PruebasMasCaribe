@@ -266,6 +266,11 @@
                 <!-- Cuatro cifras del expediente: lo llena mostrarDetalleCarpeta -->
                 <div class="pt-detalle-cifras" id="detalle-cifras" hidden></div>
 
+                <!-- Quiénes están en el expediente. La cifra de arriba dice
+                     cuántos son; aquí se dice quiénes. Lo llena
+                     pintarGenteDetalle(). -->
+                <div class="pt-detalle-gente" id="detalle-gente" hidden></div>
+
                 <!-- Resumen del estado del trámite (semáforo por días hábiles).
                      Se gestiona desde la pestaña "Estados"; aquí solo se muestra. -->
                 <div id="detalle-semaforo" class="pt-proceso"></div>
@@ -546,6 +551,14 @@
                     <span>Nombre de la carpeta *</span>
                     <input type="text" id="carpeta-nombre" required maxlength="120"
                            placeholder="Ej.: Insolvencia — Nombre del cliente (Exp. 003-2026)">
+                </label>
+                <label class="pt-campo">
+                    <span>Tipo de proceso *</span>
+                    <select id="carpeta-tipo">
+                        <option value="natural_no_comerciante">Persona natural no comerciante (Ley 1564 de 2012)</option>
+                        <option value="pequeno_comerciante">Pequeño comerciante (Ley 1116 de 2006)</option>
+                    </select>
+                    <small class="pt-nota">Define el régimen bajo el que corre el trámite.</small>
                 </label>
                 <label class="pt-campo">
                     <span>Descripción</span>

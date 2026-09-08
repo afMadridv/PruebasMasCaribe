@@ -184,6 +184,29 @@ Solo avisa del umbral más bajo que aplique (5, 3 o 1 día) y solo cuando se cru
 hacia abajo. Sin eso, un proceso a un día de vencer disparaba los tres avisos a
 la vez todas las mañanas.
 
+### Cuenta atrás del plazo del trámite
+
+La misma tarea diaria llama a `avisar_plazos_tramite()`, que avisa del plazo
+completo (60 días hábiles, o 90 con prórroga) a **todos los que están en la
+carpeta**: operadores, cliente, acreedores, administradores y los monitores de
+esa notaría. La lista la arma `destinatarios_de_carpeta()`.
+
+Seis hitos, en días de **calendario** que faltan: 28, 21, 14, 7, 1 y 0. Cada uno
+se manda una sola vez por carpeta; el tipo de la notificación es `plazo-28`,
+`plazo-21`, … `plazo-0` y `referencia_id` es la carpeta.
+
+La condición es «faltan N días o menos», no «faltan N exactos». Si el día del
+hito cae en sábado o festivo la tarea no corre, y con la comparación exacta el
+aviso se habría perdido. Como cada hito se manda una vez y se elige el más
+cercano al vencimiento, tampoco salen varios atrasados de golpe.
+
+La fecha que se anuncia sí está en días hábiles: la calculó
+`calcular_vencimiento_habil()` al iniciar el trámite.
+
+Prórroga y reactivación mueven el vencimiento. El trigger `notif_carpeta`
+borra los avisos `plazo-*` de esa carpeta cuando `fecha_vencimiento_tramite`
+cambia; si no, los hitos ya mandados bloquearían los nuevos.
+
 ### Medios y documentos
 
 La subcarpeta cuyo nombre contiene «audiencia» acepta solo audio y video. El

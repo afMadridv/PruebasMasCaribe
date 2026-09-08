@@ -154,6 +154,7 @@
             fechaDesactivacion: c.fecha_desactivacion_programada || null,
             activa: c.activa, creadaPor: c.creada_por, fecha: Date.parse(c.fecha),
             notariaId: c.notaria_id || null,
+            tipoProceso: c.tipo_proceso || null,
             asignados: (rAsignados.data || [])
                 .filter(a => a.carpeta_id === c.id)
                 .map(a => usuarioPorId[a.perfil_id] || a.perfil_id),
@@ -276,6 +277,8 @@
                 activa: !!valor.activa,
                 // La carpeta cae en la notaría que el portal tenga abierta
                 notaria_id: valor.notariaId || null,
+                // Régimen del trámite: cambia la ley aplicable
+                tipo_proceso: valor.tipoProceso || null,
                 creada_por: ses._id || null
             }).select('id').single();
             if (error) fallar(error);
@@ -310,6 +313,7 @@
             const { error } = await nube.from('carpetas').update({
                 nombre: valor.nombre,
                 descripcion: valor.descripcion || '',
+                tipo_proceso: valor.tipoProceso || null,
                 activa: !!valor.activa
             }).eq('id', valor.id);
             if (error) fallar(error);

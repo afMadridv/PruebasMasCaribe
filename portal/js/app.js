@@ -20,11 +20,21 @@ if (!sesion) {
     cerrarSesion(); // sesión de una versión anterior del portal
 }
 
-// Grabaciones de audiencias y documentos del expediente se guardan
-// aparte: los medios solo entran en la subcarpeta de audiencias y los
-// documentos solo fuera de ella. Ver destinoAdmiteExtension().
-const EXTENSIONES_MEDIA = ['mp3', 'mp4', 'm4a', 'wav', 'ogg', 'mov', 'webm'];
-const EXTENSIONES_DOCUMENTO = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg'];
+// Qué se puede subir depende de DÓNDE se sube. Ver destinoAdmiteExtension().
+//
+// Las listas son amplias a propósito: una grabación de audiencia puede
+// venir en el formato que le dé la gana al equipo del juzgado, y un
+// soporte puede llegar como imagen escaneada o como hoja de cálculo.
+const EXTENSIONES_MEDIA = [
+    'mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v', 'mpg', 'mpeg', '3gp',
+    'mp3', 'm4a', 'wav', 'ogg', 'oga', 'aac', 'flac', 'wma', 'opus', 'amr'
+];
+const EXTENSIONES_DOCUMENTO = [
+    'pdf', 'doc', 'docx', 'odt', 'rtf', 'txt',
+    'xls', 'xlsx', 'ods', 'csv',
+    'ppt', 'pptx', 'odp',
+    'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'tif', 'tiff', 'heic'
+];
 const EXTENSIONES_PERMITIDAS = EXTENSIONES_DOCUMENTO.concat(EXTENSIONES_MEDIA);
 // Vista dentro del portal: PDF/imágenes/audio/video en visor nativo; Word y
 // Excel se renderizan con librerías (docx-preview y SheetJS), ver verArchivo.
@@ -356,6 +366,17 @@ try {
         document.addEventListener('DOMContentLoaded', () => plegarLateral(true));
     }
 } catch (e) {}
+
+/* Las tarjetas de carpeta se comportan como botones: además del clic,
+   responden a Enter y espacio. Sin esto, quien navega con teclado no
+   podría abrir un expediente. */
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const tarjeta = e.target.closest('.pt-tarjeta-carpeta');
+    if (!tarjeta || e.target.closest('button')) return;
+    e.preventDefault();
+    abrirCarpeta(Number(tarjeta.dataset.id));
+});
 
 /* Menú «⋯» de una fila: solo uno abierto a la vez. Se cierra al
    hacer clic fuera (ver el listener de cierre más abajo). */
@@ -1101,13 +1122,12 @@ function pintarCarpetasSegunFiltro() {
     mostradas = filtrarPorBusqueda(mostradas, _busquedaCarpetas);
 
     pintarPanoramaCarpetas(mostradas);
+    // Rejilla de tarjetas en vez de filas anchas: caben más en pantalla
+    // y cada carpeta se lee de un vistazo, sin recorrer columnas.
     lista.innerHTML = mostradas.length
-        ? '<div class="pt-filas__cab">' +
-              '<span>Carpeta</span><span>Proceso</span>' +
-              (ES_SUPERVISION ? '<span>Operador</span>' : '<span></span>') +
-              '<span>Contenido</span><span></span>' +
-          '</div>' +
-          mostradas.map(c => filaCarpeta(c, _conteoArchivos[c.id] || 0)).join('')
+        ? '<div class="pt-rejilla-carpetas">' +
+              mostradas.map(c => filaCarpeta(c, _conteoArchivos[c.id] || 0)).join('') +
+          '</div>'
         : '';
     vacio.hidden = mostradas.length > 0;
     vacio.textContent = ES_SUPERVISION
@@ -1172,12 +1192,13 @@ function pintarPanoramaCarpetas(mostradas) {
 
 /* Una carpeta = una fila escaneable. La acción primaria («Abrir») queda
    siempre visible; las de administración se repliegan en el menú «⋯». */
+/* Una carpeta, como tarjeta. Toda la tarjeta abre el expediente, y el
+   botón "Abrir" también: se puede pulsar donde caiga la mano. El menú
+   de tres puntos vive dentro y no debe propagar el clic, o abriría la
+   carpeta al intentar editarla. */
 function filaCarpeta(c, totalArchivos) {
     const operadores = c.operadores || [];
-    const asignados = (c.asignados || []).length;
-
-    const estado = c.activa ? '' :
-        ' <span class="pt-insignia pt-insignia--inactiva">Desactivada</span>';
+    const asignados = c.asignados || [];
 
     let menu = '';
     if (ES_ADMIN) {
@@ -1194,28 +1215,104 @@ function filaCarpeta(c, totalArchivos) {
             '</div>';
     }
 
-    return '<div class="pt-fila-carpeta' + (c.activa ? '' : ' pt-fila-carpeta--inactiva') + '">' +
-        '<div>' +
-            '<div class="pt-fila__nombre">' + escaparHtml(c.nombre) + estado + '</div>' +
-            ((ES_PERSONAL || ES_MONITOR) && c.descripcion
-                ? '<div class="pt-fila__sub">' + escaparHtml(c.descripcion) + '</div>'
-                : '<div class="pt-fila__sub">creada ' + escaparHtml(formatoFecha(c.fecha)) + '</div>') +
-        '</div>' +
-        '<div class="pt-fila__col">' + resumenSemaforoCarpeta(c, _procesosPorCarpeta[c.id] || []) + '</div>' +
-        '<div class="pt-fila__col">' +
-            (ES_SUPERVISION
-                ? (operadores.length ? escaparHtml(operadores.map(o => nombreDe(o)).join(', ')) : 'sin asignar')
-                : '') +
-        '</div>' +
-        '<div class="pt-fila__col">' +
-            '<b>' + totalArchivos + ' doc' + (totalArchivos === 1 ? '' : 's') + '</b>' +
-            (ES_SUPERVISION ? (c.pesoTotalMb || 0).toFixed(2) + ' MB · ' : '') +
-            ((ES_PERSONAL || ES_MONITOR) ? asignados + ' persona' + (asignados === 1 ? '' : 's') : '') +
-        '</div>' +
-        '<div class="pt-fila__acciones">' +
-            '<button class="pt-boton pt-boton--primario pt-boton--mini" data-accion="abrir-carpeta" data-id="' + c.id + '">Abrir</button>' +
+    // Quiénes están en el expediente. Antes decía "4 personas" y había
+    // que abrirlo para saber quiénes eran.
+    const personas = (ES_PERSONAL || ES_MONITOR) ? gentesDeCarpeta(c) : '';
+
+    return '<article class="pt-tarjeta-carpeta' + (c.activa ? '' : ' pt-tarjeta-carpeta--inactiva') + '" ' +
+                   'data-accion="abrir-carpeta" data-id="' + c.id + '" ' +
+                   'tabindex="0" role="button">' +
+        '<div class="pt-tarjeta-carpeta__cab">' +
+            '<span class="pt-tarjeta-carpeta__ic">' + icono('carpeta', 18) + '</span>' +
+            (c.activa ? '' : '<span class="pt-insignia pt-insignia--inactiva">Desactivada</span>') +
             menu +
         '</div>' +
+
+        '<h3 class="pt-tarjeta-carpeta__nombre">' + escaparHtml(c.nombre) + '</h3>' +
+        (tipoProcesoEtiqueta(c) || '') +
+
+        '<div class="pt-tarjeta-carpeta__proceso">' +
+            resumenSemaforoCarpeta(c, _procesosPorCarpeta[c.id] || []) +
+        '</div>' +
+
+        // El plazo del trámite: la fecha en que se cumple, no un conteo
+        (plazoDeCarpeta(c) || '') +
+
+        personas +
+
+        '<div class="pt-tarjeta-carpeta__pie">' +
+            '<span class="pt-tarjeta-carpeta__docs">' +
+                '<b>' + totalArchivos + '</b> doc' + (totalArchivos === 1 ? '' : 's') +
+                (ES_SUPERVISION ? ' · ' + (c.pesoTotalMb || 0).toFixed(2) + ' MB' : '') +
+            '</span>' +
+            '<button class="pt-boton pt-boton--primario pt-boton--mini" ' +
+                    'data-accion="abrir-carpeta" data-id="' + c.id + '">Abrir</button>' +
+        '</div>' +
+    '</article>';
+}
+
+/* Etiqueta del régimen del trámite, si está marcado */
+const TIPOS_PROCESO = {
+    natural_no_comerciante: 'Persona natural no comerciante',
+    pequeno_comerciante:    'Pequeño comerciante'
+};
+function tipoProcesoEtiqueta(c) {
+    if (!c.tipoProceso || !TIPOS_PROCESO[c.tipoProceso]) return '';
+    return '<span class="pt-tarjeta-carpeta__tipo">' +
+        escaparHtml(TIPOS_PROCESO[c.tipoProceso]) + '</span>';
+}
+
+/* El plazo del trámite en la tarjeta: la FECHA en que se cumple, que es
+   lo que el operador necesita saber, no cuántos días lleva. */
+function plazoDeCarpeta(c) {
+    if (c.finalizado) {
+        return '<div class="pt-tarjeta-carpeta__plazo">' +
+            puntoSemaforo('verde', 8) + ' Finalizado' +
+            (c.fechaFinTramite ? ' el ' + escaparHtml(formatoFechaDia(c.fechaFinTramite)) : '') +
+        '</div>';
+    }
+    if (!c.fechaInicioTramite || !c.fechaVencimientoTramite) {
+        return '<div class="pt-tarjeta-carpeta__plazo pt-tarjeta-carpeta__plazo--sin">' +
+            'Sin plazo iniciado' + '</div>';
+    }
+    if (c.pausado) {
+        return '<div class="pt-tarjeta-carpeta__plazo">' +
+            puntoSemaforo('pausado', 8) + ' En pausa · el reloj está detenido</div>';
+    }
+    const hoy = fechaISOLocalHabil();
+    const vencido = c.fechaVencimientoTramite < hoy;
+    const restantes = contarDiasHabiles(hoy, c.fechaVencimientoTramite);
+    const color = vencido ? 'rojo' : (restantes !== null && restantes <= 5 ? 'naranja' : 'verde');
+    return '<div class="pt-tarjeta-carpeta__plazo">' +
+        puntoSemaforo(color, 8) +
+        (vencido ? ' Venció el ' : ' Vence el ') +
+        '<strong>' + escaparHtml(formatoFechaDia(c.fechaVencimientoTramite)) + '</strong>' +
+        (c.tieneProrroga ? ' <span class="pt-tarjeta-carpeta__prorroga">con prórroga</span>' : '') +
+    '</div>';
+}
+
+/* Quiénes trabajan el expediente y quiénes son parte. Se muestran los
+   nombres, no el número: saber que hay cuatro personas no sirve de nada
+   si hay que abrir la carpeta para ver quiénes son. */
+function gentesDeCarpeta(c) {
+    const ops = (c.operadores || []).map(o => nombreDe(o));
+    const partes = (c.asignados || []).map(a => nombreDe(a));
+    if (!ops.length && !partes.length) return '';
+
+    const grupo = (etiqueta, gente) => {
+        if (!gente.length) return '';
+        return '<div class="pt-gente__grupo">' +
+            '<span class="pt-gente__eti">' + etiqueta + '</span>' +
+            '<span class="pt-gente__nombres">' +
+                gente.map(n => '<span class="pt-gente__chip" title="' + escaparHtml(n) + '">' +
+                    escaparHtml(n) + '</span>').join('') +
+            '</span>' +
+        '</div>';
+    };
+
+    return '<div class="pt-gente">' +
+        grupo('Operador', ops) +
+        grupo(partes.length === 1 ? 'Parte' : 'Partes', partes) +
     '</div>';
 }
 
@@ -1463,6 +1560,49 @@ function pintarCifrasDetalle(carpeta, archivos) {
         cifra(mb.toFixed(2), 'MB') +
         cifra(personas, personas === 1 ? 'Persona' : 'Personas') +
         cifra(plazoNum, plazoTit, clase);
+
+    pintarGenteDetalle(carpeta);
+}
+
+/* Quiénes están en el expediente, con nombre y rol. La cifra de arriba
+   dice cuántos son; sin esto había que adivinar quiénes. Lo ven el
+   administrador, el monitor y el operador responsable; el deudor y los
+   acreedores no ven la lista de las otras partes. */
+function pintarGenteDetalle(carpeta) {
+    const caja = document.getElementById('detalle-gente');
+    if (!caja) return;
+    if (!(ES_PERSONAL || ES_MONITOR)) { caja.hidden = true; return; }
+
+    const fila = (etiqueta, usuarios) => {
+        if (!usuarios.length) return '';
+        return '<div class="pt-gente__grupo">' +
+            '<span class="pt-gente__eti">' + etiqueta + '</span>' +
+            '<span class="pt-gente__nombres">' +
+                usuarios.map(u => {
+                    const perfil = (_usuariosCache || []).find(x => x.usuario === u);
+                    const rol = perfil ? (ETIQUETAS_ROL[perfil.rol] || perfil.rol) : '';
+                    return '<span class="pt-gente__chip" title="' +
+                        escaparHtml(u + (rol ? ' · ' + rol : '')) + '">' +
+                        escaparHtml(nombreDe(u)) +
+                        (rol ? ' <em>' + escaparHtml(rol) + '</em>' : '') +
+                    '</span>';
+                }).join('') +
+            '</span>' +
+        '</div>';
+    };
+
+    const ops = carpeta.operadores || [];
+    const partes = carpeta.asignados || [];
+    if (!ops.length && !partes.length) {
+        caja.hidden = false;
+        caja.innerHTML = '<p class="pt-nota">Todavía no hay nadie asignado a este expediente.</p>';
+        return;
+    }
+    caja.hidden = false;
+    caja.innerHTML = '<div class="pt-gente">' +
+        fila(ops.length === 1 ? 'Operador' : 'Operadores', ops) +
+        fila(partes.length === 1 ? 'Parte' : 'Partes', partes) +
+    '</div>';
 }
 
 /* Muestra u oculta la zona de carga (boton "+ Subir archivos") */
@@ -1655,39 +1795,54 @@ function grupoDeTramite(c) {
     return 'encurso';
 }
 
-/* Anillo del conteo 60/90 del tramite completo. Devuelve el SVG.
-   Los dias habiles transcurridos se calculan con la misma aritmetica
-   del resto del portal (diasHabiles.js). */
-function anilloTramite(c) {
-    const total = c.diasHabilesTramite || 60;
-    let usados = null;
-    if (c.fechaInicioTramite) {
-        try { usados = contarDiasHabiles(c.fechaInicioTramite, fechaISOLocalHabil()); } catch (e) { usados = null; }
+/* El plazo del trámite, en una fila propia dentro de la tarjeta.
+
+   Antes era un anillo con "8/60" al lado del nombre. Se cambió por la
+   fecha, que es lo que el operador necesita, pero puesta en la misma
+   fila el texto largo aplastaba el nombre a una palabra por línea. Va
+   debajo, a lo ancho, con la fecha corta.
+
+   La calculó el servidor al iniciar el trámite, saltando fines de
+   semana y festivos colombianos. */
+function plazoTramite(c) {
+    const hoy = fechaISOLocalHabil();
+
+    const caja = (color, eti, valor, resto) =>
+        '<div class="pt-plazo pt-plazo--' + color + '">' +
+            '<span class="pt-plazo__eti">' + eti + '</span>' +
+            '<span class="pt-plazo__fecha">' + valor + '</span>' +
+            (resto ? '<span class="pt-plazo__resto">' + resto + '</span>' : '') +
+        '</div>';
+
+    if (!c.fechaInicioTramite || !c.fechaVencimientoTramite) {
+        return caja('sin', 'Plazo', 'Sin iniciar', '');
     }
-    let color = 'gris', etiqueta = '-/' + total, frac = 0;
-    if (usados !== null) {
-        usados = Math.max(0, Math.min(usados, total));
-        frac = total ? usados / total : 0;
-        etiqueta = usados + '/' + total;
-        color = c.finalizado ? 'verde' : c.pausado ? 'gris'
-              : frac >= 1 ? 'rojo' : frac >= 0.85 ? 'naranja' : 'verde';
+    if (c.finalizado) {
+        return caja('verde', 'Finalizado',
+            escaparHtml(c.fechaFinTramite ? formatoFechaCorta(c.fechaFinTramite) : '—'), '');
     }
-    const R = 22, C = 2 * Math.PI * R;
-    const offset = C * (1 - frac);
-    return '<div class="pt-anillo" title="' + etiqueta + ' dias habiles del tramite">' +
-        '<svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true">' +
-            '<circle class="pt-anillo__pista" cx="26" cy="26" r="' + R + '" fill="none" stroke-width="5"></circle>' +
-            '<circle class="pt-anillo__arco pt-anillo__arco--' + color + '" cx="26" cy="26" r="' + R + '" fill="none" ' +
-                'stroke-width="5" stroke-linecap="round" stroke-dasharray="' + C.toFixed(1) + '" ' +
-                'stroke-dashoffset="' + offset.toFixed(1) + '"></circle>' +
-        '</svg>' +
-        '<span class="pt-anillo__txt">' + etiqueta + '</span>' +
-    '</div>';
+    if (c.pausado) {
+        return caja('gris', 'En pausa', 'Reloj detenido', '');
+    }
+
+    const vencido = c.fechaVencimientoTramite < hoy;
+    let restantes = null;
+    try { restantes = contarDiasHabiles(hoy, c.fechaVencimientoTramite); } catch (e) {}
+    const color = vencido ? 'rojo' : (restantes !== null && restantes <= 5 ? 'naranja' : 'verde');
+    const resto = restantes === null ? ''
+        : (vencido ? Math.abs(restantes) + ' días hábiles de atraso'
+                   : restantes + ' días hábiles') +
+          (c.tieneProrroga ? ' · prórroga' : '');
+
+    return caja(color, vencido ? 'Venció' : 'Vence',
+                escaparHtml(formatoFechaCorta(c.fechaVencimientoTramite)), resto);
 }
 
 /* Una tarjeta de tramite dentro del tablero.
-   Nombre y anillo arriba, operador debajo, una linea separadora y
-   luego el detalle del plazo. Las acciones van al pie. */
+   Nombre y operador arriba a lo ancho, debajo la fila del plazo de los
+   60 dias, luego el detalle de la etapa en curso y al pie las acciones.
+   Las columnas son estrechas, asi que aqui las fechas van cortas: la
+   version larga con dia de la semana esta en el detalle de la carpeta. */
 function tarjetaTramiteTablero(c) {
     const procesos = _estadosProcesos[c.id] || [];
     const actual = procesoActualDe(procesos);
@@ -1697,20 +1852,23 @@ function tarjetaTramiteTablero(c) {
     if (c.finalizado) {
         lineas.push('Todos los procesos completados');
         lineas.push('Finalizado' +
-            (c.fechaFinTramite ? ' ' + escaparHtml(formatoFechaDia(c.fechaFinTramite)) : ''));
+            (c.fechaFinTramite ? ' el ' + escaparHtml(formatoFechaCorta(c.fechaFinTramite)) : ''));
     } else if (c.pausado) {
         lineas.push('Tramite en pausa: el reloj esta detenido');
     } else if (!actual) {
         lineas.push(procesos.length ? 'Todos los procesos completados' : 'En espera');
         lineas.push('Sin procesos definidos todavia');
     } else {
+        // Este vencimiento es el de la ETAPA en curso, no el de los 60
+        // dias del tramite: si no se nombra distinto, la tarjeta parece
+        // llevar dos "Vence" contradictorios.
         const st = semaforoEfectivo(actual, c.pausado);
         const d = st.diasRestantes;
-        lineas.push('Vence <strong>' + escaparHtml(formatoVencimiento(actual.fechaVencimiento)) + '</strong>' +
+        lineas.push('Etapa: <strong>' + escaparHtml(actual.nombre) + '</strong>');
+        lineas.push('Termina el ' + escaparHtml(formatoFechaCorta(actual.fechaVencimiento)) +
             (d === null ? '' : ' · ' + (d < 0
-                ? Math.abs(d) + ' dia(s) habil(es) de atraso'
-                : d + ' dia(s) habil(es)')));
-        lineas.push('Proceso: ' + escaparHtml(actual.nombre));
+                ? Math.abs(d) + ' días hábiles de atraso'
+                : d + ' días hábiles')));
     }
 
     // El menu solo aparece donde hay algo que gestionar
@@ -1719,12 +1877,12 @@ function tarjetaTramiteTablero(c) {
 
     return '<article class="pt-tramite">' +
         '<div class="pt-tramite__cab">' +
-            '<div>' +
+            '<div class="pt-tramite__titulo">' +
                 '<div class="pt-tramite__nombre">' + escaparHtml(c.nombre) + '</div>' +
                 (operadores ? '<div class="pt-tramite__op">' + escaparHtml(operadores) + '</div>' : '') +
             '</div>' +
-            anilloTramite(c) +
         '</div>' +
+        plazoTramite(c) +
         '<div class="pt-tramite__cuerpo">' +
             lineas.map(l => '<div class="pt-tramite__linea">' + l + '</div>').join('') +
         '</div>' +
@@ -1893,9 +2051,9 @@ function tablaEstadosGlobal(carpetas) {
             acciones += ' <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="nuevo-proceso" data-id="' + c.id + '">+ Proceso</button>' +
                 (actual && !c.pausado ? ' <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="editar-proceso" data-id="' + actual.id + '">Editar</button>' : '') +
                 (!c.fechaInicioTramite && !c.pausado
-                    ? ' <button class="pt-boton pt-boton--primario pt-boton--mini" data-accion="iniciar-tramite" data-id="' + c.id + '">Iniciar conteo</button>' : '') +
+                    ? ' <button class="pt-boton pt-boton--primario pt-boton--mini" data-accion="iniciar-tramite" data-id="' + c.id + '">Iniciar plazo</button>' : '') +
                 (c.fechaInicioTramite && !c.tieneProrroga && !c.pausado
-                    ? ' <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="prorroga-tramite" data-id="' + c.id + '">Prórroga 90</button>' : '') +
+                    ? ' <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="prorroga-tramite" data-id="' + c.id + '">+30 días</button>' : '') +
                 (c.pausado
                     ? ' <button class="pt-boton pt-boton--primario pt-boton--mini" data-accion="reactivar-tramite" data-id="' + c.id + '">Reactivar</button>'
                     : ' <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="pausar-tramite" data-id="' + c.id + '">Pausar</button>') +
@@ -1949,11 +2107,11 @@ function tarjetaEstadoTramite(c) {
         }
         botones += '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="nuevo-proceso" data-id="' + c.id + '">+ Nuevo proceso</button> ';
         if (!c.fechaInicioTramite && !c.pausado) {
-            botones += '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="iniciar-tramite" data-id="' + c.id + '">Iniciar conteo (60 días)</button> ';
+            botones += '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="iniciar-tramite" data-id="' + c.id + '">Iniciar plazo (60 días hábiles)</button> ';
         }
         // La prórroga también la puede aplicar el operador responsable
         if (c.fechaInicioTramite && !c.tieneProrroga && !c.pausado) {
-            botones += '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="prorroga-tramite" data-id="' + c.id + '">Añadir prórroga (90)</button> ';
+            botones += '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="prorroga-tramite" data-id="' + c.id + '">Prórroga: +30 días hábiles</button> ';
         }
         botones += c.pausado
             ? '<button class="pt-boton pt-boton--primario pt-boton--mini" data-accion="reactivar-tramite" data-id="' + c.id + '">Reactivar trámite</button>'
@@ -2117,14 +2275,22 @@ async function reactivarTramiteAccion(carpetaId) {
 async function iniciarTramiteAccion(carpetaId) {
     if (!ES_PERSONAL) return;
     const c = _estadosCarpetas.find(x => x.id === carpetaId);
-    if (!await confirmarPortal('Confirme el inicio del conteo del trámite' + (c ? ' "' + c.nombre + '"' : '') + '.\n\n' +
-        'Corren 60 días hábiles colombianos desde hoy (ampliables a 90 con la prórroga).', 'Iniciar conteo')) return;
+    if (!await confirmarPortal('Confirme el inicio del plazo del trámite' + (c ? ' "' + c.nombre + '"' : '') + '.\n\n' +
+        'Corren 60 días hábiles colombianos desde hoy, saltando fines de semana y festivos. ' +
+        'Al confirmar se calcula el día exacto en que se cumple.', 'Iniciar plazo')) return;
     try {
         await tramiteIniciar(carpetaId);
         registrarActividad('iniciar-tramite', (c && c.nombre) || String(carpetaId), carpetaId);
-        avisar('Conteo iniciado: 60 días hábiles.');
+        // El servidor ya calculó la fecha saltando festivos: se lee y se
+        // dice, porque es el dato que el operador va a apuntar
+        let vence = null;
+        try { vence = (await dbObtener('carpetas', carpetaId) || {}).fechaVencimientoTramite; }
+        catch (e) { /* si no se puede leer, se avisa sin fecha */ }
+        avisar(vence
+            ? 'Plazo iniciado. El trámite vence el ' + formatoFechaDia(vence) + '.'
+            : 'Plazo iniciado: 60 días hábiles.');
     } catch (e) {
-        avisar((e && e.message) || 'No se pudo iniciar el conteo.', 'error');
+        avisar((e && e.message) || 'No se pudo iniciar el plazo.', 'error');
     }
     cerrarDetalleTramite();
     await cargarYPintarEstados();
@@ -2153,11 +2319,17 @@ async function prorrogaTramiteAccion(carpetaId) {
     if (!ES_PERSONAL) return; // admin u operador responsable (el servidor valida)
     const c = _estadosCarpetas.find(x => x.id === carpetaId);
     if (!await confirmarPortal('Confirme la PRÓRROGA del trámite' + (c ? ' "' + c.nombre + '"' : '') + '.\n\n' +
-        'El plazo pasa de 60 a 90 días hábiles contados desde la MISMA fecha de inicio. Solo se puede aplicar una vez.', 'Añadir prórroga')) return;
+        'Se añaden 30 días hábiles: el plazo pasa de 60 a 90, contados desde la misma fecha ' +
+        'de inicio. Solo se puede aplicar una vez.', 'Añadir prórroga')) return;
     try {
         await tramiteProrroga(carpetaId);
         registrarActividad('prorroga-tramite', (c && c.nombre) || String(carpetaId), carpetaId);
-        avisar('Prórroga aplicada: el trámite ahora tiene 90 días hábiles.');
+        let nueva = null;
+        try { nueva = (await dbObtener('carpetas', carpetaId) || {}).fechaVencimientoTramite; }
+        catch (e) { /* si no se puede leer, se avisa sin fecha */ }
+        avisar(nueva
+            ? 'Prórroga aplicada. El trámite ahora vence el ' + formatoFechaDia(nueva) + '.'
+            : 'Prórroga aplicada: el trámite ahora tiene 90 días hábiles.');
     } catch (e) {
         avisar((e && e.message) || 'No se pudo aplicar la prórroga.', 'error');
     }
@@ -2246,9 +2418,9 @@ function abrirDetalleTramite(carpetaId) {
         acciones = '<div class="pt-celda-acciones" style="margin:.8rem 0;">' +
             '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="nuevo-proceso" data-id="' + c.id + '">+ Nuevo proceso</button> ' +
             (!c.fechaInicioTramite && !c.pausado
-                ? '<button class="pt-boton pt-boton--primario pt-boton--mini" data-accion="iniciar-tramite" data-id="' + c.id + '">Iniciar conteo (60 días)</button> ' : '') +
+                ? '<button class="pt-boton pt-boton--primario pt-boton--mini" data-accion="iniciar-tramite" data-id="' + c.id + '">Iniciar plazo (60 días hábiles)</button> ' : '') +
             (c.fechaInicioTramite && !c.tieneProrroga && !c.pausado
-                ? '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="prorroga-tramite" data-id="' + c.id + '">Aplicar prórroga (90 días)</button> ' : '') +
+                ? '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="prorroga-tramite" data-id="' + c.id + '">Prórroga: +30 días hábiles</button> ' : '') +
             (c.pausado
                 ? '<button class="pt-boton pt-boton--primario pt-boton--mini" data-accion="reactivar-tramite" data-id="' + c.id + '">Reactivar trámite</button>'
                 : '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="pausar-tramite" data-id="' + c.id + '">Pausar trámite</button>') +
@@ -3387,7 +3559,13 @@ const ICONO_NOTIF = {
     'proceso-estado': 'estado', 'proceso-semaforo': 'estado', 'proceso-vencido': 'alerta',
     'tramite-pausado': 'desactivar', 'tramite-reactivado': 'activar',
     'tramite-finalizado': 'activar', 'tramite-prorroga': 'estado',
-    'tramite-fin': 'activar', 'ingreso-propio': 'ingreso', 'solicitud-clave': 'usuario'
+    'tramite-fin': 'activar', 'ingreso-propio': 'ingreso', 'solicitud-clave': 'usuario',
+    // Cuenta atrás del plazo del trámite, la genera la tarea diaria del
+    // servidor (avisar_plazos_tramite) y la recibe TODO el que esté en la
+    // carpeta. El número es cuántos días de calendario faltaban.
+    'plazo-28': 'calendario', 'plazo-21': 'calendario',
+    'plazo-14': 'calendario', 'plazo-7': 'calendario',
+    'plazo-1': 'alerta', 'plazo-0': 'alerta'
 };
 
 /* Registra el ingreso del admin como notificación en su campana (fecha/hora),
@@ -3903,19 +4081,34 @@ async function pintarArchivos() {
    agrupa sus documentos («Audiencias», «Notificaciones»…).
    Se navegan como fichas: con pocas subcarpetas un árbol estorba. */
 
-/* La subcarpeta de audiencias guarda las grabaciones; el resto de la
-   carpeta guarda el expediente escrito. Se reconoce por el nombre
-   porque las subcarpetas las crea el operador con el que quiera, sin
-   distinguir mayúsculas ni tildes: «Audiencias», «audiencia»… */
+/* La subcarpeta de audiencias guarda las grabaciones. Se reconoce por
+   el nombre, sin distinguir mayúsculas ni tildes, porque el operador
+   puede llamarla «Audiencias», «audiencia de conciliación» o parecido. */
 function esSubcarpetaDeMedios(nombre) {
     return /audiencia/i.test(String(nombre || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
 }
 
 /* ¿Admite este destino un archivo con esta extensión?
-   destino: id de subcarpeta, o null para la raíz («Documentos»). */
+
+   Toda carpeta nace con dos sitios, y cada uno tiene su regla:
+
+     Documentos (la raíz)  solo documentos, en cualquier formato
+     Audiencias            solo audio y video, en cualquier formato
+
+   Las subcarpetas que el operador cree a mano no llevan restricción:
+   son suyas y ahí puede mezclar lo que necesite. El objetivo de las dos
+   automáticas es que el expediente escrito y las grabaciones no se
+   revuelvan, no imponer orden en todo lo demás.
+
+   destino: id de subcarpeta, o null para la raíz. */
 function destinoAdmiteExtension(destino, ext) {
     const esMedia = EXTENSIONES_MEDIA.includes(ext);
-    return destinoEsDeMedios(destino) ? esMedia : !esMedia;
+    // Audiencias: solo grabaciones
+    if (destinoEsDeMedios(destino)) return esMedia;
+    // Raíz: solo el expediente escrito
+    if (destino === null || destino === undefined || destino === '') return !esMedia;
+    // Subcarpeta creada a mano: libre
+    return true;
 }
 
 /* Dice si un destino es la subcarpeta de audiencias, donde van las
@@ -3927,9 +4120,11 @@ function destinoEsDeMedios(destino) {
 
 /* Motivo del rechazo, en las palabras del portal */
 function motivoRechazo(destino, nombreArchivo) {
-    return nombreArchivo + (destinoEsDeMedios(destino)
-        ? ' (en audiencias solo entran audio y video)'
-        : ' (el audio y el video van en la subcarpeta de audiencias)');
+    if (destinoEsDeMedios(destino)) {
+        return nombreArchivo + ' (en Audiencias solo entran grabaciones de audio o video)';
+    }
+    return nombreArchivo + ' (las grabaciones van en Audiencias; en Documentos ' +
+           'solo el expediente escrito)';
 }
 
 /* Nombre de una subcarpeta a partir de su id. */
@@ -3992,12 +4187,19 @@ function ajustarZonaSubida() {
     const entrada = document.getElementById('entrada-archivos');
     const nota = document.getElementById('subida-nota');
     const medios = destinoEsDeMedios(_subcarpetaAbierta);
-    const lista = medios ? EXTENSIONES_MEDIA : EXTENSIONES_DOCUMENTO;
+    const enRaiz = _subcarpetaAbierta === null;
+    // Las subcarpetas creadas a mano no restringen nada
+    const lista = medios ? EXTENSIONES_MEDIA
+                : enRaiz ? EXTENSIONES_DOCUMENTO
+                : EXTENSIONES_PERMITIDAS;
     if (entrada) entrada.accept = lista.map(e => '.' + e).join(',');
     if (nota) {
         nota.textContent = (medios
-            ? 'Solo audio y video: ' + lista.join(', ').toUpperCase()
-            : 'Permitidos: PDF, Word, Excel, PNG, JPG. El audio y el video van en la subcarpeta de audiencias') +
+            ? 'Solo grabaciones de audio o video, en cualquier formato'
+            : enRaiz
+                ? 'Solo el expediente escrito: PDF, Word, Excel, imágenes escaneadas. ' +
+                  'Las grabaciones van en Audiencias'
+                : 'Aquí puedes subir de todo: documentos, imágenes, audio y video') +
             ' · máximo 50 MB por archivo';
     }
 }
@@ -4403,6 +4605,16 @@ function cambiarMesCalendario(delta) {
 }
 
 /* Fecha en formato largo en español, a partir de una cadena ISO. */
+/* 'AAAA-MM-DD' → '24 nov 2026'. En columnas estrechas la fecha larga
+   no cabe y empuja el resto de la tarjeta, así que ahí se usa esta. */
+function formatoFechaCorta(iso) {
+    const [a, m, d] = String(iso).split('-').map(Number);
+    if (!a || !m || !d) return String(iso);
+    const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun',
+                 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    return d + ' ' + (MES[m - 1] || '') + ' ' + a;
+}
+
 function formatoFechaDia(iso) {
     // 'AAAA-MM-DD' → 'lunes, 20 de agosto de 2026' (sin correr el día por zona horaria)
     const [a, m, d] = String(iso).split('-').map(Number);
@@ -5820,6 +6032,8 @@ async function abrirModalCarpeta(carpeta) {
     document.getElementById('modal-carpeta-titulo').textContent = carpeta ? 'Editar carpeta' : 'Nueva carpeta';
     document.getElementById('carpeta-nombre').value = carpeta ? carpeta.nombre : '';
     document.getElementById('carpeta-descripcion').value = carpeta ? (carpeta.descripcion || '') : '';
+    document.getElementById('carpeta-tipo').value =
+        (carpeta && carpeta.tipoProceso) || 'natural_no_comerciante';
     document.getElementById('carpeta-activa').checked = carpeta ? !!carpeta.activa : true;
 
     // Listas para asignar: operadores responsables y clientes/acreedores.
@@ -5881,6 +6095,7 @@ async function guardarCarpeta(evento) {
     const nombre = document.getElementById('carpeta-nombre').value.trim();
     if (!nombre) return;
     const descripcion = document.getElementById('carpeta-descripcion').value.trim();
+    const tipoProceso = document.getElementById('carpeta-tipo').value;
     const activa = document.getElementById('carpeta-activa').checked;
     const operadores = [...document.querySelectorAll('#carpeta-operadores input:checked')].map(c => c.value);
     const asignados = [
@@ -5889,7 +6104,7 @@ async function guardarCarpeta(evento) {
     ].map(c => c.value);
 
     if (carpetaEditando) {
-        await dbGuardar('carpetas', { ...carpetaEditando, nombre, descripcion, activa, asignados, operadores });
+        await dbGuardar('carpetas', { ...carpetaEditando, nombre, descripcion, tipoProceso, activa, asignados, operadores });
         registrarActividad('editar-carpeta', nombre);
         avisar('Carpeta actualizada.');
     } else {
@@ -5901,12 +6116,17 @@ async function guardarCarpeta(evento) {
                    'Desde "Todas las notarías" no se sabe a cuál pertenece.', 'error');
             return;
         }
-        await dbAgregar('carpetas', {
-            nombre, descripcion, activa, asignados, operadores,
+        const nuevaId = await dbAgregar('carpetas', {
+            nombre, descripcion, tipoProceso, activa, asignados, operadores,
             notariaId: _notariaActiva,
             creadaPor: sesion.usuario,
             fecha: Date.now()
         });
+        // Toda carpeta nace con su subcarpeta de audiencias: es donde van
+        // las grabaciones y conviene que exista desde el primer día, sin
+        // que el operador tenga que acordarse de crearla.
+        try { await subcarpetaCrear(nuevaId, 'Audiencias'); }
+        catch (e) { /* si falla, se puede crear a mano después */ }
         registrarActividad('crear-carpeta', nombre);
         avisar('Carpeta creada.');
     }

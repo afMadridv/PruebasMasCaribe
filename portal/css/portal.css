@@ -25,6 +25,12 @@
     --pt-rojo-suave: #FBE3E1;
     --pt-ambar: #8A4B08;
     --pt-ambar-suave: #FCEFD3;
+    /* Los mismos tres colores, pero para TEXTO y bordes finos. En claro
+       coinciden con los de arriba; en oscuro se aclaran para poder
+       leerse sobre las superficies del tema. */
+    --pt-verde-txt: #157039;
+    --pt-rojo-txt:  #B3261E;
+    --pt-ambar-txt: #8A4B08;
 
     /* Elevación (sombras suaves, sin bordes duros) */
     --pt-sombra-1: 0 1px 2px rgba(15,42,68,.07), 0 3px 10px rgba(15,42,68,.06);
@@ -66,6 +72,11 @@ html[data-tema="oscuro"]{
     --pt-verde-suave: #14361F;
     --pt-rojo-suave: #3A1714;
     --pt-ambar-suave: #3A2A0C;
+    /* Semaforo aclarado: sobre las superficies oscuras pasa de 2.2:1 a
+       6:1 de contraste, que ya se lee. Los rellenos solidos no cambian. */
+    --pt-verde-txt: #57C98A;
+    --pt-rojo-txt:  #EF8078;
+    --pt-ambar-txt: #E8A33C;
     --pt-sombra-1: 0 1px 2px rgba(0,0,0,.35), 0 3px 10px rgba(0,0,0,.3);
     --pt-sombra-2: 0 4px 10px rgba(0,0,0,.4), 0 14px 30px rgba(0,0,0,.45);
     --pt-sombra-3: 0 10px 24px rgba(0,0,0,.5), 0 24px 60px rgba(0,0,0,.55);
@@ -220,12 +231,12 @@ button{
 }
 .pt-boton--peligro{
     background-color: transparent;
-    color: var(--pt-rojo);
+    color: var(--pt-rojo-txt);
     border: 1px solid #EBC7C4;
 }
 .pt-boton--peligro:hover{
     background-color: var(--pt-rojo-suave);
-    border-color: var(--pt-rojo);
+    border-color: var(--pt-rojo-txt);
 }
 .pt-boton--mini{
     padding: .55rem 1.1rem;
@@ -249,7 +260,7 @@ button{
 }
 .pt-error{
     background-color: var(--pt-rojo-suave);
-    color: var(--pt-rojo);
+    color: var(--pt-rojo-txt);
     border-radius: .9rem;
     padding: 1rem 1.4rem;
     font-size: 1.4rem;
@@ -386,7 +397,7 @@ fieldset.pt-campo{
    que el texto se siga leyendo bien también en modo oscuro. */
 .pt-carpeta--inactiva{
     background-color: var(--pt-ambar-suave);
-    border: 1px solid var(--pt-ambar);
+    border: 1px solid var(--pt-ambar-txt);
 }
 .pt-carpeta__etapa .pt-svg{ color: var(--pt-azul-600); flex-shrink: 0; }
 
@@ -409,8 +420,8 @@ fieldset.pt-campo{
     border-radius: 50%;
     background-color: currentColor;
 }
-.pt-insignia--activa{ background-color: var(--pt-verde-suave); color: var(--pt-verde); }
-.pt-insignia--inactiva{ background-color: var(--pt-ambar-suave); color: var(--pt-ambar); }
+.pt-insignia--activa{ background-color: var(--pt-verde-suave); color: var(--pt-verde-txt); }
+.pt-insignia--inactiva{ background-color: var(--pt-ambar-suave); color: var(--pt-ambar-txt); }
 .pt-insignia--rol{ background-color: #E2EBF4; color: var(--pt-navy-700); }
 .pt-insignia--rol::before{ display: none; }
 
@@ -1798,7 +1809,7 @@ html[data-tema="oscuro"] .pt-cal-prox h4{ color: #DCE7EB; }
    Días dentro del plazo de un proceso (solo personal y monitor). */
 .pt-cal__dia--rango{
     background: var(--pt-ambar-suave);
-    border-color: var(--pt-ambar);
+    border-color: var(--pt-ambar-txt);
 }
 .pt-cal__dia--rango.pt-cal__dia--audiencia{
     /* audiencia dentro de un rango: manda el color de audiencia */
@@ -1808,7 +1819,7 @@ html[data-tema="oscuro"] .pt-cal-prox h4{ color: #DCE7EB; }
     display: inline-block;
     width: 10px; height: 10px;
     background: var(--pt-ambar-suave);
-    border: 1px solid var(--pt-ambar);
+    border: 1px solid var(--pt-ambar-txt);
     border-radius: 3px;
     vertical-align: middle;
 }
@@ -1916,4 +1927,4 @@ html[data-tema="oscuro"] .pt-cal-prox h4{ color: #DCE7EB; }
     cursor: pointer; opacity: .6; transition: all var(--pt-rapido);
 }
 .pt-campana-item:hover .pt-campana-x{ opacity: 1; }
-.pt-campana-x:hover{ background: var(--pt-rojo-suave); color: var(--pt-rojo); opacity: 1; }
+.pt-campana-x:hover{ background: var(--pt-rojo-suave); color: var(--pt-rojo-txt); opacity: 1; }
