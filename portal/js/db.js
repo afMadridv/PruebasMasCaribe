@@ -535,7 +535,9 @@ async function llamadaActualizar() {}
 function canalSenalizacion() { return { enviar: () => {}, cerrar: () => {} }; }
 
 /* Notificaciones (campana): en modo local no hay triggers de servidor */
-async function notificacionesListar() { return []; }
+/* En modo practica no hay campana. Recibe la notaria para tener la
+   misma firma que la version de nube. */
+async function notificacionesListar(notaria) { return []; }
 /* Marca notificaciones como leídas. */
 async function notificacionesMarcarLeidas() {}
 /* Borra una notificación. */

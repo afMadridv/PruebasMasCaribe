@@ -727,6 +727,9 @@ async function elegirNotaria(valor) {
     // no sirve
     cacheOlvidar();
     if (!_arranqueHecho) { await completarArranque(); return; }
+    // La campana tambien cambia de oficina: sus avisos son los de esta
+    // notaria, no los de la anterior
+    refrescarCampana().catch(() => {});
     await mostrarVistaCarpetas();
 }
 
@@ -3598,7 +3601,9 @@ async function iniciarCampana() {
 async function refrescarCampana() {
     try {
         if (ES_ADMIN) await notificacionesGenerarVencidos().catch(() => {});
-        _notifCache = await notificacionesListar();
+        // Solo los avisos de la notaria abierta: mezclarlos hace la
+        // campana inutil cuando alguien atiende varias oficinas
+        _notifCache = await notificacionesListar(_notariaActiva);
     } catch (e) { return; }
     const noLeidas = _notifCache.filter(n => !n.leido).length;
     const cont = document.getElementById('campana-contador');
@@ -3636,7 +3641,11 @@ async function alternarCampana() {
     pintarCampanaLista();   // se pintan resaltadas las nuevas…
     // …y al abrir el panel quedan automáticamente LEÍDAS (el contador se apaga)
     if (_notifCache.some(n => !n.leido)) {
-        notificacionesMarcarLeidas(null).then(() => {
+        // Los identificadores en vez de null: con null se marcarian
+        // tambien los avisos de las otras notarias, que no se estan
+        // viendo, y desaparecerian sin que nadie los leyera
+        const visibles = _notifCache.filter(n => !n.leido).map(n => n.id);
+        notificacionesMarcarLeidas(visibles).then(() => {
             for (const n of _notifCache) n.leido = true;
             const cont = document.getElementById('campana-contador');
             if (cont) cont.hidden = true;
@@ -6442,9 +6451,17 @@ async function crearUsuario(evento) {
         avisar('Revisa los datos: la contraseña necesita mínimo 8 caracteres.', 'error');
         return;
     }
-    // El correo es obligatorio: se usa para avisos y notificaciones del trámite
-    if (!correo || !esCorreoValido(correo)) {
-        avisar('Registra un correo de contacto válido para el usuario.', 'error');
+    // El correo se exige a operador, cliente y acreedor: es por donde les
+    // llegan los avisos de audiencia y del tramite. Al administrador y al
+    // monitor no, porque ven la campana dentro del portal.
+    if (correoObligatorio(rol)) {
+        if (!correo || !esCorreoValido(correo)) {
+            avisar('El rol «' + rol + '» necesita un correo de contacto válido: ' +
+                   'por ahí le llegan los avisos del trámite.', 'error');
+            return;
+        }
+    } else if (correo && !esCorreoValido(correo)) {
+        avisar('El correo de contacto no tiene un formato válido.', 'error');
         return;
     }
     const existente = await dbObtener('usuarios', usuario);
@@ -6462,6 +6479,38 @@ async function crearUsuario(evento) {
     document.getElementById('form-usuario').reset();
     alternarCajonUsuario(false);
     await mostrarVistaUsuarios();
+}
+
+/* A quien se le exige correo.
+
+   El correo se usa para los avisos de audiencia (mailto:) y para las
+   notificaciones del tramite, asi que operador, cliente y acreedor lo
+   necesitan. El administrador y el monitor entran al portal y ven la
+   campana ahi mismo: para ellos es opcional.
+
+   La MISMA regla vive en la base, en la restriccion
+   perfiles_correo_obligatorio. Aqui esta para avisar antes y con un
+   mensaje claro; alla esta para que ninguna ruta la evada. */
+const ROLES_CON_CORREO = ['operador', 'cliente', 'acreedor'];
+
+function correoObligatorio(rol) {
+    return ROLES_CON_CORREO.includes(rol);
+}
+
+/* Marca el campo de correo como obligatorio u opcional segun el rol.
+   Cambia la etiqueta tambien: un asterisco que nadie explica no sirve. */
+function ajustarCampoCorreo(idCampo, idEtiqueta, rol) {
+    const campo = document.getElementById(idCampo);
+    const etiqueta = document.getElementById(idEtiqueta);
+    if (!campo) return;
+    const obliga = correoObligatorio(rol);
+    campo.required = obliga;
+    campo.placeholder = obliga ? 'nombre@ejemplo.com' : 'Opcional para este rol';
+    if (etiqueta) {
+        etiqueta.textContent = obliga
+            ? 'Correo electrónico (obligatorio: se usa para los avisos del trámite)'
+            : 'Correo electrónico (opcional para administrador y monitor)';
+    }
 }
 
 /* Comprobación básica de formato de correo. */
@@ -6483,6 +6532,7 @@ function abrirModalUsuario(usuario) {
     document.getElementById('editar-correo').value = usuario.correo || '';
     document.getElementById('editar-clave').value = '';
     document.getElementById('editar-notificar').checked = false;
+    ajustarCampoCorreo('editar-correo', 'etiqueta-editar-correo', usuario.rol);
     document.getElementById('modal-usuario').hidden = false;
     document.getElementById('editar-nombre').focus();
     // Las notarías se traen aparte: son otra tabla
@@ -6542,7 +6592,17 @@ async function guardarEdicionUsuario(evento) {
     const notificar = document.getElementById('editar-notificar').checked;
 
     if (!nombre) { avisar('El nombre no puede quedar vacío.', 'error'); return; }
-    if (correo && !esCorreoValido(correo)) { avisar('El correo de contacto no tiene un formato válido.', 'error'); return; }
+    // Misma regla que al crear. Hay perfiles antiguos sin correo: al
+    // editarlos hay que completarlo, que es justo lo que se quiere.
+    if (correoObligatorio(usuarioEditando.rol)) {
+        if (!correo || !esCorreoValido(correo)) {
+            avisar('El rol «' + usuarioEditando.rol + '» necesita un correo de ' +
+                   'contacto válido antes de guardar.', 'error');
+            return;
+        }
+    } else if (correo && !esCorreoValido(correo)) {
+        avisar('El correo de contacto no tiene un formato válido.', 'error'); return;
+    }
     if (clave && clave.length < 8) { avisar('La contraseña nueva necesita mínimo 8 caracteres.', 'error'); return; }
     if (notificar && !clave) { avisar('Marca «notificar» solo cuando pongas una contraseña nueva.', 'error'); return; }
     if (notificar && !correo) { avisar('Para notificar, el usuario debe tener un correo de contacto.', 'error'); return; }
@@ -6869,7 +6929,13 @@ function conectarEventos() {
     if (formNotaria) formNotaria.addEventListener('submit', guardarNotaria);
     // El rol decide si se puede marcar una notaría o varias
     const selRol = document.getElementById('nuevo-rol');
-    if (selRol) selRol.addEventListener('change', () => pintarNotariasDeFormulario(notariasMarcadasEnFormulario()));
+    if (selRol) {
+        selRol.addEventListener('change', () => {
+            pintarNotariasDeFormulario(notariasMarcadasEnFormulario());
+            ajustarCampoCorreo('nuevo-correo', 'etiqueta-nuevo-correo', selRol.value);
+        });
+        ajustarCampoCorreo('nuevo-correo', 'etiqueta-nuevo-correo', selRol.value);
+    }
     // Modal de texto (nombre de subcarpeta y similares)
     const formTexto = document.getElementById('form-texto');
     if (formTexto) {

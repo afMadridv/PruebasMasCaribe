@@ -42,6 +42,9 @@
         if (m.includes('schema cache') || m.includes('does not exist')) return 'La base de datos aún no tiene las tablas: ejecuta portal/supabase/esquema.sql en el SQL Editor de Supabase.';
         if (m.includes('Failed to fetch') || m.includes('NetworkError')) return 'Sin conexión con Supabase. Revisa tu internet.';
         if (m.includes('row-level security')) return 'Tu rol no tiene permiso para esa acción.';
+        // La restricción de la base dice lo mismo que valida el formulario,
+        // pero el mensaje que devuelve Postgres no lo entiende nadie
+        if (m.includes('perfiles_correo_obligatorio')) return 'Este rol necesita un correo de contacto: por ahí le llegan los avisos del trámite.';
         return m || 'Error de conexión con la base de datos.';
     }
 
@@ -1067,15 +1070,27 @@
 
     /* ============ NOTIFICACIONES (campana, modo nube) ============
        RLS: cada quien lee y marca SOLO las suyas. */
-    window.notificacionesListar = async () => {
-        const { data, error } = await nube.from('notificaciones')
-            .select('id, tipo, mensaje, carpeta_id, referencia_id, leido, fecha')
+    /* Los avisos de la notaria abierta, no los de todas.
+       Un administrador con acceso a varias oficinas tenia la campana
+       revuelta: entre los avisos de Medellin se perdian los de Santa
+       Marta. Los que no llevan notaria (soporte, ingreso, solicitud de
+       clave) no pertenecen a ninguna oficina y se ven siempre.
+       notaria null = el usuario esta mirando todas: no se filtra. */
+    window.notificacionesListar = async (notaria) => {
+        let consulta = nube.from('notificaciones')
+            .select('id, tipo, mensaje, carpeta_id, referencia_id, leido, fecha, notaria_id');
+        if (notaria !== null && notaria !== undefined && notaria !== '') {
+            // Number() a proposito: el valor entra en un filtro de texto
+            consulta = consulta.or('notaria_id.is.null,notaria_id.eq.' + Number(notaria));
+        }
+        const { data, error } = await consulta
             .order('fecha', { ascending: false })
             .limit(50);
         if (error) fallar(error);
         return (data || []).map(n => ({
             id: n.id, tipo: n.tipo, mensaje: n.mensaje,
             carpetaId: n.carpeta_id, referenciaId: n.referencia_id,
+            notariaId: n.notaria_id,
             leido: n.leido, fecha: Date.parse(n.fecha)
         }));
     };
