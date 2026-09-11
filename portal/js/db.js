@@ -535,6 +535,9 @@ async function llamadaActualizar() {}
 function canalSenalizacion() { return { enviar: () => {}, cerrar: () => {} }; }
 
 /* Notificaciones (campana): en modo local no hay triggers de servidor */
+/* En modo practica las credenciales no se guardan aparte. */
+async function credencialGuardar(usuario, clave) {}
+
 /* En modo practica no hay campana. Recibe la notaria para tener la
    misma firma que la version de nube. */
 async function notificacionesListar(notaria) { return []; }

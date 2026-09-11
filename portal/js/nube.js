@@ -95,9 +95,13 @@
         // Las notarías extra del operador viven en otra tabla, así que se
         // traen a la vez. RLS decide qué filas llegan: el administrador
         // las ve todas, cada quien la suya.
-        const [rPerfiles, rNotarias] = await Promise.all([
+        // Las credenciales solo llegan si quien pregunta es administrador:
+        // lo decide la RLS de la tabla, no el cliente. Para los demás
+        // roles la consulta devuelve vacío y la clave queda en ''.
+        const [rPerfiles, rNotarias, rClaves] = await Promise.all([
             nube.from('perfiles').select('*').order('usuario'),
-            nube.from('perfil_notarias').select('perfil_id, notaria_id')
+            nube.from('perfil_notarias').select('perfil_id, notaria_id'),
+            nube.from('credenciales').select('perfil_id, clave, actualizada')
         ]);
         const { data, error } = rPerfiles;
         if (error) fallar(error);
@@ -105,12 +109,18 @@
         for (const f of (rNotarias.data || [])) {
             (extra[f.perfil_id] = extra[f.perfil_id] || []).push(f.notaria_id);
         }
+        const claves = {};
+        for (const c of (rClaves.data || [])) {
+            claves[c.perfil_id] = { clave: c.clave, actualizada: Date.parse(c.actualizada) };
+        }
         return data.map(p => ({
             usuario: p.usuario, nombre: p.nombre, rol: p.rol,
             activo: p.activo, correo: p.correo || '', creado: Date.parse(p.creado), _id: p.id,
             notariaId: p.notaria_id || null,
             notarias: extra[p.id] || (p.notaria_id ? [p.notaria_id] : []),
             primerLogin: p.primer_login !== false,
+            clave: (claves[p.id] || {}).clave || '',
+            claveActualizada: (claves[p.id] || {}).actualizada || null,
             ultimaConexion: p.ultima_conexion ? Date.parse(p.ultima_conexion) : null
         }));
     }
@@ -796,6 +806,15 @@
        con la clave pública (sería inseguro), así que llama a la Edge Function
        "restablecer-clave", que usa la clave service_role SOLO en el servidor y
        verifica que quien llama sea administrador. */
+    /* Guarda la contraseña que el administrador acaba de asignar.
+       No recupera nada: anota lo que él mismo escribió, para no tener
+       que cambiarla otra vez cuando el usuario la olvide. */
+    window.credencialGuardar = async (usuario, clave) => {
+        const { error } = await nube.rpc('credencial_fijar',
+            { p_usuario: usuario, p_clave: clave });
+        if (error) fallar(error);
+    };
+
     window.restablecerClave = async (usuario, nuevaClave) => {
         if (sesionNube().rol !== 'administrador') {
             throw new Error('Solo el administrador puede restablecer contraseñas.');

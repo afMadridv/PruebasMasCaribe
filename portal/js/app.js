@@ -6269,40 +6269,115 @@ function cambiarFiltroRolUsuario(rol) {
     pintarListaUsuarios();
 }
 
-/* Exporta los usuarios a Excel con UNA PESTAÑA POR ROL. Nota importante:
-   las contraseñas NO se pueden incluir — viven cifradas (bcrypt) en Supabase
-   Auth y ni el portal ni el administrador pueden leerlas. La columna queda
-   vacía; para dar una clave nueva se usa "Editar → restablecer contraseña". */
+/* Exporta los usuarios a Excel: una hoja de resumen y una por rol.
+
+   La columna Contraseña sale de la tabla credenciales, donde se anota
+   lo que el administrador escribió al crear la cuenta o al
+   restablecerla. No es la contraseña "leída" del servidor: eso es
+   imposible, auth.users la guarda como hash bcrypt de una sola
+   dirección. Es la que tú mismo asignaste, y como en este portal nadie
+   puede cambiarse la suya, coincide con la vigente.
+
+   Las cuentas creadas ANTES de que existiera esta tabla salen con
+   "(sin anotar)": para que aparezcan hay que restablecerles la clave
+   una vez. */
 async function exportarUsuariosExcel() {
     if (!ES_ADMIN) return;
     try {
         const XLSX = await cargarSheetJS();
         const libro = XLSX.utils.book_new();
+        const hoy = new Date();
+
+        const nombreNotaria = (id) => {
+            const n = _notariasDisponibles.find(x => String(x.id) === String(id));
+            return n ? n.ciudad + ' · ' + n.nombre : '';
+        };
+        const fecha = (ms) => ms ? new Date(ms).toLocaleString('es-CO',
+            { dateStyle: 'medium', timeStyle: 'short' }) : '';
+
+        const filaDe = (u) => ({
+            'Usuario': u.usuario,
+            'Contraseña': u.clave || '(sin anotar)',
+            'Nombre completo': u.nombre,
+            'Rol': ETIQUETAS_ROL[u.rol] || u.rol,
+            'Correo': u.correo || '',
+            'Notaría': (u.notarias || []).map(nombreNotaria).filter(Boolean).join(' / '),
+            'Estado': u.activo === false ? 'Desactivado' : 'Activo',
+            'Última conexión': fecha(u.ultimaConexion),
+            'Clave anotada el': fecha(u.claveActualizada),
+            'Creado': fecha(u.creado)
+        });
+
+        // Anchos en caracteres. Sin esto todo sale en columnas de 8 y
+        // hay que ensanchar diez veces a mano.
+        const ANCHOS = [
+            { wch: 18 }, { wch: 20 }, { wch: 30 }, { wch: 16 }, { wch: 30 },
+            { wch: 34 }, { wch: 13 }, { wch: 22 }, { wch: 22 }, { wch: 22 }
+        ];
+
         const roles = [
             ['administrador', 'Administradores'],
-            ['acreedor', 'Acreedores'],
-            ['cliente', 'Deudores'],
-            ['operador', 'Operadores'],
-            ['monitor', 'Monitores']
+            ['operador',      'Operadores'],
+            ['cliente',       'Deudores'],
+            ['acreedor',      'Acreedores'],
+            ['monitor',       'Monitores']
         ];
-        for (const [rol, tituloHoja] of roles) {
-            const filas = _usuariosCache.filter(u => u.rol === rol).map(u => ({
-                Usuario: u.usuario,
-                Nombre: u.nombre,
-                Rol: ETIQUETAS_ROL[u.rol] || u.rol,
-                Correo: u.correo || '',
-                'Contraseña': '',   // no recuperable (cifrada en el servidor)
-                Estado: u.activo === false ? 'Desactivado' : 'Activo',
-                'Última conexión': u.ultimaConexion ? new Date(u.ultimaConexion).toLocaleString('es-CO') : ''
-            }));
-            // Aunque no haya usuarios de ese rol, se crea la hoja con encabezados
-            const hoja = XLSX.utils.json_to_sheet(filas.length ? filas :
-                [{ Usuario: '', Nombre: '', Rol: '', Correo: '', 'Contraseña': '', Estado: '', 'Última conexión': '' }]);
-            XLSX.utils.book_append_sheet(libro, hoja, tituloHoja);
+
+        /* ---- Hoja 1: resumen ---- */
+        const resumen = [
+            { Concepto: 'Portal', Valor: 'Portal Documental' },
+            { Concepto: 'Notaría', Valor: (notariaActual()
+                ? notariaActual().ciudad + ' · ' + notariaActual().nombre
+                : 'Todas las notarías') },
+            { Concepto: 'Generado', Valor: hoy.toLocaleString('es-CO',
+                { dateStyle: 'full', timeStyle: 'short' }) },
+            { Concepto: 'Generado por', Valor: (sesion && sesion.nombre) || '' },
+            { Concepto: '', Valor: '' }
+        ];
+        for (const [rol, titulo] of roles) {
+            const total = _usuariosCache.filter(u => u.rol === rol).length;
+            const activos = _usuariosCache.filter(u => u.rol === rol && u.activo !== false).length;
+            resumen.push({ Concepto: titulo, Valor: activos + ' activos de ' + total });
         }
-        XLSX.writeFile(libro, 'usuarios_portal_mascaribe.xlsx');
+        resumen.push({ Concepto: '', Valor: '' });
+        resumen.push({ Concepto: 'TOTAL', Valor: _usuariosCache.length + ' cuentas' });
+        resumen.push({ Concepto: '', Valor: '' });
+        resumen.push({ Concepto: 'Aviso', Valor: 'Este archivo contiene contraseñas. Guárdalo cifrado y no lo envíes por correo.' });
+
+        const hojaResumen = XLSX.utils.json_to_sheet(resumen);
+        hojaResumen['!cols'] = [{ wch: 22 }, { wch: 70 }];
+        XLSX.utils.book_append_sheet(libro, hojaResumen, 'Resumen');
+
+        /* ---- Hoja 2: todos juntos ---- */
+        const todos = _usuariosCache.map(filaDe);
+        const hojaTodos = XLSX.utils.json_to_sheet(todos.length ? todos : [filaDe({ usuario: '', nombre: '', rol: '' })]);
+        hojaTodos['!cols'] = ANCHOS;
+        hojaTodos['!freeze'] = { xSplit: 0, ySplit: 1 };   // encabezado fijo al desplazar
+        hojaTodos['!autofilter'] = { ref: XLSX.utils.encode_range({
+            s: { r: 0, c: 0 }, e: { r: Math.max(todos.length, 1), c: 9 } }) };
+        XLSX.utils.book_append_sheet(libro, hojaTodos, 'Todos');
+
+        /* ---- Una hoja por rol ---- */
+        for (const [rol, titulo] of roles) {
+            const filas = _usuariosCache.filter(u => u.rol === rol).map(filaDe);
+            // La hoja se crea aunque esté vacía: así el archivo siempre
+            // tiene la misma forma y se puede comparar entre descargas
+            const hoja = XLSX.utils.json_to_sheet(filas.length ? filas
+                : [filaDe({ usuario: '', nombre: '', rol: rol })]);
+            hoja['!cols'] = ANCHOS;
+            hoja['!freeze'] = { xSplit: 0, ySplit: 1 };
+            XLSX.utils.book_append_sheet(libro, hoja, titulo);
+        }
+
+        const sello = hoy.toISOString().slice(0, 10);
+        XLSX.writeFile(libro, 'usuarios_portal_' + sello + '.xlsx');
         registrarActividad('exportar-usuarios', 'Excel de usuarios');
-        avisar('Excel descargado. La columna Contraseña va vacía: las claves están cifradas y no se pueden leer.');
+
+        const sinAnotar = _usuariosCache.filter(u => !u.clave).length;
+        avisar(sinAnotar
+            ? 'Excel descargado. ' + sinAnotar + ' cuenta(s) sin contraseña anotada: ' +
+              'restabléceles la clave una vez y quedará registrada.'
+            : 'Excel descargado con las credenciales. Contiene contraseñas: guárdalo con cuidado.');
     } catch (e) {
         avisar((e && e.message) || 'No se pudo generar el Excel.', 'error');
     }
@@ -6476,6 +6551,11 @@ async function crearUsuario(evento) {
     }
     try {
         const aviso = await crearUsuarioDatos(usuario, nombre, rol, clave, correo, notarias);
+        // Se anota la clave que acabas de escribir, para que salga en el
+        // Excel el dia que el usuario la olvide. Si falla, la cuenta ya
+        // quedo creada: se avisa pero no se deshace nada.
+        try { await credencialGuardar(usuario, clave); }
+        catch (e) { avisar('Usuario creado, pero no se pudo anotar la contraseña: ' + (e.message || ''), 'error'); }
         avisar(aviso || ('Usuario "' + usuario + '" creado.'), aviso ? 'error' : undefined);
     } catch (e) {
         avisar(e.message || 'No se pudo crear el usuario.', 'error');
@@ -6629,6 +6709,8 @@ async function guardarEdicionUsuario(evento) {
 
         if (clave) {
             await restablecerClave(usuarioEditando, clave);
+            try { await credencialGuardar(usuarioEditando.usuario, clave); }
+            catch (e) { avisar('Contraseña cambiada, pero no se pudo anotar: ' + (e.message || ''), 'error'); }
             // Si el usuario tenía una solicitud de restablecimiento pendiente,
             // se marca como resuelta automáticamente.
             try {

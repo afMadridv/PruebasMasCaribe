@@ -1733,6 +1733,14 @@ body.pt-app .pt-buscador:focus-within{ border-color: var(--pt-marca-cian); }
     cursor: pointer;
     transition: border-color var(--pt-rapido), background var(--pt-rapido);
 }
+/* Quien solo tiene una oficina ve la caja, pero no es un boton: sin
+   cursor de mano, sin hover y sin flecha. Que no parezca que se puede
+   pulsar algo que no lleva a ningun lado. */
+.pt-notaria__fijo{
+    cursor: default;
+    border-style: dashed;
+    opacity: .88;
+}
 .pt-notaria__boton:hover{
     border-color: var(--pt-marca-cian);
     background: var(--pt-superficie);
