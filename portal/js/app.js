@@ -1138,7 +1138,10 @@ function pintarLateral(carpetas, procesos) {
     // Almacenamiento: suma del peso cacheado de cada carpeta visible
     const caja = document.getElementById('almacen-caja');
     if (!caja) return;
-    if (!ES_SUPERVISION) { caja.hidden = true; return; }
+    // Solo el administrador. La ocupación del disco dice cuánta carga
+    // lleva la notaría, y eso no es asunto de las partes ni del
+    // operador. La RLS de la tabla almacenamiento dice lo mismo.
+    if (!ES_ADMIN) { caja.hidden = true; return; }
     // El peso de los expedientes sale de lo que el portal ya descargo
     const docsMb = carpetas.reduce((s, c) => s + (Number(c.pesoTotalMb) || 0), 0);
 

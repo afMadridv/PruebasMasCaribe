@@ -37,13 +37,21 @@ insert into public.almacenamiento (id) values (1) on conflict (id) do nothing;
 
 alter table public.almacenamiento enable row level security;
 
--- Cualquiera con sesión puede leerla: es un dato de capacidad, no
--- contiene nada de ningún expediente. La escribe la tarea del sistema
--- conectándose directo a Postgres, así que no hace falta política de
--- escritura por API.
+-- EL PERMISO DE TABLA, EXPLÍCITO
+--   En Supabase Cloud las tablas nuevas heredan los grants por las
+--   default privileges del proyecto. En autohospedado esa herencia no
+--   está configurada igual, así que una tabla creada por `postgres`
+--   nace sin permisos para `authenticated` y la consulta devuelve
+--   vacío sin dar error: el portal cree que no hay medición y cae al
+--   valor de config.js. Se concede a mano para que no dependa de eso.
+grant select on public.almacenamiento to authenticated;
+
+-- Solo administradores. La ocupación del disco dice cuánta carga lleva
+-- la notaría, y eso no es asunto de clientes, acreedores ni operadores.
+-- Coincide con la barra del portal, que solo se le pinta al admin.
 drop policy if exists "ver almacenamiento" on public.almacenamiento;
 create policy "ver almacenamiento" on public.almacenamiento
-    for select using (public.rol_actual() is not null);
+    for select using (public.es_admin());
 
 
 -- Registrar la medición. La llama la tarea del sistema por psql, no
