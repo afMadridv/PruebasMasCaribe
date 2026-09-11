@@ -39,7 +39,14 @@
         if (m.includes('Signups not allowed') || m.includes('signup_disabled')) return 'El registro de usuarios está desactivado en Supabase. Actívalo en Authentication → Sign In / Providers → "Allow new users to sign up" para poder crear operadores, clientes y acreedores.';
         if (m.includes('rate limit') || m.includes('For security purposes') || m.includes('over_email_send')) return 'Supabase limitó temporalmente los registros. Espera un momento y vuelve a intentarlo.';
         if (m.includes('Password should be')) return 'La contraseña no cumple el mínimo configurado en Supabase.';
-        if (m.includes('schema cache') || m.includes('does not exist')) return 'La base de datos aún no tiene las tablas: ejecuta portal/supabase/esquema.sql en el SQL Editor de Supabase.';
+        // PostgREST responde «... in the schema cache» lo mismo si falta la
+        // tabla entera que si falta UNA columna. Este mensaje antes decía
+        // siempre «faltan las tablas», que mandaba a correr el esquema
+        // completo cuando lo que faltaba era una migración suelta. El texto
+        // crudo nombra qué falta, y eso es lo que permite arreglarlo.
+        if (m.includes('schema cache') || m.includes('does not exist')) {
+            return 'A la base le falta algo que el portal necesita; seguramente quedó una migración sin correr. Dice: ' + m;
+        }
         if (m.includes('Failed to fetch') || m.includes('NetworkError')) return 'Sin conexión con Supabase. Revisa tu internet.';
         if (m.includes('row-level security')) return 'Tu rol no tiene permiso para esa acción.';
         // La restricción de la base dice lo mismo que valida el formulario,

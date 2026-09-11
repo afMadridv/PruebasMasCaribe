@@ -45,7 +45,9 @@ que tienen que existir ya.
 | 7 | `migracion_avisos_plazo.sql` | Avisos del plazo a 4, 3, 2, 1 semanas, 1 día y el mismo día |
 | 8 | `migracion_notificaciones_por_notaria.sql` | Los avisos no se mezclan entre oficinas, y el correo obligatorio por rol |
 | 9 | `migracion_credenciales.sql` | Las contraseñas asignadas, para el Excel |
-| 10 | `migracion_endurecimiento_2026_09.sql` | Cierra el acceso anónimo. **Va al final** |
+| 10 | `migracion_tipo_proceso.sql` | El régimen de la carpeta. Faltaba: se había creado a mano en el panel |
+| 11 | `migracion_almacenamiento.sql` | La barra de espacio lee el disco de verdad |
+| 12 | `migracion_endurecimiento_2026_09.sql` | Cierra el acceso anónimo. **Va al final** |
 
 `limpieza_portal.sql` no entra aquí: es una herramienta aparte, para
 vaciar un portal que ya está en uso.
@@ -130,7 +132,7 @@ SQL
 
 ## Fase 3. El esquema
 
-Copia la carpeta `portal/supabase` al servidor y ejecuta los diez en
+Copia la carpeta `portal/supabase` al servidor y ejecuta los doce en
 orden. `ON_ERROR_STOP=1` corta a la primera: si uno falla, hay que
 resolverlo antes de seguir, no acumular fallos.
 
@@ -145,6 +147,8 @@ for a in esquema.sql \
          migracion_avisos_plazo.sql \
          migracion_notificaciones_por_notaria.sql \
          migracion_credenciales.sql \
+         migracion_tipo_proceso.sql \
+         migracion_almacenamiento.sql \
          migracion_endurecimiento_2026_09.sql; do
   echo "=== $a"
   docker exec -i supabase-db psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$a" || break
