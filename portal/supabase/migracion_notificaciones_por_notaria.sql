@@ -329,14 +329,44 @@ end $$;
 -- operador, cliente y acreedor lo necesitan. Administrador y monitor
 -- entran al portal y ven la campana ahí mismo: para ellos es opcional.
 --
--- Va como NOT VALID a propósito: hay perfiles antiguos sin correo y no
--- se trata de romper el portal hoy. La regla se aplica a lo que se
--- cree o se edite de ahora en adelante, así que al editar uno de esos
--- perfiles antiguos habrá que completarle el correo. Eso es lo que se
--- quiere: que se complete, no que se bloquee el portal.
+-- POR QUÉ UN TRIGGER Y NO UNA RESTRICCIÓN CHECK
+--   Se intentó primero con un CHECK y rompió la creación de usuarios
+--   entera. El trigger crear_perfil_nuevo genera todo perfil como
+--   'cliente' con correo nulo, y la Edge Function le pone el rol y el
+--   correo un paso después: el CHECK se evalúa también al INSERTAR, así
+--   que reventaba antes de que nadie tuviera ocasión de poner el correo.
+--
+--   Con un trigger BEFORE UPDATE el perfil puede NACER sin correo,
+--   durante el instante que la Edge Function tarda en completarlo, pero
+--   no se puede GUARDAR sin él. La regla se mantiene y la creación
+--   funciona.
 alter table public.perfiles drop constraint if exists perfiles_correo_obligatorio;
-alter table public.perfiles add constraint perfiles_correo_obligatorio
-    check (
-        rol in ('administrador', 'monitor')
-        or (correo is not null and btrim(correo) <> '')
-    ) not valid;
+
+create or replace function public.exigir_correo_por_rol()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    -- Administrador y monitor entran al portal y ven la campana ahí
+    -- mismo: para ellos el correo es opcional.
+    if new.rol in ('administrador', 'monitor') then
+        return new;
+    end if;
+
+    -- Operador, cliente y acreedor reciben por correo los avisos de
+    -- audiencia y del trámite, así que sin correo no se guardan.
+    if new.correo is null or btrim(new.correo) = '' then
+        raise exception 'El rol «%» necesita un correo de contacto: por ahí le llegan los avisos del trámite.', new.rol
+            using errcode = 'check_violation';
+    end if;
+
+    return new;
+end;
+$$;
+
+drop trigger if exists exigir_correo on public.perfiles;
+create trigger exigir_correo
+    before update on public.perfiles
+    for each row execute function public.exigir_correo_por_rol();
