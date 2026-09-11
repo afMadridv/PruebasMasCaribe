@@ -47,7 +47,8 @@ que tienen que existir ya.
 | 9 | `migracion_credenciales.sql` | Las contraseñas asignadas, para el Excel |
 | 10 | `migracion_tipo_proceso.sql` | El régimen de la carpeta. Faltaba: se había creado a mano en el panel |
 | 11 | `migracion_almacenamiento.sql` | La barra de espacio lee el disco de verdad |
-| 12 | `migracion_endurecimiento_2026_09.sql` | Cierra el acceso anónimo. **Va al final** |
+| 12 | `migracion_tope_archivo.sql` | 200 MB por archivo, para las grabaciones de audiencias |
+| 13 | `migracion_endurecimiento_2026_09.sql` | Cierra el acceso anónimo. **Va al final** |
 
 `limpieza_portal.sql` no entra aquí: es una herramienta aparte, para
 vaciar un portal que ya está en uso.
@@ -132,7 +133,7 @@ SQL
 
 ## Fase 3. El esquema
 
-Copia la carpeta `portal/supabase` al servidor y ejecuta los doce en
+Copia la carpeta `portal/supabase` al servidor y ejecuta los trece en
 orden. `ON_ERROR_STOP=1` corta a la primera: si uno falla, hay que
 resolverlo antes de seguir, no acumular fallos.
 
@@ -149,6 +150,7 @@ for a in esquema.sql \
          migracion_credenciales.sql \
          migracion_tipo_proceso.sql \
          migracion_almacenamiento.sql \
+         migracion_tope_archivo.sql \
          migracion_endurecimiento_2026_09.sql; do
   echo "=== $a"
   docker exec -i supabase-db psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$a" || break

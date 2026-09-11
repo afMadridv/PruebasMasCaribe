@@ -664,8 +664,11 @@ insert into storage.buckets (id, name, public)
 values ('documentos', 'documentos', false)
 on conflict (id) do nothing;
 
--- Límite de 50 MB por archivo (también lo valida el navegador)
-update storage.buckets set file_size_limit = 52428800 where id = 'documentos';
+-- Límite por archivo. El navegador valida contra el MISMO número
+-- (TAMANO_MAXIMO en app.js): si no coinciden, o se sube algo que Storage
+-- rechaza al final, o se prohíbe algo que sí cabía.
+-- 200 MB para que quepan las grabaciones de audiencias.
+update storage.buckets set file_size_limit = 209715200 where id = 'documentos';
 
 drop policy if exists "sube documentos admin u operador" on storage.objects;
 create policy "sube documentos admin u operador" on storage.objects

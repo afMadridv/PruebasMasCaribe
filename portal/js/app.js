@@ -39,10 +39,17 @@ const EXTENSIONES_PERMITIDAS = EXTENSIONES_DOCUMENTO.concat(EXTENSIONES_MEDIA);
 // Vista dentro del portal: PDF/imágenes/audio/video en visor nativo; Word y
 // Excel se renderizan con librerías (docx-preview y SheetJS), ver verArchivo.
 const EXTENSIONES_VISTA = EXTENSIONES_PERMITIDAS.slice();
-// 50 MB: es el file_size_limit del bucket 'documentos' en esquema.sql.
-// Estaba en 100 MB, así que un archivo de 60 MB pasaba la validación del
-// navegador y lo rechazaba Storage al subirlo.
-const TAMANO_MAXIMO = 50 * 1024 * 1024;
+// Tiene que ser EXACTAMENTE el file_size_limit del bucket 'documentos'.
+// Si el navegador admite más que Storage, el archivo viaja entero y lo
+// rechazan al final; si admite menos, se prohíben archivos que sí cabían.
+// Cambiarlo aquí obliga a cambiarlo también en la base: ver
+// migracion_tope_archivo.sql.
+//
+// 200 MB porque las grabaciones de audiencias no caben en 50: una hora de
+// video ronda los 300 MB en calidad alta, y este tope deja pasar las de
+// calidad normal sin obligar a subidas reanudables.
+const TAMANO_MAXIMO = 200 * 1024 * 1024;
+const TAMANO_MAXIMO_TXT = (TAMANO_MAXIMO / 1048576) + ' MB';
 
 const SESION_VALIDA = !!(sesion && ROLES_VALIDOS.includes(sesion.rol));
 const ES_ADMIN = SESION_VALIDA && sesion.rol === 'administrador';
@@ -1072,9 +1079,9 @@ function esqueletoFilas(n) {
 /* Cupo total de almacenamiento del portal, en MB.
 
    OJO con la confusión que tenía esto antes: decía 50 y el comentario
-   hablaba del "cupo del bucket". Los 50 MB del bucket son el limite
-   POR ARCHIVO (file_size_limit), no el total. La barra mostraba
-   entonces "de 50 MB" como si el portal entero cupiera ahi.
+   hablaba del "cupo del bucket". El file_size_limit del bucket es el
+   límite POR ARCHIVO, no el total. La barra mostraba entonces
+   "de 50 MB" como si el portal entero cupiera ahi.
 
    El tope de verdad depende de donde este montado:
      Supabase Cloud gratis   1 GB
@@ -3068,7 +3075,7 @@ function ponerAdjuntoChat(archivo) {
         return;
     }
     if (archivo.size > TAMANO_MAXIMO) {
-        avisar('El archivo supera 50 MB: ' + archivo.name, 'error');
+        avisar('El archivo supera ' + TAMANO_MAXIMO_TXT + ': ' + archivo.name, 'error');
         return;
     }
     _adjuntoChat = archivo;
@@ -3353,7 +3360,7 @@ function ponerAdjuntoSoporte(archivo) {
     // El mensaje decía 100 MB pero valida TAMANO_MAXIMO, que son 50.
     // El número se saca de la constante para que no vuelvan a separarse.
     if (archivo.size > TAMANO_MAXIMO) {
-        avisar('El archivo supera ' + (TAMANO_MAXIMO / 1048576) + ' MB: ' + archivo.name, 'error');
+        avisar('El archivo supera ' + TAMANO_MAXIMO_TXT + ': ' + archivo.name, 'error');
         return;
     }
     _adjuntoSoporte = archivo;
@@ -4295,7 +4302,7 @@ function ajustarZonaSubida() {
                 ? 'Solo el expediente escrito: PDF, Word, Excel, imágenes escaneadas. ' +
                   'Las grabaciones van en Audiencias'
                 : 'Aquí puedes subir de todo: documentos, imágenes, audio y video') +
-            ' · máximo 50 MB por archivo';
+            ' · máximo ' + TAMANO_MAXIMO_TXT + ' por archivo';
     }
 }
 
@@ -5837,7 +5844,7 @@ async function subirArchivos(listaArchivos) {
         } else if (!destinoAdmiteExtension(_subcarpetaAbierta, ext)) {
             rechazados.push(motivoRechazo(_subcarpetaAbierta, archivo.name));
         } else if (archivo.size > TAMANO_MAXIMO) {
-            rechazados.push(archivo.name + ' (supera 50 MB)');
+            rechazados.push(archivo.name + ' (supera ' + TAMANO_MAXIMO_TXT + ')');
         } else {
             validos.push(archivo);
         }
