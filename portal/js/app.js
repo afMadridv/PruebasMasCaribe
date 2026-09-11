@@ -3269,7 +3269,12 @@ function ponerAdjuntoSoporte(archivo) {
     if (!archivo) return;
     const ext = extensionDe(archivo.name);
     if (!EXTENSIONES_PERMITIDAS.includes(ext)) { avisar('Tipo de archivo no permitido: ' + archivo.name, 'error'); return; }
-    if (archivo.size > TAMANO_MAXIMO) { avisar('El archivo supera 100 MB: ' + archivo.name, 'error'); return; }
+    // El mensaje decía 100 MB pero valida TAMANO_MAXIMO, que son 50.
+    // El número se saca de la constante para que no vuelvan a separarse.
+    if (archivo.size > TAMANO_MAXIMO) {
+        avisar('El archivo supera ' + (TAMANO_MAXIMO / 1048576) + ' MB: ' + archivo.name, 'error');
+        return;
+    }
     _adjuntoSoporte = archivo;
     document.getElementById('soporte-adjunto-nombre').textContent = archivo.name + ' (' + formatoTamano(archivo.size) + ')';
     document.getElementById('soporte-adjunto-chip').hidden = false;
