@@ -1120,23 +1120,6 @@
             leido: n.leido, fecha: Date.parse(n.fecha)
         }));
     };
-    /* Lo que mide la tarea del sistema con df. Puede no existir (en
-       Supabase Cloud nadie la llena): entonces devuelve null y el
-       portal cae de vuelta al tope de config.js. */
-    window.almacenamientoLeer = async () => {
-        const { data, error } = await nube.from('almacenamiento')
-            .select('total_mb, usado_mb, libre_mb, docs_mb, actualizado')
-            .eq('id', 1).maybeSingle();
-        if (error || !data || !Number(data.total_mb)) return null;
-        return {
-            totalMb: Number(data.total_mb),
-            usadoMb: Number(data.usado_mb),
-            libreMb: Number(data.libre_mb),
-            docsMb: Number(data.docs_mb),
-            actualizado: Date.parse(data.actualizado)
-        };
-    };
-
     window.notificacionesMarcarLeidas = async (ids) => {
         const { error } = await nube.rpc('marcar_notificaciones_leidas', { ids: ids || null });
         if (error) fallar(error);

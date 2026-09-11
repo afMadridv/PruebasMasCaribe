@@ -710,9 +710,6 @@ async function completarArranque() {
     mostrarRecordatoriosVigentes();
     iniciarSoporte();
     iniciarCampana();
-    // El disco: una vez al entrar y cada cinco minutos
-    refrescarAlmacenamiento().then(repintarLateral);
-    setInterval(() => refrescarAlmacenamiento().then(repintarLateral), 300000);
     verificarConsentimiento();
     avisarCierresPendientes();
     registrarConexion();
@@ -1083,51 +1080,24 @@ function esqueletoFilas(n) {
    límite POR ARCHIVO, no el total. La barra mostraba entonces
    "de 50 MB" como si el portal entero cupiera ahi.
 
-   El tope de verdad depende de donde este montado:
-     Supabase Cloud gratis   1 GB
-     Supabase Cloud Pro      100 GB
-     Servidor propio         lo que tenga el disco
+   Se quitó la barra de almacenamiento del lateral. El número nunca
+   llegó a ser de fiar: mezclaba el peso de los expedientes con el del
+   disco entero, y en más de una recarga se quedaba en el valor de
+   respaldo mostrando 1 GB donde había 231. Un dato que hay que
+   desconfiar cada vez que se mira no sirve de nada en pantalla.
 
-   Por eso vive en config.js, junto a la URL: es cosa del despliegue,
-   no del codigo. Si no esta, se asume 1 GB, que es lo mas conservador. */
-const ALMACEN_TOPE_MB = Number(
-    (typeof PORTAL_CONFIG !== 'undefined' && PORTAL_CONFIG.ALMACEN_TOPE_MB) || 1024
-);
+   Lo que sí sigue: la tabla `almacenamiento` y la tarea `medir-disco`
+   del servidor, que anota la medición cada cinco minutos. El dato
+   queda registrado por si más adelante hace falta; simplemente no se
+   pinta. Para consultarlo:
 
-/* Lo que se le paso a pintarLateral la ultima vez. Hace falta para
-   poder repintar la barra cuando llega una medicion nueva, sin volver
-   a pedir carpetas ni procesos. */
-let _ultimoLateral = null;
+     select * from public.almacenamiento;
+     df -h /
+*/
 
-function repintarLateral() {
-    if (_ultimoLateral) pintarLateral(_ultimoLateral.carpetas, _ultimoLateral.procesos);
-}
-
-/* Lo ultimo que midio la tarea del sistema. null mientras no llega, o
-   siempre si el portal corre sobre Supabase Cloud, donde no hay tarea
-   que lo llene: ahi manda ALMACEN_TOPE_MB. */
-let _almacenDisco = null;
-
-/* Pregunta por la medicion y repinta. Se llama al arrancar y cada
-   cinco minutos: el disco no cambia tan rapido como para mas. */
-async function refrescarAlmacenamiento() {
-    if (typeof almacenamientoLeer !== 'function') return;
-    try { _almacenDisco = await almacenamientoLeer(); }
-    catch (e) { _almacenDisco = null; }
-}
-
-/* 245760 MB no se lee; 240 GB si. */
-function formatoEspacio(mb) {
-    const n = Number(mb) || 0;
-    if (n >= 1024) return (n / 1024).toFixed(n >= 10240 ? 0 : 1) + ' GB';
-    return n.toFixed(1) + ' MB';
-}
-
-/* Contadores de la barra lateral y barra de almacenamiento. Todo sale
-   de datos que ya se descargaron: no hay consultas extra. */
+/* Contadores de la barra lateral. Todo sale de datos que ya se
+   descargaron: no hay consultas extra. */
 function pintarLateral(carpetas, procesos) {
-    // Se guardan para poder repintar cuando llegue la medicion del disco
-    _ultimoLateral = { carpetas, procesos };
     const activas = carpetas.filter(c => c.activa);
     const num = (id, valor) => {
         const el = document.getElementById(id);
@@ -1141,48 +1111,6 @@ function pintarLateral(carpetas, procesos) {
     const porAtender = (procesos || []).filter(p =>
         !p.completado && !p.pausado && (p.semaforo === 'rojo' || p.semaforo === 'naranja')).length;
     num('nav-num-estados', porAtender);
-
-    // Almacenamiento: suma del peso cacheado de cada carpeta visible
-    const caja = document.getElementById('almacen-caja');
-    if (!caja) return;
-    // Solo el administrador. La ocupación del disco dice cuánta carga
-    // lleva la notaría, y eso no es asunto de las partes ni del
-    // operador. La RLS de la tabla almacenamiento dice lo mismo.
-    if (!ES_ADMIN) { caja.hidden = true; return; }
-    // El peso de los expedientes sale de lo que el portal ya descargo
-    const docsMb = carpetas.reduce((s, c) => s + (Number(c.pesoTotalMb) || 0), 0);
-
-    // Con medicion del disco se muestra el disco: es lo que de verdad
-    // decide si el servidor sigue aceptando archivos. Sin ella, los
-    // expedientes contra el tope declarado en config.js.
-    const d = _almacenDisco;
-    const usadoMb = d ? d.usadoMb : docsMb;
-    const topeMb  = d ? d.totalMb : ALMACEN_TOPE_MB;
-
-    const pct = topeMb > 0 ? Math.min(100, Math.round((usadoMb / topeMb) * 100)) : 0;
-    caja.hidden = false;
-
-    const barra = document.getElementById('almacen-barra');
-    barra.style.width = pct + '%';
-    // Amarillo al 80%, rojo al 92%: avisar antes de que el disco lleno
-    // tumbe Postgres, no cuando ya paso
-    barra.classList.toggle('pt-almacen__barra--aviso', pct >= 80 && pct < 92);
-    barra.classList.toggle('pt-almacen__barra--alerta', pct >= 92);
-
-    document.getElementById('almacen-txt').textContent =
-        formatoEspacio(usadoMb) + ' de ' + formatoEspacio(topeMb);
-
-    // El detalle, al pasar el raton: cuanto pesan los expedientes, cuanto
-    // queda libre y cuando se midio
-    const caj = document.getElementById('almacen-caja');
-    if (caj) {
-        caj.title = d
-            ? 'Expedientes: ' + formatoEspacio(docsMb) +
-              '\nLibre en el disco: ' + formatoEspacio(d.libreMb) +
-              '\nMedido: ' + (d.actualizado ? formatoFecha(d.actualizado) : '—')
-            : 'Expedientes: ' + formatoEspacio(docsMb) +
-              '\nTope declarado en config.js (el servidor no reporta el disco)';
-    }
 }
 
 /* Pinta la lista de carpetas según el filtro activo. Solo el administrador ve
