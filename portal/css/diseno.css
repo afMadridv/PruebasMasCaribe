@@ -2322,3 +2322,9 @@ body.pt-app .pt-campo .pt-notaria-casilla input,
     color: var(--pt-gris);
     margin-left: 0.32rem;
 }
+
+/* ---- La barra de almacenamiento cambia de color antes de llenarse ----
+   Un disco lleno tumba Postgres, asi que el aviso llega al 80%, no al
+   100%, que es cuando ya no sirve de nada. */
+.pt-almacen__barra i.pt-almacen__barra--aviso{  background: var(--pt-ambar-txt); }
+.pt-almacen__barra i.pt-almacen__barra--alerta{ background: var(--pt-rojo-txt); }

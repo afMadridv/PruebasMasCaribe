@@ -703,6 +703,9 @@ async function completarArranque() {
     mostrarRecordatoriosVigentes();
     iniciarSoporte();
     iniciarCampana();
+    // El disco: una vez al entrar y cada cinco minutos
+    refrescarAlmacenamiento().then(repintarLateral);
+    setInterval(() => refrescarAlmacenamiento().then(repintarLateral), 300000);
     verificarConsentimiento();
     avisarCierresPendientes();
     registrarConexion();
@@ -1084,6 +1087,28 @@ const ALMACEN_TOPE_MB = Number(
     (typeof PORTAL_CONFIG !== 'undefined' && PORTAL_CONFIG.ALMACEN_TOPE_MB) || 1024
 );
 
+/* Lo que se le paso a pintarLateral la ultima vez. Hace falta para
+   poder repintar la barra cuando llega una medicion nueva, sin volver
+   a pedir carpetas ni procesos. */
+let _ultimoLateral = null;
+
+function repintarLateral() {
+    if (_ultimoLateral) pintarLateral(_ultimoLateral.carpetas, _ultimoLateral.procesos);
+}
+
+/* Lo ultimo que midio la tarea del sistema. null mientras no llega, o
+   siempre si el portal corre sobre Supabase Cloud, donde no hay tarea
+   que lo llene: ahi manda ALMACEN_TOPE_MB. */
+let _almacenDisco = null;
+
+/* Pregunta por la medicion y repinta. Se llama al arrancar y cada
+   cinco minutos: el disco no cambia tan rapido como para mas. */
+async function refrescarAlmacenamiento() {
+    if (typeof almacenamientoLeer !== 'function') return;
+    try { _almacenDisco = await almacenamientoLeer(); }
+    catch (e) { _almacenDisco = null; }
+}
+
 /* 245760 MB no se lee; 240 GB si. */
 function formatoEspacio(mb) {
     const n = Number(mb) || 0;
@@ -1094,6 +1119,8 @@ function formatoEspacio(mb) {
 /* Contadores de la barra lateral y barra de almacenamiento. Todo sale
    de datos que ya se descargaron: no hay consultas extra. */
 function pintarLateral(carpetas, procesos) {
+    // Se guardan para poder repintar cuando llegue la medicion del disco
+    _ultimoLateral = { carpetas, procesos };
     const activas = carpetas.filter(c => c.activa);
     const num = (id, valor) => {
         const el = document.getElementById(id);
@@ -1112,12 +1139,40 @@ function pintarLateral(carpetas, procesos) {
     const caja = document.getElementById('almacen-caja');
     if (!caja) return;
     if (!ES_SUPERVISION) { caja.hidden = true; return; }
-    const usadoMb = carpetas.reduce((s, c) => s + (Number(c.pesoTotalMb) || 0), 0);
-    const pct = Math.min(100, Math.round((usadoMb / ALMACEN_TOPE_MB) * 100));
+    // El peso de los expedientes sale de lo que el portal ya descargo
+    const docsMb = carpetas.reduce((s, c) => s + (Number(c.pesoTotalMb) || 0), 0);
+
+    // Con medicion del disco se muestra el disco: es lo que de verdad
+    // decide si el servidor sigue aceptando archivos. Sin ella, los
+    // expedientes contra el tope declarado en config.js.
+    const d = _almacenDisco;
+    const usadoMb = d ? d.usadoMb : docsMb;
+    const topeMb  = d ? d.totalMb : ALMACEN_TOPE_MB;
+
+    const pct = topeMb > 0 ? Math.min(100, Math.round((usadoMb / topeMb) * 100)) : 0;
     caja.hidden = false;
-    document.getElementById('almacen-barra').style.width = pct + '%';
+
+    const barra = document.getElementById('almacen-barra');
+    barra.style.width = pct + '%';
+    // Amarillo al 80%, rojo al 92%: avisar antes de que el disco lleno
+    // tumbe Postgres, no cuando ya paso
+    barra.classList.toggle('pt-almacen__barra--aviso', pct >= 80 && pct < 92);
+    barra.classList.toggle('pt-almacen__barra--alerta', pct >= 92);
+
     document.getElementById('almacen-txt').textContent =
-        formatoEspacio(usadoMb) + ' de ' + formatoEspacio(ALMACEN_TOPE_MB);
+        formatoEspacio(usadoMb) + ' de ' + formatoEspacio(topeMb);
+
+    // El detalle, al pasar el raton: cuanto pesan los expedientes, cuanto
+    // queda libre y cuando se midio
+    const caj = document.getElementById('almacen-caja');
+    if (caj) {
+        caj.title = d
+            ? 'Expedientes: ' + formatoEspacio(docsMb) +
+              '\nLibre en el disco: ' + formatoEspacio(d.libreMb) +
+              '\nMedido: ' + (d.actualizado ? formatoFecha(d.actualizado) : '—')
+            : 'Expedientes: ' + formatoEspacio(docsMb) +
+              '\nTope declarado en config.js (el servidor no reporta el disco)';
+    }
 }
 
 /* Pinta la lista de carpetas según el filtro activo. Solo el administrador ve
