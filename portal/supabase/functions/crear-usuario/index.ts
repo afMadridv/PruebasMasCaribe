@@ -91,6 +91,13 @@ Deno.serve(async (req: Request) => {
       }
     }
     if (clave.length < 8) return json({ error: 'La contraseña debe tener al menos 8 caracteres.' }, 400);
+    // El correo es obligatorio para quien recibe avisos del trámite. La
+    // misma regla vive en el formulario y en el trigger exigir_correo;
+    // aquí se comprueba ANTES de crear la cuenta, para no dejar una
+    // cuenta huérfana cuyo perfil luego no se puede guardar.
+    if (rol !== 'administrador' && rol !== 'monitor' && !correo) {
+      return json({ error: 'El rol «' + rol + '» necesita un correo de contacto.' }, 400);
+    }
 
     // 5) Crear la cuenta con el Admin API (correo confirmado: entra directo).
     //    El trigger crear_perfil_nuevo genera el perfil como 'cliente';
@@ -107,7 +114,9 @@ Deno.serve(async (req: Request) => {
       if (msg.includes('already') || msg.includes('registered')) {
         return json({ error: 'Ya existe un usuario con ese nombre.' }, 400);
       }
-      return json({ error: msg }, 400);
+      // Sin mensaje no se puede diagnosticar nada: el portal mostraba
+      // un aviso vacío y no había forma de saber qué falló
+      return json({ error: msg || 'Supabase rechazó la creación de la cuenta.' }, 400);
     }
     const id = creado?.user?.id;
     if (!id) return json({ error: 'Supabase no devolvió el usuario creado.' }, 500);
@@ -119,7 +128,13 @@ Deno.serve(async (req: Request) => {
     if (notarias.length > 0) cambios.notaria_id = notarias[0];
     if (Object.keys(cambios).length > 0) {
       const { error: updErr } = await admin.from('perfiles').update(cambios).eq('id', id);
-      if (updErr) return json({ error: 'Usuario creado, pero no se pudo guardar el rol/correo: ' + updErr.message }, 500);
+      if (updErr) {
+        // La cuenta ya existe pero su perfil quedó incompleto: se borra
+        // para no dejar un usuario que entra a un portal sin ficha, y
+        // que además bloquea volver a crear ese mismo nombre.
+        await admin.auth.admin.deleteUser(id).catch(() => {});
+        return json({ error: 'No se pudo guardar el perfil: ' + updErr.message }, 400);
+      }
     }
 
     // El operador con varias ciudades necesita una fila por notaría.
