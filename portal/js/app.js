@@ -1066,7 +1066,30 @@ function esqueletoFilas(n) {
 
 /* Contadores de la barra lateral y barra de almacenamiento.
    Todo sale de datos que ya se descargaron: no hay consultas extra. */
-const ALMACEN_TOPE_MB = 50;   // cupo del bucket 'documentos'
+/* Cupo total de almacenamiento del portal, en MB.
+
+   OJO con la confusión que tenía esto antes: decía 50 y el comentario
+   hablaba del "cupo del bucket". Los 50 MB del bucket son el limite
+   POR ARCHIVO (file_size_limit), no el total. La barra mostraba
+   entonces "de 50 MB" como si el portal entero cupiera ahi.
+
+   El tope de verdad depende de donde este montado:
+     Supabase Cloud gratis   1 GB
+     Supabase Cloud Pro      100 GB
+     Servidor propio         lo que tenga el disco
+
+   Por eso vive en config.js, junto a la URL: es cosa del despliegue,
+   no del codigo. Si no esta, se asume 1 GB, que es lo mas conservador. */
+const ALMACEN_TOPE_MB = Number(
+    (typeof PORTAL_CONFIG !== 'undefined' && PORTAL_CONFIG.ALMACEN_TOPE_MB) || 1024
+);
+
+/* 245760 MB no se lee; 240 GB si. */
+function formatoEspacio(mb) {
+    const n = Number(mb) || 0;
+    if (n >= 1024) return (n / 1024).toFixed(n >= 10240 ? 0 : 1) + ' GB';
+    return n.toFixed(1) + ' MB';
+}
 
 /* Contadores de la barra lateral y barra de almacenamiento. Todo sale
    de datos que ya se descargaron: no hay consultas extra. */
@@ -1094,7 +1117,7 @@ function pintarLateral(carpetas, procesos) {
     caja.hidden = false;
     document.getElementById('almacen-barra').style.width = pct + '%';
     document.getElementById('almacen-txt').textContent =
-        usadoMb.toFixed(1) + ' MB de ' + ALMACEN_TOPE_MB + ' MB';
+        formatoEspacio(usadoMb) + ' de ' + formatoEspacio(ALMACEN_TOPE_MB);
 }
 
 /* Pinta la lista de carpetas según el filtro activo. Solo el administrador ve
