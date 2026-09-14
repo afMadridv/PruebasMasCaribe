@@ -302,6 +302,19 @@
                 <button id="boton-subir" class="pt-boton pt-boton--primario pt-boton--mini"
                         data-accion="alternar-subida" hidden>+ Subir archivos</button>
             </div>
+            <!-- Seguimiento de la subida. Aparece en cuanto se eligen los
+                 archivos, antes de que empiece a subir nada: hasta ahora
+                 no había señal de vida entre elegir y el aviso final. -->
+            <div id="subida-progreso" class="pt-progreso" hidden
+                 role="status" aria-live="polite">
+                <div class="pt-progreso__cab">
+                    <span class="pt-progreso__eti" id="subida-progreso-eti">Preparando la subida…</span>
+                    <span class="pt-progreso__num" id="subida-progreso-num"></span>
+                </div>
+                <div class="pt-progreso__pista"><i id="subida-progreso-barra"></i></div>
+                <span class="pt-progreso__archivo" id="subida-progreso-archivo"></span>
+            </div>
+
             <div id="zona-subida" class="pt-zona-subida" hidden>
                 <p><span data-icono="adjunto" data-icono-tam="20"></span> Arrastra archivos aquí, o</p>
                 <label class="pt-boton pt-boton--primario">

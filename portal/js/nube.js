@@ -466,15 +466,26 @@
         if (error) fallar(error);
     };
 
+    /* Borra los binarios de Storage y luego las filas. Devuelve cuántos
+       archivos había, que es lo que el portal enseña al terminar.
+
+       Las rutas van de cien en cien: un expediente con novecientos
+       documentos mandaba novecientas rutas en una sola petición, y esas
+       peticiones enormes son justo las que el servidor corta a medias,
+       dejando los binarios en disco y las filas ya borradas. */
     window.dbEliminarArchivosDeCarpeta = async (carpetaId) => {
         const { data, error } = await nube.from('archivos')
             .select('id, ruta_storage').eq('carpeta_id', carpetaId);
         if (error) fallar(error);
-        const rutas = (data || []).map(a => a.ruta_storage);
-        if (rutas.length > 0) await nube.storage.from('documentos').remove(rutas);
+        const rutas = (data || []).map(a => a.ruta_storage).filter(Boolean);
+        const POR_TANDA = 100;
+        for (let i = 0; i < rutas.length; i += POR_TANDA) {
+            await nube.storage.from('documentos').remove(rutas.slice(i, i + POR_TANDA));
+        }
         const { error: errorFilas } = await nube.from('archivos')
             .delete().eq('carpeta_id', carpetaId);
         if (errorFilas) fallar(errorFilas);
+        return (data || []).length;
     };
 
     /* Bitácora: registrar acción (el servidor pone el actor real) y

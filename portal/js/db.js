@@ -92,12 +92,14 @@ async function fijarDescargaPartes(archivoId, permitir) {
 }
 
 /* Borra todos los documentos de una carpeta. Se usa al eliminar la
-   carpeta entera. */
+   carpeta entera y al vaciarla desde el expediente. Devuelve cuántos
+   había, igual que la version de nube. */
 async function dbEliminarArchivosDeCarpeta(carpetaId) {
     const archivos = await dbArchivosDeCarpeta(carpetaId);
     for (const a of archivos) {
         await dbEliminar('archivos', a.id);
     }
+    return archivos.length;
 }
 
 /* Registra una acción en la bitácora (versión local). En modo nube,

@@ -76,6 +76,70 @@ async function enTandas(lista, n, tarea) {
     await Promise.all(obreros);
 }
 
+/* ============ SEGUIMIENTO DE LA SUBIDA ============
+   Cuenta archivos terminados, no bytes: cada archivo va en una sola
+   petición y el navegador no informa del avance dentro de ella. Por eso
+   se nombra además el archivo en curso: con uno grande el contador se
+   queda quieto un rato y hace falta algo que diga que sigue vivo. */
+let _progresoCerrarTemporizador = null;
+
+function _progresoElementos() {
+    return {
+        caja:    document.getElementById('subida-progreso'),
+        eti:     document.getElementById('subida-progreso-eti'),
+        num:     document.getElementById('subida-progreso-num'),
+        barra:   document.getElementById('subida-progreso-barra'),
+        archivo: document.getElementById('subida-progreso-archivo')
+    };
+}
+
+/* Se llama al elegir los archivos, antes de subir el primer byte. */
+function progresoSubidaAbrir(total) {
+    const e = _progresoElementos();
+    if (!e.caja) return;
+    clearTimeout(_progresoCerrarTemporizador);
+    e.caja.classList.remove('pt-progreso--listo', 'pt-progreso--fallo');
+    e.eti.textContent = total === 1 ? 'Subiendo el documento…' : 'Subiendo los documentos…';
+    e.num.textContent = '0 de ' + total;
+    e.barra.style.width = '0%';
+    e.archivo.textContent = '';
+    e.caja.hidden = false;
+}
+
+/* Un archivo más terminado (haya subido bien o no: el total avanza
+   igual, y los fallos se cuentan aparte al cerrar). */
+function progresoSubidaAvance(hechos, total, nombre) {
+    const e = _progresoElementos();
+    if (!e.caja || e.caja.hidden) return;
+    e.num.textContent = hechos + ' de ' + total;
+    e.barra.style.width = (total ? Math.round((hechos / total) * 100) : 0) + '%';
+    e.archivo.textContent = nombre || '';
+}
+
+/* Cierra el seguimiento. Se queda unos segundos con el resultado a la
+   vista antes de desaparecer: si se ocultara de golpe, con pocos
+   archivos nadie alcanzaría a ver que terminó. */
+function progresoSubidaCerrar(subidos, fallidos) {
+    const e = _progresoElementos();
+    if (!e.caja) return;
+    const hubo = subidos + fallidos;
+    e.barra.style.width = '100%';
+    e.archivo.textContent = '';
+    e.caja.classList.toggle('pt-progreso--fallo', fallidos > 0);
+    e.caja.classList.toggle('pt-progreso--listo', fallidos === 0);
+    e.eti.textContent = fallidos === 0
+        ? (subidos === 1 ? 'Documento subido' : 'Documentos subidos')
+        : 'Subida terminada con fallos';
+    e.num.textContent = fallidos === 0
+        ? subidos + ' de ' + hubo
+        : subidos + ' de ' + hubo + ' · ' + fallidos + ' sin subir';
+    clearTimeout(_progresoCerrarTemporizador);
+    _progresoCerrarTemporizador = setTimeout(() => {
+        e.caja.hidden = true;
+        e.caja.classList.remove('pt-progreso--listo', 'pt-progreso--fallo');
+    }, fallidos > 0 ? 9000 : 4000);
+}
+
 const SESION_VALIDA = !!(sesion && ROLES_VALIDOS.includes(sesion.rol));
 const ES_ADMIN = SESION_VALIDA && sesion.rol === 'administrador';
 // Monitor: ve TODO como el administrador (menos la pestaña de usuarios)
@@ -4083,20 +4147,40 @@ async function pintarArchivos() {
     // A partir de aquí se trabaja SOLO con lo que se está viendo
     const visibles = archivosDeVistaActual();
 
-    // Botón "Editar documentos" sobre la tabla (solo personal de la carpeta)
+    // Barra sobre la tabla: reordenar (personal de la carpeta) y vaciar
+    // el expediente (solo el administrador)
     const barraArchivos = document.getElementById('barra-editar-documentos');
     if (barraArchivos) barraArchivos.remove();
-    if (puedeGestionarCarpeta(carpetaAbierta) && visibles.length > 1) {
+
+    const puedeOrdenar = puedeGestionarCarpeta(carpetaAbierta) && visibles.length > 1;
+    // Vaciar borra el expediente ENTERO, subcarpetas incluidas, así que
+    // solo se ofrece desde la raíz: dentro de «Audiencias» el botón
+    // parecería que solo vacía esa subcarpeta, y no es lo que hace.
+    const puedeVaciar = ES_ADMIN && _subcarpetaAbierta === null &&
+                        (_archivosCache || []).length > 0 && !_editandoOrden;
+
+    if (puedeOrdenar || puedeVaciar) {
         const envoltura = document.querySelector('#panel-archivos .pt-tabla-envoltura');
         const barra = document.createElement('div');
         barra.id = 'barra-editar-documentos';
         barra.className = 'pt-barra-editar-docs';
-        barra.innerHTML = _editandoOrden
-            ? '<span class="pt-nota">Arrastra las filas o usa las flechas para reorganizar. El orden se usa en la tabla y en el expediente.</span>' +
-              '<button class="pt-boton pt-boton--primario pt-boton--mini" data-accion="guardar-orden">Guardar orden</button>' +
-              '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="cancelar-orden">Cancelar</button>'
-            : '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="editar-documentos">' +
-              icono('editar', 15) + ' Editar documentos</button>';
+
+        let dentro = '';
+        if (_editandoOrden) {
+            dentro = '<span class="pt-nota">Arrastra las filas o usa las flechas para reorganizar. El orden se usa en la tabla y en el expediente.</span>' +
+                     '<button class="pt-boton pt-boton--primario pt-boton--mini" data-accion="guardar-orden">Guardar orden</button>' +
+                     '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="cancelar-orden">Cancelar</button>';
+        } else {
+            if (puedeOrdenar) {
+                dentro += '<button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="editar-documentos">' +
+                          icono('editar', 15) + ' Editar documentos</button>';
+            }
+            if (puedeVaciar) {
+                dentro += '<button class="pt-boton pt-boton--peligro pt-boton--mini" data-accion="vaciar-carpeta">' +
+                          icono('eliminar', 15) + ' Eliminar todos los documentos</button>';
+            }
+        }
+        barra.innerHTML = dentro;
         envoltura.parentNode.insertBefore(barra, envoltura);
     }
 
@@ -5807,6 +5891,16 @@ async function subirArchivos(listaArchivos) {
     const casillaDescarga = document.getElementById('subida-descargable');
     const descargablePartes = casillaDescarga ? casillaDescarga.checked : true;
 
+    if (!validos.length) {
+        if (rechazados.length) avisarRechazados(rechazados);
+        return;
+    }
+
+    // La barra sale YA, antes del primer byte: elegir veinte archivos y
+    // no ver nada hasta el aviso final parecía que el portal se había
+    // colgado.
+    progresoSubidaAbrir(validos.length);
+
     // Las subidas van en paralelo, pero de a pocas. Antes salían TODAS
     // a la vez con Promise.all: soltar trescientos archivos abría
     // trescientas peticiones simultáneas contra un servidor con diez
@@ -5814,7 +5908,9 @@ async function subirArchivos(listaArchivos) {
     // haberse subido. De a cuatro se aprovecha el ancho de banda igual
     // y no se atropella nada.
     let subidos = 0;
+    let terminados = 0;
     await enTandas(validos, SUBIDAS_A_LA_VEZ, async (archivo) => {
+        progresoSubidaAvance(terminados, validos.length, archivo.name);
         try {
             await dbAgregar('archivos', {
                 carpetaId: carpetaAbierta.id,
@@ -5833,20 +5929,26 @@ async function subirArchivos(listaArchivos) {
         } catch (e) {
             rechazados.push(archivo.name + ' (' + ((e && e.message) || 'error al subir') + ')');
         }
+        terminados++;
+        progresoSubidaAvance(terminados, validos.length, '');
     });
 
+    progresoSubidaCerrar(subidos, validos.length - subidos);
+
     if (subidos > 0) avisar(subidos + ' archivo(s) subido(s) correctamente.');
-    if (rechazados.length > 0) {
-        // Con muchos fallos la lista entera tapaba media pantalla y no
-        // dejaba leer el motivo, que es lo único que importa. Se
-        // nombran unos pocos y se dice cuántos más hubo.
-        const A_LA_VISTA = 5;
-        const muestra = rechazados.slice(0, A_LA_VISTA).join(', ');
-        const resto = rechazados.length - A_LA_VISTA;
-        avisar('No se subió: ' + muestra +
-               (resto > 0 ? ' y ' + resto + ' más' : ''), 'error');
-    }
+    if (rechazados.length > 0) avisarRechazados(rechazados);
     await pintarArchivos();
+}
+
+/* Con muchos fallos la lista entera de nombres tapaba media pantalla y
+   no dejaba leer el motivo, que es lo único que importa. Se nombran
+   unos pocos y se dice cuántos más hubo. */
+function avisarRechazados(rechazados) {
+    const A_LA_VISTA = 5;
+    const muestra = rechazados.slice(0, A_LA_VISTA).join(', ');
+    const resto = rechazados.length - A_LA_VISTA;
+    avisar('No se subió: ' + muestra +
+           (resto > 0 ? ' y ' + resto + ' más' : ''), 'error');
 }
 
 /* Cambia si el cliente/acreedor puede descargar un archivo (solo personal) */
@@ -6081,6 +6183,51 @@ async function descargarCarpetaZip() {
 
 /* Elimina un documento previa confirmación. Borra el metadato y el
    binario del almacenamiento. */
+/* Vacía el expediente: borra TODOS sus documentos, los de las
+   subcarpetas incluidos, y sus binarios del servidor.
+
+   Solo el administrador, y con dos pasos. El segundo pide escribir una
+   palabra porque esto no se deshace: el diálogo de sí/no de siempre se
+   contesta que sí por inercia, y aquí un sí de más borra el expediente
+   completo. No hay papelera ni deshacer. */
+async function vaciarCarpeta() {
+    if (!ES_ADMIN || !carpetaAbierta) return;
+    const total = (_archivosCache || []).length;
+    if (!total) return;
+
+    const ok = await confirmarPortal(
+        'Se van a eliminar los ' + total + ' documentos de «' + carpetaAbierta.nombre +
+        '», incluidos los de las subcarpetas. Se borran también del disco del ' +
+        'servidor y no se pueden recuperar.',
+        'Vaciar el expediente');
+    if (!ok) return;
+
+    const escrito = await pedirTextoPortal(
+        'Escribe ELIMINAR para confirmar',
+        'Se perderán ' + total + ' documentos de «' + carpetaAbierta.nombre + '». No se puede deshacer.',
+        '');
+    if (escrito === null) return;
+    if (escrito.trim().toUpperCase() !== 'ELIMINAR') {
+        avisar('No se eliminó nada: había que escribir ELIMINAR.', 'error');
+        return;
+    }
+
+    // El botón se quita mientras corre para que no se pulse dos veces:
+    // con cientos de documentos el borrado tarda varios segundos
+    const boton = document.querySelector('[data-accion="vaciar-carpeta"]');
+    if (boton) { boton.disabled = true; boton.textContent = 'Eliminando…'; }
+
+    try {
+        const borrados = await dbEliminarArchivosDeCarpeta(carpetaAbierta.id);
+        registrarActividad('vaciar-carpeta',
+            (borrados || total) + ' documentos · ' + carpetaAbierta.nombre, carpetaAbierta.id);
+        avisar('Se eliminaron ' + (borrados || total) + ' documento(s).');
+    } catch (e) {
+        avisar((e && e.message) || 'No se pudieron eliminar los documentos.', 'error');
+    }
+    await pintarArchivos();
+}
+
 async function eliminarArchivo(id) {
     // Solo admin u operador responsable de la carpeta abierta
     if (!carpetaAbierta || !puedeGestionarCarpeta(carpetaAbierta)) return;
@@ -6446,6 +6593,7 @@ const VERBOS_ACCION = {
     'descargar-zip':      { ic: 'paquete',        verbo: 'descargó la carpeta (ZIP)' },
     'subir-archivo':      { ic: 'subir',          verbo: 'subió' },
     'eliminar-archivo':   { ic: 'eliminar',       verbo: 'eliminó' },
+    'vaciar-carpeta':     { ic: 'eliminar',       verbo: 'vació el expediente:' },
     'crear-carpeta':      { ic: 'carpeta-nueva',  verbo: 'creó la carpeta' },
     'editar-carpeta':     { ic: 'editar',         verbo: 'editó la carpeta' },
     'activar-carpeta':    { ic: 'activar',        verbo: 'activó la carpeta' },
@@ -7039,6 +7187,7 @@ function conectarEventos() {
 
             // Editar documentos (orden manual)
             case 'editar-documentos':    empezarEdicionOrden(); break;
+            case 'vaciar-carpeta':       vaciarCarpeta(); break;
             case 'guardar-orden':        guardarOrdenDocumentos(); break;
             case 'cancelar-orden':       cancelarEdicionOrden(); break;
             case 'orden-subir':          moverArchivoEnOrden(id, -1); break;

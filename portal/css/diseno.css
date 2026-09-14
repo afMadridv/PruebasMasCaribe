@@ -2294,3 +2294,77 @@ body.pt-app .pt-campo .pt-notaria-casilla input,
     color: var(--pt-gris);
     margin-left: 0.32rem;
 }
+
+/* ============================================================
+   PROGRESO DE SUBIDA
+   ------------------------------------------------------------
+   Entre elegir veinte archivos y el aviso de «subidos» no pasaba
+   nada en pantalla: parecía que el portal se había quedado
+   quieto. Esta barra aparece al elegir, antes de que empiece a
+   subir nada, y va contando.
+
+   Mide archivos terminados, no bytes: la subida usa una sola
+   petición por archivo y el navegador no informa del avance
+   dentro de cada una. Por eso además se nombra el archivo en
+   curso, que es lo que dice que algo se está moviendo cuando uno
+   es grande y tarda.
+   ============================================================ */
+.pt-progreso{
+    background: var(--pt-superficie);
+    border: 1px solid var(--pt-borde);
+    border-radius: 1rem;
+    padding: 1.2rem 1.4rem;
+    margin-bottom: 1.44rem;
+    box-shadow: var(--pt-sombra-1);
+}
+.pt-progreso[hidden]{ display: none; }
+
+.pt-progreso__cab{
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1.2rem;
+    margin-bottom: .7rem;
+}
+.pt-progreso__eti{ font-size: 1.3rem; font-weight: 600; }
+.pt-progreso__num{
+    font-size: 1.2rem;
+    color: var(--pt-gris);
+    /* Cifras de ancho fijo: sin esto el contador brinca al pasar
+       de 9 a 10 y la barra parece temblar */
+    font-variant-numeric: tabular-nums;
+}
+
+.pt-progreso__pista{
+    height: .8rem;
+    border-radius: 999px;
+    background: var(--pt-borde);
+    overflow: hidden;
+}
+.pt-progreso__pista i{
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: 999px;
+    background: var(--pt-marca-cian);
+    transition: width .25s ease;
+}
+.pt-progreso--listo .pt-progreso__pista i{ background: var(--pt-verde-txt); }
+.pt-progreso--fallo .pt-progreso__pista i{ background: var(--pt-rojo-txt); }
+
+.pt-progreso__archivo{
+    display: block;
+    margin-top: .6rem;
+    font-size: 1.168rem;
+    color: var(--pt-gris);
+    /* Un nombre largo no debe ensanchar el panel ni partirse en
+       tres renglones */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pt-progreso__archivo:empty{ display: none; }
+
+@media (prefers-reduced-motion: reduce){
+    .pt-progreso__pista i{ transition: none; }
+}
