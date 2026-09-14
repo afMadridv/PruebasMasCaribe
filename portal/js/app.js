@@ -51,6 +51,31 @@ const EXTENSIONES_VISTA = EXTENSIONES_PERMITIDAS.slice();
 const TAMANO_MAXIMO = 200 * 1024 * 1024;
 const TAMANO_MAXIMO_TXT = (TAMANO_MAXIMO / 1048576) + ' MB';
 
+/* Cuántos archivos se suben a la vez. No es un límite de cuántos se
+   pueden soltar: se pueden soltar los que sean, solo que entran de a
+   cuatro. El navegador abre unas seis conexiones por servidor y el
+   servidor atiende diez consultas a la vez, así que pasar de ahí no
+   sube nada más rápido; solo hace que las últimas esperen tanto que
+   se agotan. */
+const SUBIDAS_A_LA_VEZ = 4;
+
+/* Recorre la lista con N tareas en marcha a la vez. Cada una toma el
+   siguiente elemento en cuanto termina el suyo, así que nunca hay más
+   de N en vuelo ni se queda ninguna esperando a que acabe un lote
+   entero por culpa del archivo más lento. */
+async function enTandas(lista, n, tarea) {
+    let siguiente = 0;
+    const obreros = Array.from(
+        { length: Math.min(n, lista.length) },
+        async () => {
+            while (siguiente < lista.length) {
+                await tarea(lista[siguiente++]);
+            }
+        }
+    );
+    await Promise.all(obreros);
+}
+
 const SESION_VALIDA = !!(sesion && ROLES_VALIDOS.includes(sesion.rol));
 const ES_ADMIN = SESION_VALIDA && sesion.rol === 'administrador';
 // Monitor: ve TODO como el administrador (menos la pestaña de usuarios)
@@ -5782,10 +5807,14 @@ async function subirArchivos(listaArchivos) {
     const casillaDescarga = document.getElementById('subida-descargable');
     const descargablePartes = casillaDescarga ? casillaDescarga.checked : true;
 
-    // Las subidas van EN PARALELO (antes eran una por una: con varios
-    // archivos grandes la espera se multiplicaba)
+    // Las subidas van en paralelo, pero de a pocas. Antes salían TODAS
+    // a la vez con Promise.all: soltar trescientos archivos abría
+    // trescientas peticiones simultáneas contra un servidor con diez
+    // conexiones, y las últimas morían con «statement timeout» sin
+    // haberse subido. De a cuatro se aprovecha el ancho de banda igual
+    // y no se atropella nada.
     let subidos = 0;
-    await Promise.all(validos.map(async (archivo) => {
+    await enTandas(validos, SUBIDAS_A_LA_VEZ, async (archivo) => {
         try {
             await dbAgregar('archivos', {
                 carpetaId: carpetaAbierta.id,
@@ -5804,10 +5833,19 @@ async function subirArchivos(listaArchivos) {
         } catch (e) {
             rechazados.push(archivo.name + ' (' + ((e && e.message) || 'error al subir') + ')');
         }
-    }));
+    });
 
     if (subidos > 0) avisar(subidos + ' archivo(s) subido(s) correctamente.');
-    if (rechazados.length > 0) avisar('No se subió: ' + rechazados.join(', '), 'error');
+    if (rechazados.length > 0) {
+        // Con muchos fallos la lista entera tapaba media pantalla y no
+        // dejaba leer el motivo, que es lo único que importa. Se
+        // nombran unos pocos y se dice cuántos más hubo.
+        const A_LA_VISTA = 5;
+        const muestra = rechazados.slice(0, A_LA_VISTA).join(', ');
+        const resto = rechazados.length - A_LA_VISTA;
+        avisar('No se subió: ' + muestra +
+               (resto > 0 ? ' y ' + resto + ' más' : ''), 'error');
+    }
     await pintarArchivos();
 }
 
