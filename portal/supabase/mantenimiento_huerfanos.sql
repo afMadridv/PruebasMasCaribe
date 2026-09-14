@@ -100,11 +100,28 @@ select (select count(*) from public.archivos)                                  a
 --
 --    wc -l /tmp/huerfanos.txt && head -20 /tmp/huerfanos.txt
 --
--- 3) Solo si la lista es la esperada, borrar el binario y su fila:
+-- 3) Comprobar que las rutas existen de verdad ANTES de borrar. Esto no
+--    borra nada: cuenta cuántas encuentra y cuánto pesan.
 --
---    while IFS= read -r ruta; do
---      rm -f "/root/supabase/volumes/storage/stub/stub/documentos/$ruta"
+--    BASE=/root/supabase/volumes/storage/stub/stub/documentos
+--    total=0; faltan=0
+--    while IFS= read -r r; do
+--      if [ -f "$BASE/$r" ]; then total=$((total+$(stat -c%s "$BASE/$r")));
+--      else echo "NO EXISTE: $r"; faltan=$((faltan+1)); fi
 --    done < /tmp/huerfanos.txt
+--    echo "faltan $faltan, total $((total/1048576)) MB"
+--
+--    La ruta lleva `stub/stub` porque el backend de ficheros de Supabase
+--    guarda por inquilino y en autohospedado el inquilino se llama así.
+--    Si cambia entre versiones, se vuelve a averiguar con:
+--
+--      find /root/supabase/volumes/storage -name '<un nombre de la lista>'
+--
+-- 4) Solo si el paso 3 encontró TODAS y no faltó ninguna, borrar los
+--    binarios y después las filas:
+--
+--    BASE=/root/supabase/volumes/storage/stub/stub/documentos
+--    while IFS= read -r r; do rm -f "$BASE/$r"; done < /tmp/huerfanos.txt
 --
 --    docker exec -i supabase-db psql -U supabase_admin -d postgres <<'SQL'
 --    delete from storage.objects o
@@ -112,10 +129,10 @@ select (select count(*) from public.archivos)                                  a
 --       and not exists (select 1 from public.archivos a where a.ruta_storage = o.name);
 --    SQL
 --
---    La ruta del paso 3 hay que confirmarla antes, porque la estructura
---    de carpetas del backend de ficheros cambia entre versiones:
+--    El orden importa: primero el archivo y luego la fila. Al revés, si
+--    algo falla en medio, se pierde la lista de qué había que borrar y
+--    los binarios quedan en disco sin nada que los nombre.
 --
---      find /root/supabase/volumes/storage -name '*.jpg' | head -3
---
--- 4) Volver a correr este archivo. El apartado 1 debe dar cero.
+-- 5) Volver a correr este archivo. El apartado 1 debe dar cero y las dos
+--    primeras cifras del apartado 3 deben coincidir.
 -- ============================================================
