@@ -1162,6 +1162,29 @@
             leido: n.leido, fecha: Date.parse(n.fecha)
         }));
     };
+    /* El espacio del servidor. Va por una función y no leyendo la tabla:
+       ver migracion_almacenamiento_ver.sql.
+
+       Tres respuestas distintas, y el portal las trata distinto:
+         { ... }        la medición
+         null           no eres administrador (la función no devuelve
+                        filas), o el servidor aún no ha medido nada
+         se lanza error el servidor no dejó leer, y eso hay que decirlo,
+                        no taparlo con un número inventado */
+    window.almacenamientoLeer = async () => {
+        const { data, error } = await nube.rpc('almacenamiento_ver');
+        if (error) fallar(error);
+        const fila = Array.isArray(data) ? data[0] : data;
+        if (!fila || !Number(fila.total_bytes)) return null;
+        return {
+            totalBytes: Number(fila.total_bytes),
+            usadoBytes: Number(fila.usado_bytes),
+            libreBytes: Number(fila.libre_bytes),
+            docsBytes:  Number(fila.docs_bytes),
+            medido:     Date.parse(fila.medido)
+        };
+    };
+
     window.notificacionesMarcarLeidas = async (ids) => {
         const { error } = await nube.rpc('marcar_notificaciones_leidas', { ids: ids || null });
         if (error) fallar(error);

@@ -2423,3 +2423,88 @@ body.pt-app .pt-campo .pt-notaria-casilla input,
     /* En pantalla estrecha el autor sobra antes que el nombre */
     .pt-tabla .pt-col-autor{ max-width: 10rem; }
 }
+
+/* ============================================================
+   ESPACIO DEL SERVIDOR (lateral, solo administrador)
+   ------------------------------------------------------------
+   La versión anterior se quitó porque mentía: cuando no podía
+   leer la medición caía a un tope escrito a mano y pintaba 1 GB
+   donde había 231, sin decir que algo había fallado. Esta
+   distingue los tres casos, y «no hay dato» se ve distinto de
+   «hay dato», que es lo que faltaba.
+   ============================================================ */
+.pt-almacen{
+    margin: auto 1.2rem 1.2rem;
+    padding: 1.1rem 1.2rem;
+    border: 1px solid var(--pt-borde);
+    border-radius: .9rem;
+    background: var(--pt-superficie);
+}
+.pt-almacen[hidden]{ display: none; }
+
+.pt-almacen__tit{
+    font-size: 1.05rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06rem;
+    color: var(--pt-gris);
+    margin-bottom: .7rem;
+}
+.pt-almacen__barra{
+    height: .7rem;
+    border-radius: 999px;
+    background: var(--pt-borde);
+    overflow: hidden;
+    margin-bottom: .6rem;
+}
+.pt-almacen__barra i{
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--pt-marca-cian);
+    transition: width .3s ease;
+}
+.pt-almacen--aviso  .pt-almacen__barra i{ background: var(--pt-ambar-txt); }
+.pt-almacen--alerta .pt-almacen__barra i{ background: var(--pt-rojo-txt); }
+
+.pt-almacen__txt{
+    font-size: 1.25rem;
+    font-variant-numeric: tabular-nums;
+}
+.pt-almacen__pct{ color: var(--pt-gris); }
+
+.pt-almacen__detalle{
+    display: flex;
+    justify-content: space-between;
+    gap: .8rem;
+    margin-top: .45rem;
+    font-size: 1.1rem;
+    color: var(--pt-gris);
+}
+/* La antigüedad de la medición: si esto se queda en «hace 2 h», la
+   tarea del servidor dejó de correr y hay que mirarla */
+.pt-almacen__edad{ white-space: nowrap; }
+
+.pt-almacen--sin-dato .pt-almacen__txt{
+    color: var(--pt-gris);
+    font-style: italic;
+}
+
+@media (prefers-reduced-motion: reduce){
+    .pt-almacen__barra i{ transition: none; }
+}
+
+/* El consejo de comprimir el video, dentro del panel de subida */
+.pt-progreso__aviso{
+    margin: .8rem 0 0;
+    padding: .8rem 1rem;
+    border-radius: .7rem;
+    /* color-mix deriva el fondo del mismo ámbar del tema, así el aviso
+       cambia solo entre claro y oscuro sin definir dos paletas */
+    background: color-mix(in srgb, var(--pt-ambar-txt) 12%, var(--pt-superficie));
+    border: 1px solid color-mix(in srgb, var(--pt-ambar-txt) 35%, transparent);
+    color: var(--pt-tinta);
+    font-size: 1.2rem;
+    line-height: 1.45;
+}
+.pt-progreso__aviso[hidden]{ display: none; }

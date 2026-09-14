@@ -537,6 +537,10 @@ async function llamadaActualizar() {}
 function canalSenalizacion() { return { enviar: () => {}, cerrar: () => {} }; }
 
 /* Notificaciones (campana): en modo local no hay triggers de servidor */
+/* En modo practica no hay servidor que medir: el portal no pinta la
+   barra de almacenamiento. */
+async function almacenamientoLeer() { return null; }
+
 /* En modo practica las credenciales no se guardan aparte. */
 async function credencialGuardar(usuario, clave) {}
 

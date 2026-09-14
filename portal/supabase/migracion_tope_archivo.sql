@@ -1,5 +1,5 @@
 -- ============================================================
--- MIGRACIÓN: 200 MB por archivo, para que quepan las audiencias
+-- MIGRACIÓN: 500 MB por archivo, para que quepan las audiencias
 -- ============================================================
 -- Idempotente: se puede correr varias veces sin romper nada.
 --
@@ -9,11 +9,14 @@
 --   unos 300 MB en calidad alta ni de 100 en calidad normal. O sea que
 --   el sitio hecho para videos rechazaba los videos.
 --
--- POR QUÉ 200 Y NO MÁS
+-- POR QUÉ 500 Y NO MÁS
 --   La subida va en una sola petición: no es reanudable. Si se corta a
---   la mitad hay que repetirla entera. A 200 MB eso todavía es un rato
---   molesto; a 2 GB es una tarde perdida. Para pasar de ahí habría que
---   implementar subida reanudable (TUS), que es otro trabajo.
+--   la mitad hay que repetirla entera, y el navegador tiene el archivo
+--   completo en memoria mientras tanto. A 500 MB eso ya es una espera
+--   larga en una conexión colombiana corriente, que es justo por lo que
+--   el portal avisa de comprimir el video antes de subirlo. Para pasar
+--   de aquí habría que implementar subida reanudable (TUS), que es otro
+--   trabajo.
 --
 -- HAY QUE CAMBIARLO EN TRES SITIOS, NO EN UNO
 --   1. Aquí, el bucket (lo que Storage acepta).
@@ -25,8 +28,8 @@
 -- ============================================================
 
 update storage.buckets
-   set file_size_limit = 209715200          -- 200 MB
+   set file_size_limit = 524288000          -- 500 MB
  where id = 'documentos';
 
--- Comprobación: tiene que decir 209715200
+-- Comprobación: tiene que decir 524288000
 select id, file_size_limit from storage.buckets where id = 'documentos';

@@ -10,8 +10,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://144.172.108.56.sslip.io" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Krub:wght@400;500;600;700&family=Lora:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/portal.css?v=49">
-    <link rel="stylesheet" href="css/diseno.css?v=49">
+    <link rel="stylesheet" href="css/portal.css?v=50">
+    <link rel="stylesheet" href="css/diseno.css?v=50">
 </head>
 <body class="pt-app">
 
@@ -134,6 +134,12 @@
             <button id="pestana-usuarios" data-accion="ver-usuarios" hidden>Usuarios</button>
             <button id="pestana-notificaciones" data-accion="ver-notificaciones" hidden>Actividad</button>
         </nav>
+
+        <!-- Espacio del servidor. Solo el administrador, y solo si el
+             servidor de verdad reporta la medición: si no llega, dice
+             que no llegó en vez de inventarse un tope. Lo llena
+             pintarAlmacenamiento(). -->
+        <div class="pt-almacen" id="almacen-caja" hidden></div>
 
         <div class="pt-lateral__yo">
             <span class="pt-avatar" id="mi-avatar"></span>
@@ -313,6 +319,10 @@
                 </div>
                 <div class="pt-progreso__pista"><i id="subida-progreso-barra"></i></div>
                 <span class="pt-progreso__archivo" id="subida-progreso-archivo"></span>
+                <!-- Consejo para videos pesados. Va aquí y no como aviso
+                     flotante: los flotantes duran cuatro segundos y el de
+                     «subidos» lo taparía. -->
+                <p class="pt-progreso__aviso" id="subida-progreso-aviso" hidden></p>
             </div>
 
             <div id="zona-subida" class="pt-zona-subida" hidden>
@@ -325,7 +335,7 @@
                     <input type="file" id="entrada-archivos" multiple hidden
                            accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
                 </label>
-                <p class="pt-nota" id="subida-nota">Permitidos: PDF, Word, Excel, PNG, JPG. El audio y el video van en la subcarpeta de audiencias · máximo 200 MB por archivo</p>
+                <p class="pt-nota" id="subida-nota">Permitidos: PDF, Word, Excel, PNG, JPG. El audio y el video van en la subcarpeta de audiencias · máximo 500 MB por archivo</p>
                 <label class="pt-check-descarga">
                     <input type="checkbox" id="subida-descargable" checked>
                     Permitir que el cliente y los acreedores descarguen estos documentos
@@ -964,13 +974,13 @@
     <div id="toast" class="pt-toast"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.1"></script>
-    <script src="js/diasHabiles.js?v=49"></script>
-    <script src="js/db.js?v=49"></script>
-    <script src="js/auth.js?v=49"></script>
-    <script src="js/config.js?v=49"></script>
-    <script src="js/iconos.js?v=49"></script>
-    <script src="js/tema.js?v=49"></script>
-    <script src="js/nube.js?v=49"></script>
-    <script src="js/app.js?v=49"></script>
+    <script src="js/diasHabiles.js?v=50"></script>
+    <script src="js/db.js?v=50"></script>
+    <script src="js/auth.js?v=50"></script>
+    <script src="js/config.js?v=50"></script>
+    <script src="js/iconos.js?v=50"></script>
+    <script src="js/tema.js?v=50"></script>
+    <script src="js/nube.js?v=50"></script>
+    <script src="js/app.js?v=50"></script>
 </body>
 </html>

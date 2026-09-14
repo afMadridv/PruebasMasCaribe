@@ -44,12 +44,23 @@ const EXTENSIONES_VISTA = EXTENSIONES_PERMITIDAS.slice();
 // rechazan al final; si admite menos, se prohíben archivos que sí cabían.
 // Cambiarlo aquí obliga a cambiarlo también en la base: ver
 // migracion_tope_archivo.sql.
-//
-// 200 MB porque las grabaciones de audiencias no caben en 50: una hora de
-// video ronda los 300 MB en calidad alta, y este tope deja pasar las de
-// calidad normal sin obligar a subidas reanudables.
-const TAMANO_MAXIMO = 200 * 1024 * 1024;
+const TAMANO_MAXIMO = 500 * 1024 * 1024;
 const TAMANO_MAXIMO_TXT = (TAMANO_MAXIMO / 1048576) + ' MB';
+
+// A partir de aquí el portal recomienda comprimir antes de subir. No lo
+// impide: es un consejo. La subida va en UNA petición y no es
+// reanudable, así que medio giga por una conexión corriente es una
+// espera larga que se pierde entera si se corta.
+const AVISO_VIDEO_MB = 100;
+
+// Solo video: el audio de una audiencia pesa poco y comprimirlo no
+// merece la pena
+const EXTENSIONES_VIDEO = [
+    'mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v', 'mpg', 'mpeg', '3gp'
+];
+function esVideo(nombre) {
+    return EXTENSIONES_VIDEO.includes(extensionDe(nombre));
+}
 
 /* Cuántos archivos se suben a la vez. No es un límite de cuántos se
    pueden soltar: se pueden soltar los que sean, solo que entran de a
@@ -89,12 +100,15 @@ function _progresoElementos() {
         eti:     document.getElementById('subida-progreso-eti'),
         num:     document.getElementById('subida-progreso-num'),
         barra:   document.getElementById('subida-progreso-barra'),
-        archivo: document.getElementById('subida-progreso-archivo')
+        archivo: document.getElementById('subida-progreso-archivo'),
+        aviso:   document.getElementById('subida-progreso-aviso')
     };
 }
 
-/* Se llama al elegir los archivos, antes de subir el primer byte. */
-function progresoSubidaAbrir(total) {
+/* Se llama al elegir los archivos, antes de subir el primer byte.
+   `consejo` es el aviso de videos pesados, si lo hay: se queda a la
+   vista toda la subida. */
+function progresoSubidaAbrir(total, consejo) {
     const e = _progresoElementos();
     if (!e.caja) return;
     clearTimeout(_progresoCerrarTemporizador);
@@ -103,6 +117,10 @@ function progresoSubidaAbrir(total) {
     e.num.textContent = '0 de ' + total;
     e.barra.style.width = '0%';
     e.archivo.textContent = '';
+    if (e.aviso) {
+        e.aviso.textContent = consejo || '';
+        e.aviso.hidden = !consejo;
+    }
     e.caja.hidden = false;
 }
 
@@ -799,6 +817,11 @@ async function completarArranque() {
     mostrarRecordatoriosVigentes();
     iniciarSoporte();
     iniciarCampana();
+    // El espacio del servidor: al entrar y cada minuto. La tarea del
+    // sistema mide cada pocos minutos; refrescar más seguido es para que
+    // la antigüedad que se muestra no envejezca en pantalla.
+    refrescarAlmacenamiento();
+    setInterval(refrescarAlmacenamiento, 60000);
     verificarConsentimiento();
     avisarCierresPendientes();
     registrarConexion();
@@ -1169,20 +1192,105 @@ function esqueletoFilas(n) {
    límite POR ARCHIVO, no el total. La barra mostraba entonces
    "de 50 MB" como si el portal entero cupiera ahi.
 
-   Se quitó la barra de almacenamiento del lateral. El número nunca
-   llegó a ser de fiar: mezclaba el peso de los expedientes con el del
-   disco entero, y en más de una recarga se quedaba en el valor de
-   respaldo mostrando 1 GB donde había 231. Un dato que hay que
-   desconfiar cada vez que se mira no sirve de nada en pantalla.
+   ============ ESPACIO DEL SERVIDOR ============
 
-   Lo que sí sigue: la tabla `almacenamiento` y la tarea `medir-disco`
-   del servidor, que anota la medición cada cinco minutos. El dato
-   queda registrado por si más adelante hace falta; simplemente no se
-   pinta. Para consultarlo:
+   La primera versión de esta barra mentía: cuando no conseguía leer la
+   medición, caía a un tope escrito en config.js y pintaba «1 GB» donde
+   había 231. El fallo era mudo, así que el número equivocado parecía
+   tan bueno como el bueno.
 
-     select * from public.almacenamiento;
-     df -h /
-*/
+   Ahora hay tres estados y cada uno se ve distinto:
+     - la medición, con su antigüedad al lado
+     - «el servidor no ha medido todavía»
+     - «no se pudo leer», con el motivo en el título
+
+   Ninguno se inventa cifras. El dato del disco lo escribe la tarea
+   `medir-disco` del servidor con `df`; el peso de los expedientes lo
+   suma la base en el momento, así que esa mitad siempre está al día. */
+let _almacen = null;        // última lectura, o null
+let _almacenError = null;   // motivo si no se pudo leer
+
+/* Pregunta por la medición. Cada minuto, para que la antigüedad que se
+   muestra no se quede vieja en pantalla. */
+async function refrescarAlmacenamiento() {
+    if (!ES_ADMIN || typeof almacenamientoLeer !== 'function') return;
+    try {
+        _almacen = await almacenamientoLeer();
+        _almacenError = null;
+    } catch (e) {
+        _almacen = null;
+        _almacenError = (e && e.message) || 'no se pudo leer';
+    }
+    pintarAlmacenamiento();
+}
+
+/* 251658240 bytes no se lee; 240 GB sí. */
+function formatoEspacio(bytes) {
+    const n = Number(bytes) || 0;
+    const GB = 1073741824, MB = 1048576;
+    if (n >= GB) return (n / GB).toFixed(n >= 10 * GB ? 0 : 1) + ' GB';
+    if (n >= MB) return (n / MB).toFixed(1) + ' MB';
+    return Math.round(n / 1024) + ' KB';
+}
+
+/* «hace 2 min». Sirve para saber de un vistazo si el dato está vivo o
+   si la tarea del servidor dejó de correr. */
+function hace(marca) {
+    if (!marca) return '';
+    const seg = Math.max(0, Math.round((Date.now() - marca) / 1000));
+    if (seg < 90) return 'hace ' + seg + ' s';
+    const min = Math.round(seg / 60);
+    if (min < 90) return 'hace ' + min + ' min';
+    const hor = Math.round(min / 60);
+    if (hor < 36) return 'hace ' + hor + ' h';
+    return 'hace ' + Math.round(hor / 24) + ' días';
+}
+
+function pintarAlmacenamiento() {
+    const caja = document.getElementById('almacen-caja');
+    if (!caja) return;
+    // La ocupación del disco dice cuánta carga lleva la notaría, y eso no
+    // es asunto de las partes ni del operador. La función del servidor
+    // dice lo mismo: a quien no es admin le devuelve cero filas.
+    if (!ES_ADMIN) { caja.hidden = true; return; }
+    caja.hidden = false;
+
+    const tit = '<div class="pt-almacen__tit">Espacio del servidor</div>';
+
+    if (_almacenError) {
+        caja.className = 'pt-almacen pt-almacen--sin-dato';
+        caja.innerHTML = tit +
+            '<div class="pt-almacen__txt" title="' + escaparHtml(_almacenError) + '">' +
+            'No se pudo leer</div>';
+        return;
+    }
+    if (!_almacen) {
+        caja.className = 'pt-almacen pt-almacen--sin-dato';
+        caja.innerHTML = tit +
+            '<div class="pt-almacen__txt" title="La tarea medir-disco del servidor aún no ha escrito ninguna medición">' +
+            'Sin medición todavía</div>';
+        return;
+    }
+
+    const d = _almacen;
+    const pct = d.totalBytes > 0
+        ? Math.min(100, Math.round((d.usadoBytes / d.totalBytes) * 100)) : 0;
+    // Aviso al 80% y alarma al 92%: un disco lleno tumba Postgres, y hay
+    // que enterarse antes, no cuando ya pasó
+    const estado = pct >= 92 ? ' pt-almacen--alerta' : (pct >= 80 ? ' pt-almacen--aviso' : '');
+    caja.className = 'pt-almacen' + estado;
+
+    caja.innerHTML = tit +
+        '<div class="pt-almacen__barra"><i style="width:' + pct + '%"></i></div>' +
+        '<div class="pt-almacen__txt">' +
+            formatoEspacio(d.usadoBytes) + ' de ' + formatoEspacio(d.totalBytes) +
+            ' <span class="pt-almacen__pct">(' + pct + '%)</span></div>' +
+        '<div class="pt-almacen__detalle">' +
+            'Expedientes: <b>' + formatoEspacio(d.docsBytes) + '</b>' +
+            '<span class="pt-almacen__edad" title="Medido en el servidor con df el ' +
+                escaparHtml(formatoFecha(d.medido)) + '">' + escaparHtml(hace(d.medido)) + '</span>' +
+        '</div>';
+}
 
 /* Contadores de la barra lateral. Todo sale de datos que ya se
    descargaron: no hay consultas extra. */
@@ -5890,10 +5998,30 @@ async function subirArchivos(listaArchivos) {
         } else if (!destinoAdmiteExtension(_subcarpetaAbierta, ext)) {
             rechazados.push(motivoRechazo(_subcarpetaAbierta, archivo.name));
         } else if (archivo.size > TAMANO_MAXIMO) {
-            rechazados.push(archivo.name + ' (supera ' + TAMANO_MAXIMO_TXT + ')');
+            // Al video se le dice qué hacer, no solo que no cabe
+            rechazados.push(archivo.name + (esVideo(archivo.name)
+                ? ' (pesa ' + formatoTamano(archivo.size) + ' y el tope es ' + TAMANO_MAXIMO_TXT +
+                  ': compríelo o recorte la parte que no haga falta)'
+                : ' (supera ' + TAMANO_MAXIMO_TXT + ')'));
         } else {
             validos.push(archivo);
         }
+    }
+
+    // Consejo para los videos pesados que SÍ caben. Va en el panel de
+    // progreso y no como aviso flotante: los flotantes duran cuatro
+    // segundos y el de «subidos» lo taparía. Ahí se queda toda la subida.
+    const videosPesados = validos.filter(
+        a => esVideo(a.name) && a.size > AVISO_VIDEO_MB * 1024 * 1024);
+    let consejoVideo = '';
+    if (videosPesados.length) {
+        const peso = videosPesados.reduce((s, a) => s + a.size, 0);
+        consejoVideo =
+            (videosPesados.length === 1
+                ? 'Este video pesa ' + formatoTamano(peso) + '. '
+                : 'Estos ' + videosPesados.length + ' videos pesan ' + formatoTamano(peso) + ' entre todos. ') +
+            'Se suben igual, pero conviene comprimirlos o recortar lo que no haga falta: ' +
+            'la subida no se puede reanudar, así que si se corta hay que repetirla entera.';
     }
 
     // El operador decide si las partes pueden descargar lo que sube ahora
@@ -5908,7 +6036,7 @@ async function subirArchivos(listaArchivos) {
     // La barra sale YA, antes del primer byte: elegir veinte archivos y
     // no ver nada hasta el aviso final parecía que el portal se había
     // colgado.
-    progresoSubidaAbrir(validos.length);
+    progresoSubidaAbrir(validos.length, consejoVideo);
 
     // Las subidas van en paralelo, pero de a pocas. Antes salían TODAS
     // a la vez con Promise.all: soltar trescientos archivos abría

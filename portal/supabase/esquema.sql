@@ -667,8 +667,8 @@ on conflict (id) do nothing;
 -- Límite por archivo. El navegador valida contra el MISMO número
 -- (TAMANO_MAXIMO en app.js): si no coinciden, o se sube algo que Storage
 -- rechaza al final, o se prohíbe algo que sí cabía.
--- 200 MB para que quepan las grabaciones de audiencias.
-update storage.buckets set file_size_limit = 209715200 where id = 'documentos';
+-- 500 MB para que quepan las grabaciones de audiencias.
+update storage.buckets set file_size_limit = 524288000 where id = 'documentos';
 
 drop policy if exists "sube documentos admin u operador" on storage.objects;
 create policy "sube documentos admin u operador" on storage.objects
@@ -1866,8 +1866,10 @@ create policy "escribir mensajes del canal" on public.mensajes
 -- 13) PRE-DESPLIEGUE: integridad de autor y avisos de ingreso
 -- ============================================================
 
--- Storage: límite por archivo subido a 100 MB
-update storage.buckets set file_size_limit = 104857600 where id = 'documentos';
+-- El límite por archivo ya se fijó arriba (sección 5). Aquí había un
+-- SEGUNDO `update` que lo bajaba a 100 MB, y como corre después, era el
+-- que mandaba: una instalación nueva terminaba en 100 MB por más que la
+-- sección 5 dijera otra cosa. El número vive en un solo sitio.
 
 -- Nadie puede firmar como otro: el autor de mensajes/archivos DEBE ser el
 -- usuario conectado, y un trigger sobreescribe los snapshots con los datos
