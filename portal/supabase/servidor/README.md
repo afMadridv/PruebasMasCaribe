@@ -10,6 +10,19 @@ nueva nacía sin ella. Aquí están para que eso no vuelva a pasar.
 | `medir-disco.sh` | `/usr/local/bin/medir-disco` | cada 2 min |
 | `respaldo.sh` | `/usr/local/bin/respaldo` | 3:30 a. m. |
 | `Caddyfile` | `/etc/caddy/Caddyfile` | al cambiarlo |
+| `revision.sh` | se corre desde el repositorio | cuando se quiera |
+
+## Revisar que todo esté bien
+
+```bash
+cd /srv/portal && git pull -q && bash portal/supabase/servidor/revision.sh
+```
+
+Solo lee: no cambia nada, no reinicia nada, no borra nada. Revisa los
+contenedores, el disco, la swap, el cuadre de la base, los huérfanos de
+Storage, la tarea de plazos, la frescura de la medición y del último
+respaldo, el cortafuegos, el certificado y las rutas que deben estar
+bloqueadas. Cada línea sale con OK, AVISO o FALLA.
 
 ## El Caddyfile se baja, no se pega
 
