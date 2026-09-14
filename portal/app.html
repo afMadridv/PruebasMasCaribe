@@ -10,8 +10,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://144.172.108.56.sslip.io" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Krub:wght@400;500;600;700&family=Lora:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/portal.css?v=50">
-    <link rel="stylesheet" href="css/diseno.css?v=50">
+    <link rel="stylesheet" href="css/portal.css?v=51">
+    <link rel="stylesheet" href="css/diseno.css?v=51">
 </head>
 <body class="pt-app">
 
@@ -133,13 +133,8 @@
             <button id="pestana-calendario" data-accion="ver-calendario-vencimientos" hidden>Calendario</button>
             <button id="pestana-usuarios" data-accion="ver-usuarios" hidden>Usuarios</button>
             <button id="pestana-notificaciones" data-accion="ver-notificaciones" hidden>Actividad</button>
+            <button id="pestana-almacenamiento" data-accion="ver-almacenamiento" hidden>Almacenamiento</button>
         </nav>
-
-        <!-- Espacio del servidor. Solo el administrador, y solo si el
-             servidor de verdad reporta la medición: si no llega, dice
-             que no llegó en vez de inventarse un tope. Lo llena
-             pintarAlmacenamiento(). -->
-        <div class="pt-almacen" id="almacen-caja" hidden></div>
 
         <div class="pt-lateral__yo">
             <span class="pt-avatar" id="mi-avatar"></span>
@@ -483,6 +478,21 @@
         </section>
 
         <!-- ===== VISTA: CENTRO DE NOTIFICACIONES (solo administrador) ===== -->
+        <!-- ===== VISTA: ALMACENAMIENTO (solo administrador) =====
+             Cuánto pesa el disco del servidor y cuánto consume cada
+             expediente de la notaría abierta. Lo llena
+             pintarVistaAlmacenamiento(). -->
+        <section id="vista-almacenamiento" hidden>
+            <div class="pt-barra-seccion">
+                <h2>Almacenamiento</h2>
+                <button class="pt-boton pt-boton--fantasma" data-accion="refrescar-almacenamiento"><span data-icono="refrescar" data-icono-tam="15"></span> Actualizar</button>
+            </div>
+            <div id="almacen-disco"></div>
+            <div class="pt-panorama" id="almacen-panorama" hidden></div>
+            <h3 class="pt-almacen-sub" id="almacen-titulo-tabla">Qué ocupa cada expediente</h3>
+            <div id="almacen-carpetas"></div>
+        </section>
+
         <section id="vista-notificaciones" hidden>
             <div class="pt-barra-seccion">
                 <h2>Actividad del portal</h2>
@@ -974,13 +984,13 @@
     <div id="toast" class="pt-toast"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.1"></script>
-    <script src="js/diasHabiles.js?v=50"></script>
-    <script src="js/db.js?v=50"></script>
-    <script src="js/auth.js?v=50"></script>
-    <script src="js/config.js?v=50"></script>
-    <script src="js/iconos.js?v=50"></script>
-    <script src="js/tema.js?v=50"></script>
-    <script src="js/nube.js?v=50"></script>
-    <script src="js/app.js?v=50"></script>
+    <script src="js/diasHabiles.js?v=51"></script>
+    <script src="js/db.js?v=51"></script>
+    <script src="js/auth.js?v=51"></script>
+    <script src="js/config.js?v=51"></script>
+    <script src="js/iconos.js?v=51"></script>
+    <script src="js/tema.js?v=51"></script>
+    <script src="js/nube.js?v=51"></script>
+    <script src="js/app.js?v=51"></script>
 </body>
 </html>

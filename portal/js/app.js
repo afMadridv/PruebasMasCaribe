@@ -433,6 +433,9 @@ function pintarEncabezado() {
     document.getElementById('pestana-calendario').hidden = !(ES_SUPERVISION || ES_OPERADOR);
     document.getElementById('pestana-usuarios').hidden = !ES_ADMIN; // el monitor NUNCA la ve
     document.getElementById('pestana-notificaciones').hidden = !ES_SUPERVISION;
+    // El espacio del servidor solo lo ve el administrador: el monitor
+    // supervisa trámites, no la máquina
+    document.getElementById('pestana-almacenamiento').hidden = !ES_ADMIN;
     document.getElementById('boton-nueva-carpeta').hidden = !ES_ADMIN;
 }
 
@@ -817,11 +820,6 @@ async function completarArranque() {
     mostrarRecordatoriosVigentes();
     iniciarSoporte();
     iniciarCampana();
-    // El espacio del servidor: al entrar y cada minuto. La tarea del
-    // sistema mide cada pocos minutos; refrescar más seguido es para que
-    // la antigüedad que se muestra no envejezca en pantalla.
-    refrescarAlmacenamiento();
-    setInterval(refrescarAlmacenamiento, 60000);
     verificarConsentimiento();
     avisarCierresPendientes();
     registrarConexion();
@@ -1103,7 +1101,7 @@ function mostrarVista(idVista) {
     // Al cambiar de sección en móvil, la barra lateral se cierra sola
     alternarLateral(false);
     alternarCajonUsuario(false);
-    for (const id of ['vista-carpetas', 'vista-carpeta', 'vista-estados', 'vista-calendario', 'vista-usuarios', 'vista-notificaciones']) {
+    for (const id of ['vista-carpetas', 'vista-carpeta', 'vista-estados', 'vista-calendario', 'vista-usuarios', 'vista-notificaciones', 'vista-almacenamiento']) {
         const el = document.getElementById(id);
         if (el) el.hidden = (id !== idVista);
     }
@@ -1115,6 +1113,9 @@ function mostrarVista(idVista) {
     document.getElementById('pestana-calendario').classList.toggle('activa', idVista === 'vista-calendario');
     document.getElementById('pestana-usuarios').classList.toggle('activa', idVista === 'vista-usuarios');
     document.getElementById('pestana-notificaciones').classList.toggle('activa', idVista === 'vista-notificaciones');
+    document.getElementById('pestana-almacenamiento').classList.toggle('activa', idVista === 'vista-almacenamiento');
+    // El refresco del disco solo corre mientras la sección está abierta
+    if (idVista !== 'vista-almacenamiento') detenerRefrescoAlmacenamiento();
     // El refresco automático de "Estados" solo corre mientras la vista está abierta
     if (idVista !== 'vista-estados') detenerAutoRefrescoEstados();
     // El chat flotante de la carpeta solo existe dentro de la carpeta
@@ -1210,8 +1211,33 @@ function esqueletoFilas(n) {
 let _almacen = null;        // última lectura, o null
 let _almacenError = null;   // motivo si no se pudo leer
 
-/* Pregunta por la medición. Cada minuto, para que la antigüedad que se
-   muestra no se quede vieja en pantalla. */
+/* Se abre desde el menú, como cualquier otra sección. La ocupación del
+   servidor dice cuánta carga lleva la notaría, y eso no es asunto de las
+   partes ni del operador: la función del servidor devuelve cero filas a
+   quien no sea administrador, así que la restricción vive en los dos
+   lados y no solo en el menú. */
+let _almacenTemporizador = null;
+
+async function mostrarVistaAlmacenamiento() {
+    if (!ES_ADMIN) return;
+    mostrarVista('vista-almacenamiento');
+    await refrescarAlmacenamiento();
+    // Cada minuto mientras la sección esté abierta. La tarea del servidor
+    // mide cada pocos minutos; refrescar más seguido es para que la
+    // antigüedad que se muestra no envejezca en pantalla.
+    clearInterval(_almacenTemporizador);
+    _almacenTemporizador = setInterval(refrescarAlmacenamiento, 60000);
+}
+
+/* Al salir de la sección se para: no tiene sentido consultar el disco
+   mientras alguien trabaja en otra parte del portal. */
+function detenerRefrescoAlmacenamiento() {
+    clearInterval(_almacenTemporizador);
+    _almacenTemporizador = null;
+}
+
+/* Vuelve a pedir la medición y repinta. Lo llama el botón «Actualizar» y
+   el temporizador mientras la sección está abierta. */
 async function refrescarAlmacenamiento() {
     if (!ES_ADMIN || typeof almacenamientoLeer !== 'function') return;
     try {
@@ -1221,7 +1247,7 @@ async function refrescarAlmacenamiento() {
         _almacen = null;
         _almacenError = (e && e.message) || 'no se pudo leer';
     }
-    pintarAlmacenamiento();
+    pintarVistaAlmacenamiento();
 }
 
 /* 251658240 bytes no se lee; 240 GB sí. */
@@ -1246,50 +1272,131 @@ function hace(marca) {
     return 'hace ' + Math.round(hor / 24) + ' días';
 }
 
-function pintarAlmacenamiento() {
-    const caja = document.getElementById('almacen-caja');
-    if (!caja) return;
-    // La ocupación del disco dice cuánta carga lleva la notaría, y eso no
-    // es asunto de las partes ni del operador. La función del servidor
-    // dice lo mismo: a quien no es admin le devuelve cero filas.
-    if (!ES_ADMIN) { caja.hidden = true; return; }
-    caja.hidden = false;
-
-    const tit = '<div class="pt-almacen__tit">Espacio del servidor</div>';
-
+/* El disco del servidor, la tarjeta de arriba. */
+function _tarjetaDisco() {
+    const tit = '<div class="pt-disco__tit">Disco del servidor</div>';
     if (_almacenError) {
-        caja.className = 'pt-almacen pt-almacen--sin-dato';
-        caja.innerHTML = tit +
-            '<div class="pt-almacen__txt" title="' + escaparHtml(_almacenError) + '">' +
-            'No se pudo leer</div>';
-        return;
+        return '<div class="pt-disco pt-disco--sin-dato">' + tit +
+            '<p class="pt-disco__aviso">No se pudo leer la medición.</p>' +
+            '<p class="pt-nota">' + escaparHtml(_almacenError) + '</p></div>';
     }
     if (!_almacen) {
-        caja.className = 'pt-almacen pt-almacen--sin-dato';
-        caja.innerHTML = tit +
-            '<div class="pt-almacen__txt" title="La tarea medir-disco del servidor aún no ha escrito ninguna medición">' +
-            'Sin medición todavía</div>';
-        return;
+        return '<div class="pt-disco pt-disco--sin-dato">' + tit +
+            '<p class="pt-disco__aviso">El servidor todavía no ha medido el disco.</p>' +
+            '<p class="pt-nota">La tarea <code>medir-disco</code> escribe la medición cada pocos ' +
+            'minutos. Si esto no cambia, esa tarea no está corriendo.</p></div>';
     }
 
     const d = _almacen;
     const pct = d.totalBytes > 0
         ? Math.min(100, Math.round((d.usadoBytes / d.totalBytes) * 100)) : 0;
-    // Aviso al 80% y alarma al 92%: un disco lleno tumba Postgres, y hay
-    // que enterarse antes, no cuando ya pasó
-    const estado = pct >= 92 ? ' pt-almacen--alerta' : (pct >= 80 ? ' pt-almacen--aviso' : '');
-    caja.className = 'pt-almacen' + estado;
+    // Aviso al 80% y alarma al 92%: un disco lleno tumba Postgres, y de
+    // eso hay que enterarse antes, no cuando ya pasó
+    const estado = pct >= 92 ? ' pt-disco--alerta' : (pct >= 80 ? ' pt-disco--aviso' : '');
+    // Lo que no son documentos del portal: Ubuntu, Docker, la base y los
+    // respaldos
+    const otros = Math.max(0, d.usadoBytes - d.docsBytes);
+    const ancho = (b) => (d.totalBytes ? (b / d.totalBytes) * 100 : 0) + '%';
 
-    caja.innerHTML = tit +
-        '<div class="pt-almacen__barra"><i style="width:' + pct + '%"></i></div>' +
-        '<div class="pt-almacen__txt">' +
-            formatoEspacio(d.usadoBytes) + ' de ' + formatoEspacio(d.totalBytes) +
-            ' <span class="pt-almacen__pct">(' + pct + '%)</span></div>' +
-        '<div class="pt-almacen__detalle">' +
-            'Expedientes: <b>' + formatoEspacio(d.docsBytes) + '</b>' +
-            '<span class="pt-almacen__edad" title="Medido en el servidor con df el ' +
+    const dato = (eti, val, pie) =>
+        '<div class="pt-disco__dato"><span>' + eti + '</span><b>' + val + '</b>' +
+        '<small>' + pie + '</small></div>';
+
+    return '<div class="pt-disco' + estado + '">' +
+        '<div class="pt-disco__cab">' + tit +
+            '<span class="pt-disco__edad" title="Medido en el servidor con df el ' +
                 escaparHtml(formatoFecha(d.medido)) + '">' + escaparHtml(hace(d.medido)) + '</span>' +
+        '</div>' +
+        // Dos tramos: lo que ocupan los documentos y lo que ocupa todo lo
+        // demás. Saber cuál de los dos crece es lo que dice si hay que
+        // borrar expedientes o mirar el servidor.
+        '<div class="pt-disco__barra">' +
+            '<i class="pt-disco__docs"  style="width:' + ancho(d.docsBytes) + '" title="Documentos del portal"></i>' +
+            '<i class="pt-disco__otros" style="width:' + ancho(otros) + '" title="Sistema, base de datos y respaldos"></i>' +
+        '</div>' +
+        '<div class="pt-disco__datos">' +
+            dato('Ocupado', formatoEspacio(d.usadoBytes), pct + '% de ' + formatoEspacio(d.totalBytes)) +
+            dato('Documentos del portal', formatoEspacio(d.docsBytes), 'lo que suman los expedientes') +
+            dato('Sistema y base', formatoEspacio(otros), 'Ubuntu, Docker, Supabase, respaldos') +
+            dato('Libre', formatoEspacio(d.libreBytes), 'queda disponible') +
+        '</div>' +
+    '</div>';
+}
+
+/* Pinta la sección entera: el disco, el resumen de la oficina abierta y
+   el reparto por expediente. Las cifras de las carpetas salen de lo que
+   el portal ya descargó, así que no hay consultas extra. */
+function pintarVistaAlmacenamiento() {
+    const zonaDisco = document.getElementById('almacen-disco');
+    if (!zonaDisco || !ES_ADMIN) return;
+    zonaDisco.innerHTML = _tarjetaDisco();
+
+    // `_carpetasVisibles` ya viene filtrada por permiso y por la notaría
+    // abierta: es exactamente lo que el administrador está viendo en
+    // Carpetas, así que las dos secciones nunca se contradicen.
+    const carpetas = _carpetasVisibles || [];
+    const oficina = notariaActual();
+    const donde = oficina
+        ? escaparHtml((oficina.ciudad ? oficina.ciudad + ' · ' : '') + oficina.nombre)
+        : 'todas las notarías';
+
+    const bytesDe = (c) => Math.round((Number(c.pesoTotalMb) || 0) * 1048576);
+    const total = carpetas.reduce((n, c) => n + bytesDe(c), 0);
+    const docs = carpetas.reduce((n, c) => n + (Number(c.totalArchivos) || 0), 0);
+
+    const caja1 = (t, n, pie) =>
+        '<div class="pt-panorama__caja">' +
+            '<div class="pt-panorama__tit">' + t + '</div>' +
+            '<div class="pt-panorama__num">' + n + '</div>' +
+            '<div class="pt-panorama__pie">' + pie + '</div>' +
         '</div>';
+
+    const pano = document.getElementById('almacen-panorama');
+    pano.hidden = false;
+    pano.innerHTML =
+        caja1('Ocupa esta oficina', formatoEspacio(total), donde) +
+        caja1('Documentos', docs, 'en ' + carpetas.length +
+              (carpetas.length === 1 ? ' expediente' : ' expedientes')) +
+        caja1('Promedio por documento', docs ? formatoEspacio(total / docs) : '—',
+              docs ? 'peso medio de un archivo' : 'todavía no hay documentos') +
+        caja1('Del disco del servidor',
+              (_almacen && _almacen.totalBytes)
+                  ? ((total / _almacen.totalBytes) * 100).toFixed(1) + '%' : '—',
+              _almacen ? 'de ' + formatoEspacio(_almacen.totalBytes) : 'sin medición');
+
+    // El reparto por expediente, de mayor a menor: es lo que dice dónde
+    // mirar cuando el disco empieza a llenarse
+    const zona = document.getElementById('almacen-carpetas');
+    const ordenadas = carpetas.slice().sort((a, b) => bytesDe(b) - bytesDe(a));
+    if (!ordenadas.length) {
+        zona.innerHTML = '<div class="pt-vacio">No hay expedientes en esta oficina.</div>';
+        return;
+    }
+    const mayor = bytesDe(ordenadas[0]) || 1;
+
+    zona.innerHTML =
+        '<div class="pt-tabla-envoltura"><table class="pt-tabla"><thead><tr>' +
+            '<th>Expediente</th><th>Documentos</th><th>Tamaño</th><th>Reparto</th>' +
+        '</tr></thead><tbody>' +
+        ordenadas.map(c => {
+            const b = bytesDe(c);
+            return '<tr>' +
+                '<td class="pt-col-archivo"><span class="pt-nombre-archivo" title="' +
+                    escaparHtml(c.nombre) + '">' + escaparHtml(c.nombre) + '</span></td>' +
+                '<td class="pt-col-tamano">' + (Number(c.totalArchivos) || 0) + '</td>' +
+                '<td class="pt-col-tamano">' + formatoEspacio(b) + '</td>' +
+                // La barra se mide contra el expediente MÁS grande, no
+                // contra el total: si no, con veinte carpetas parejas
+                // todas salen como una rayita y no se compara nada
+                '<td class="pt-col-reparto">' +
+                    '<div class="pt-reparto"><i style="width:' +
+                        Math.round((b / mayor) * 100) + '%"></i></div>' +
+                    '<span class="pt-reparto__pct">' +
+                        (total ? ((b / total) * 100).toFixed(1) : '0.0') + '%</span>' +
+                '</td>' +
+            '</tr>';
+        }).join('') +
+        '</tbody></table></div>';
 }
 
 /* Contadores de la barra lateral. Todo sale de datos que ya se
@@ -6011,17 +6118,22 @@ async function subirArchivos(listaArchivos) {
     // Consejo para los videos pesados que SÍ caben. Va en el panel de
     // progreso y no como aviso flotante: los flotantes duran cuatro
     // segundos y el de «subidos» lo taparía. Ahí se queda toda la subida.
-    const videosPesados = validos.filter(
-        a => esVideo(a.name) && a.size > AVISO_VIDEO_MB * 1024 * 1024);
+    const videosPesados = validos.filter(a => esVideo(a.name));
     let consejoVideo = '';
     if (videosPesados.length) {
         const peso = videosPesados.reduce((s, a) => s + a.size, 0);
+        const pesado = peso > AVISO_VIDEO_MB * 1024 * 1024;
         consejoVideo =
             (videosPesados.length === 1
-                ? 'Este video pesa ' + formatoTamano(peso) + '. '
-                : 'Estos ' + videosPesados.length + ' videos pesan ' + formatoTamano(peso) + ' entre todos. ') +
-            'Se suben igual, pero conviene comprimirlos o recortar lo que no haga falta: ' +
-            'la subida no se puede reanudar, así que si se corta hay que repetirla entera.';
+                ? 'Video de ' + formatoTamano(peso) + '. '
+                : videosPesados.length + ' videos, ' + formatoTamano(peso) + ' entre todos. ') +
+            'Antes de subir grabaciones conviene comprimirlas o recortar lo que no ' +
+            'haga falta: el video es lo que más llena el disco del servidor' +
+            (pesado
+                // A partir de cierto peso la subida deja de ser instantánea
+                // y el riesgo de que se corte deja de ser teórico
+                ? ', y a este tamaño la subida tarda y no se puede reanudar: si se corta, hay que repetirla entera.'
+                : '.');
     }
 
     // El operador decide si las partes pueden descargar lo que sube ahora
@@ -7270,6 +7382,8 @@ function conectarEventos() {
 
             case 'filtro-carpetas':   cambiarFiltroCarpetas(boton.dataset.filtro); break;
             case 'ver-usuarios':      mostrarVistaUsuarios(); break;
+            case 'ver-almacenamiento':   mostrarVistaAlmacenamiento(); break;
+            case 'refrescar-almacenamiento': refrescarAlmacenamiento(); break;
             case 'ver-notificaciones':   mostrarVistaNotificaciones(); break;
             case 'refrescar-notificaciones': mostrarVistaNotificaciones(); break;
             case 'notif-rol':         cambiarRolNotif(boton.dataset.rol); break;
