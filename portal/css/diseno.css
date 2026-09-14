@@ -2368,3 +2368,58 @@ body.pt-app .pt-campo .pt-notaria-casilla input,
 @media (prefers-reduced-motion: reduce){
     .pt-progreso__pista i{ transition: none; }
 }
+
+/* ============================================================
+   TABLA DE DOCUMENTOS CON MUCHAS FILAS
+   ------------------------------------------------------------
+   Con nombres largos y expedientes de mil documentos la tabla se
+   rompía: el nombre empujaba a las demás columnas, «Andres Felipe
+   Madrid Villar» se partía en cuatro renglones, la fecha en otros
+   cuatro, y cada fila quedaba tres veces más alta de lo necesario.
+   Encima aparecía barra horizontal y «Descargar» se salía.
+
+   El reparto: el nombre se queda con lo que sobre y se corta con
+   puntos suspensivos; las demás ocupan lo justo y no se parten.
+   El nombre completo y el del autor quedan en el `title`.
+   ============================================================ */
+.pt-tabla .pt-col-archivo{
+    /* Se queda con el espacio sobrante */
+    width: 100%;
+    max-width: 0;               /* deja que el ellipsis funcione en tabla */
+    white-space: nowrap;
+}
+.pt-nombre-archivo{
+    display: inline-block;
+    max-width: calc(100% - 3rem);   /* descontando el icono */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.pt-tabla .pt-col-tamano{
+    white-space: nowrap;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+.pt-tabla .pt-col-fecha{
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    color: var(--pt-gris);
+}
+.pt-tabla .pt-col-autor{
+    max-width: 18rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pt-tabla .pt-col-acciones{ white-space: nowrap; width: 1%; }
+
+/* Filas más bajas: con mil documentos, cada pixel de alto son mil
+   pixeles de recorrido */
+.pt-tabla td{ padding-top: .9rem; padding-bottom: .9rem; }
+
+@media (max-width: 900px){
+    /* En pantalla estrecha el autor sobra antes que el nombre */
+    .pt-tabla .pt-col-autor{ max-width: 10rem; }
+}

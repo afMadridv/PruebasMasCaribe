@@ -377,11 +377,36 @@
         }
     };
 
+    /* PostgREST devuelve como mucho 1000 filas por consulta, y no avisa:
+       manda las mil primeras como si fueran todas. Una carpeta con 1499
+       documentos se veía con 1000, y los otros 499 no se podían abrir,
+       ni descargar, ni entraban en el ZIP. Existían en el servidor y el
+       portal no los nombraba en ninguna parte.
+
+       Esto pide de mil en mil hasta que una tanda venga incompleta, que
+       es la señal de que ya no queda nada. `consulta(desde, hasta)`
+       recibe el rango y devuelve la promesa de supabase-js. */
+    const TOPE_FILAS = 1000;
+    async function traerTodas(consulta) {
+        const todas = [];
+        for (let desde = 0; ; desde += TOPE_FILAS) {
+            const { data, error } = await consulta(desde, desde + TOPE_FILAS - 1);
+            if (error) fallar(error);
+            const tanda = data || [];
+            todas.push(...tanda);
+            if (tanda.length < TOPE_FILAS) return todas;
+        }
+    }
+
     window.dbArchivosDeCarpeta = async (carpetaId) => {
-        const { data, error } = await nube.from('archivos')
+        const data = await traerTodas((desde, hasta) => nube.from('archivos')
             .select('id, carpeta_id, subcarpeta_id, nombre, tipo, tamano, subido_por_usuario, fecha, orden, descargable_partes')
-            .eq('carpeta_id', carpetaId);
-        if (error) fallar(error);
+            .eq('carpeta_id', carpetaId)
+            // Sin un orden estable, dos tandas pueden traer la misma fila
+            // y saltarse otra: el servidor no garantiza el orden por su
+            // cuenta, y el rango se calcula sobre ese orden.
+            .order('id', { ascending: true })
+            .range(desde, hasta));
         return data.map(a => ({
             id: a.id, carpetaId: a.carpeta_id, subcarpetaId: a.subcarpeta_id,
             nombre: a.nombre, tipo: a.tipo,
@@ -474,9 +499,13 @@
        peticiones enormes son justo las que el servidor corta a medias,
        dejando los binarios en disco y las filas ya borradas. */
     window.dbEliminarArchivosDeCarpeta = async (carpetaId) => {
-        const { data, error } = await nube.from('archivos')
-            .select('id, ruta_storage').eq('carpeta_id', carpetaId);
-        if (error) fallar(error);
+        // De mil en mil: con el tope de PostgREST se borraban las filas de
+        // TODOS (el delete no tiene ese límite) pero solo se pedían las mil
+        // primeras rutas, así que los binarios de los demás quedaban
+        // ocupando disco sin ninguna fila que los nombrara.
+        const data = await traerTodas((desde, hasta) => nube.from('archivos')
+            .select('id, ruta_storage').eq('carpeta_id', carpetaId)
+            .order('id', { ascending: true }).range(desde, hasta));
         const rutas = (data || []).map(a => a.ruta_storage).filter(Boolean);
         const POR_TANDA = 100;
         for (let i = 0; i < rutas.length; i += POR_TANDA) {
@@ -624,9 +653,11 @@
     /* Archivos de una carpeta CON contenido, para el ZIP. Las descargas
        van en paralelo; RLS valida el acceso archivo por archivo. */
     window.descargarBlobsDeCarpeta = async (carpetaId, alProgresar) => {
-        const { data, error } = await nube.from('archivos')
-            .select('nombre, ruta_storage, descargable_partes').eq('carpeta_id', carpetaId);
-        if (error) fallar(error);
+        // De mil en mil: el ZIP salía con mil documentos y sin aviso de que
+        // faltaban los demás
+        const data = await traerTodas((desde, hasta) => nube.from('archivos')
+            .select('nombre, ruta_storage, descargable_partes').eq('carpeta_id', carpetaId)
+            .order('id', { ascending: true }).range(desde, hasta));
         // El personal se lleva todo; cliente y acreedor, solo lo permitido
         const ses = sesionActual();
         let filas = data || [];

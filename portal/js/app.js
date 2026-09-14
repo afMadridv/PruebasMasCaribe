@@ -4494,14 +4494,23 @@ function filaArchivo(a) {
               '<span class="pt-switch__bola"></span></button></td>'
         : '';
 
+    // Cada columna lleva su clase: el nombre se queda con el espacio
+    // sobrante y el resto se ajusta a su contenido. Sin esto, un nombre
+    // largo estrujaba las demás y la fecha y el autor se partían en
+    // cuatro renglones cada uno.
+    const nombreSeguro = escaparHtml(a.nombre);
     return '<tr data-archivo-id="' + a.id + '"' + (_editandoOrden ? ' draggable="true" class="pt-fila-arrastrable"' : '') + '>' +
-        '<td>' + (_editandoOrden ? '<span class="pt-asa-arrastre" title="Arrastrar">' + icono('arrastre', 14) + '</span>' : '') +
-            '<span class="pt-icono-archivo">' + iconoArchivo(ext) + '</span>' + escaparHtml(a.nombre) + '</td>' +
-        '<td>' + formatoTamano(a.tamano) + '</td>' +
-        ((ES_CLIENTE || ES_ACREEDOR) ? '' : '<td>' + escaparHtml(a.subidoPor) + '</td>') +
-        '<td>' + formatoFecha(a.fecha) + '</td>' +
+        '<td class="pt-col-archivo">' +
+            (_editandoOrden ? '<span class="pt-asa-arrastre" title="Arrastrar">' + icono('arrastre', 14) + '</span>' : '') +
+            '<span class="pt-icono-archivo">' + iconoArchivo(ext) + '</span>' +
+            // title para poder leer entero el nombre que no cabe
+            '<span class="pt-nombre-archivo" title="' + nombreSeguro + '">' + nombreSeguro + '</span></td>' +
+        '<td class="pt-col-tamano">' + formatoTamano(a.tamano) + '</td>' +
+        ((ES_CLIENTE || ES_ACREEDOR) ? ''
+            : '<td class="pt-col-autor" title="' + escaparHtml(a.subidoPor) + '">' + escaparHtml(a.subidoPor) + '</td>') +
+        '<td class="pt-col-fecha">' + formatoFechaTabla(a.fecha) + '</td>' +
         celdaDescarga +
-        '<td><div class="pt-celda-acciones">' + acciones + '</div></td>' +
+        '<td class="pt-col-acciones"><div class="pt-celda-acciones">' + acciones + '</div></td>' +
         '</tr>';
 }
 
@@ -7373,6 +7382,20 @@ function formatoTamano(bytes) {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+/* Fecha y hora para la tabla de documentos.
+
+   `formatoFecha` da «14 de sept de 2026, 10:51 a. m.», que en una
+   columna estrecha se parte en cuatro renglones y hace la fila el
+   triple de alta. Con mil documentos eso es una tabla imposible de
+   recorrer. Aquí va compacta y en una sola línea: «14/09/26 10:51». */
+function formatoFechaTabla(marca) {
+    if (!marca) return '—';
+    const f = new Date(marca);
+    const dos = (n) => String(n).padStart(2, '0');
+    return dos(f.getDate()) + '/' + dos(f.getMonth() + 1) + '/' + String(f.getFullYear()).slice(2) +
+           ' ' + dos(f.getHours()) + ':' + dos(f.getMinutes());
 }
 
 /* Fecha y hora en formato local colombiano. */
