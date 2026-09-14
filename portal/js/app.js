@@ -74,17 +74,47 @@ const SUBIDAS_A_LA_VEZ = 4;
    siguiente elemento en cuanto termina el suyo, así que nunca hay más
    de N en vuelo ni se queda ninguna esperando a que acabe un lote
    entero por culpa del archivo más lento. */
-async function enTandas(lista, n, tarea) {
+async function enTandas(lista, n, tarea, seguir) {
     let siguiente = 0;
     const obreros = Array.from(
         { length: Math.min(n, lista.length) },
         async () => {
             while (siguiente < lista.length) {
+                // `seguir` deja parar entre archivo y archivo. Lo que ya
+                // está en vuelo termina: cortar una subida a medias deja
+                // el binario en el servidor sin fila que lo nombre.
+                if (seguir && !seguir()) return;
                 await tarea(lista[siguiente++]);
             }
         }
     );
     await Promise.all(obreros);
+}
+
+/* Cuánto se espera por un archivo antes de darlo por perdido.
+
+   Sin esto, una petición que se queda colgada no vuelve nunca: el obrero
+   se queda esperando, la barra se congela y el lote no termina. Pasó con
+   19 de 21, y al recargar la página se perdió hasta el rastro de cuáles
+   faltaban.
+
+   Se calcula por tamaño, contando 100 KB/s, que es una conexión mala de
+   verdad. Un archivo que tarde más que eso no está subiendo: está
+   colgado. Mínimo dos minutos, para que un archivo chico en una red
+   lenta no se descarte por impaciencia. */
+function esperaPorArchivo(bytes) {
+    return Math.max(120000, Math.round((bytes / (100 * 1024)) * 1000));
+}
+
+/* Corre la promesa, pero no para siempre. */
+function conLimite(promesa, ms) {
+    let reloj;
+    const tope = new Promise((_, rechazar) => {
+        reloj = setTimeout(
+            () => rechazar(new Error('la subida se quedó colgada y se dio por perdida')),
+            ms);
+    });
+    return Promise.race([promesa, tope]).finally(() => clearTimeout(reloj));
 }
 
 /* ============ SEGUIMIENTO DE LA SUBIDA ============
@@ -94,6 +124,7 @@ async function enTandas(lista, n, tarea) {
    queda quieto un rato y hace falta algo que diga que sigue vivo. */
 let _progresoCerrarTemporizador = null;
 let _progresoFaena = 'subir';   // 'subir' | 'borrar'
+let _subidaCancelada = false;
 
 function _progresoElementos() {
     return {
@@ -101,8 +132,7 @@ function _progresoElementos() {
         eti:     document.getElementById('subida-progreso-eti'),
         num:     document.getElementById('subida-progreso-num'),
         barra:   document.getElementById('subida-progreso-barra'),
-        archivo: document.getElementById('subida-progreso-archivo'),
-        aviso:   document.getElementById('subida-progreso-aviso')
+        archivo: document.getElementById('subida-progreso-archivo')
     };
 }
 
@@ -112,10 +142,21 @@ function _progresoElementos() {
    `faena` distingue subir de borrar. Sin ella el panel decía «Subiendo
    los documentos…» mientras los estaba eliminando, que es lo contrario
    de lo que pasaba. */
-function progresoSubidaAbrir(total, consejo, faena) {
+function progresoSubidaAbrir(total, faena) {
     const e = _progresoElementos();
     if (!e.caja) return;
     _progresoFaena = faena || 'subir';
+    _subidaCancelada = false;
+
+    // Parar solo tiene sentido subiendo: el borrado va en dos tandas de
+    // cien y termina en segundos
+    const parar = document.getElementById('subida-cancelar');
+    if (parar) {
+        parar.hidden = _progresoFaena !== 'subir';
+        parar.disabled = false;
+        parar.textContent = 'Cancelar';
+    }
+
     clearTimeout(_progresoCerrarTemporizador);
     e.caja.classList.remove('pt-progreso--listo', 'pt-progreso--fallo');
     e.eti.textContent = _progresoFaena === 'borrar'
@@ -124,11 +165,34 @@ function progresoSubidaAbrir(total, consejo, faena) {
     e.num.textContent = '0 de ' + total;
     e.barra.style.width = '0%';
     e.archivo.textContent = '';
-    if (e.aviso) {
-        e.aviso.textContent = consejo || '';
-        e.aviso.hidden = !consejo;
-    }
     e.caja.hidden = false;
+}
+
+/* ============ EL CONSEJO DE LOS VIDEOS ============
+   Vive fuera del panel de progreso. Dentro se iba con la barra al
+   terminar la subida, justo cuando el consejo todavía vale para la
+   próxima tanda. Se queda hasta que lo cierren. */
+function mostrarConsejo(texto) {
+    const caja = document.getElementById('subida-consejo');
+    const txt = document.getElementById('subida-consejo-texto');
+    if (!caja || !txt || !texto) return;
+    txt.textContent = texto;
+    caja.hidden = false;
+}
+
+function cerrarConsejo() {
+    const caja = document.getElementById('subida-consejo');
+    if (caja) caja.hidden = true;
+}
+
+/* Pedir parar una subida en curso. Lo que ya está en vuelo termina: una
+   subida cortada a medias deja el binario en el servidor sin fila que lo
+   nombre, que es la basura que costó una tarde limpiar. Lo que no ha
+   empezado, no empieza. */
+function cancelarSubida() {
+    _subidaCancelada = true;
+    const parar = document.getElementById('subida-cancelar');
+    if (parar) { parar.disabled = true; parar.textContent = 'Cancelando…'; }
 }
 
 /* Un archivo más terminado (haya subido bien o no: el total avanza
@@ -163,6 +227,8 @@ function progresoSubidaCerrar(subidos, fallidos) {
         ? subidos + ' de ' + hubo
         : subidos + ' de ' + hubo + ' · ' + fallidos +
           (_progresoFaena === 'borrar' ? ' sin borrar' : ' sin subir');
+    const parar = document.getElementById('subida-cancelar');
+    if (parar) parar.hidden = true;
     clearTimeout(_progresoCerrarTemporizador);
     _progresoCerrarTemporizador = setTimeout(() => {
         e.caja.hidden = true;
@@ -6169,11 +6235,10 @@ async function subirArchivos(listaArchivos) {
     // progreso y no como aviso flotante: los flotantes duran cuatro
     // segundos y el de «subidos» lo taparía. Ahí se queda toda la subida.
     const videosPesados = validos.filter(a => esVideo(a.name));
-    let consejoVideo = '';
     if (videosPesados.length) {
         const peso = videosPesados.reduce((s, a) => s + a.size, 0);
         const pesado = peso > AVISO_VIDEO_MB * 1024 * 1024;
-        consejoVideo =
+        mostrarConsejo(
             (videosPesados.length === 1
                 ? 'Video de ' + formatoTamano(peso) + '. '
                 : videosPesados.length + ' videos, ' + formatoTamano(peso) + ' entre todos. ') +
@@ -6183,7 +6248,7 @@ async function subirArchivos(listaArchivos) {
                 // A partir de cierto peso la subida deja de ser instantánea
                 // y el riesgo de que se corte deja de ser teórico
                 ? ', y a este tamaño la subida tarda y no se puede reanudar: si se corta, hay que repetirla entera.'
-                : '.');
+                : '.'));
     }
 
     // El operador decide si las partes pueden descargar lo que sube ahora
@@ -6198,7 +6263,7 @@ async function subirArchivos(listaArchivos) {
     // La barra sale YA, antes del primer byte: elegir veinte archivos y
     // no ver nada hasta el aviso final parecía que el portal se había
     // colgado.
-    progresoSubidaAbrir(validos.length, consejoVideo, 'subir');
+    progresoSubidaAbrir(validos.length, 'subir');
 
     // Las subidas van en paralelo, pero de a pocas. Antes salían TODAS
     // a la vez con Promise.all: soltar trescientos archivos abría
@@ -6211,7 +6276,7 @@ async function subirArchivos(listaArchivos) {
     await enTandas(validos, SUBIDAS_A_LA_VEZ, async (archivo) => {
         progresoSubidaAvance(terminados, validos.length, archivo.name);
         try {
-            await dbAgregar('archivos', {
+            await conLimite(dbAgregar('archivos', {
                 carpetaId: carpetaAbierta.id,
                 // Se sube a la subcarpeta que está abierta (null = raíz)
                 subcarpetaId: _subcarpetaAbierta,
@@ -6222,7 +6287,7 @@ async function subirArchivos(listaArchivos) {
                 descargablePartes: descargablePartes,
                 subidoPor: sesion.nombre || sesion.usuario,
                 fecha: Date.now()
-            });
+            }), esperaPorArchivo(archivo.size));
             registrarActividad('subir-archivo', archivo.name + ' · ' + carpetaAbierta.nombre, carpetaAbierta.id);
             subidos++;
         } catch (e) {
@@ -6230,9 +6295,13 @@ async function subirArchivos(listaArchivos) {
         }
         terminados++;
         progresoSubidaAvance(terminados, validos.length, '');
-    });
+    }, () => !_subidaCancelada);
 
-    progresoSubidaCerrar(subidos, validos.length - subidos);
+    if (_subidaCancelada) {
+        const sinEmpezar = validos.length - terminados;
+        if (sinEmpezar > 0) rechazados.push(sinEmpezar + ' sin empezar (cancelado)');
+    }
+    progresoSubidaCerrar(subidos, terminados - subidos);
 
     if (subidos > 0) avisar(subidos + ' archivo(s) subido(s) correctamente.');
     if (rechazados.length > 0) avisarRechazados(rechazados);
@@ -6518,7 +6587,7 @@ async function vaciarCarpeta() {
 
     // La misma barra que la subida: con mil quinientos documentos esto
     // tarda, y sin nada en pantalla parece que el portal se colgó
-    progresoSubidaAbrir(total, '', 'borrar');
+    progresoSubidaAbrir(total, 'borrar');
     let borrados = 0;
     try {
         borrados = await dbEliminarArchivosDeCarpeta(carpetaAbierta.id,
@@ -7499,6 +7568,8 @@ function conectarEventos() {
             case 'vaciar-carpeta':       vaciarCarpeta(); break;
             case 'guardar-orden':        guardarOrdenDocumentos(); break;
             case 'cancelar-orden':       cancelarEdicionOrden(); break;
+            case 'cancelar-subida':      cancelarSubida(); break;
+            case 'cerrar-consejo':       cerrarConsejo(); break;
             case 'orden-subir':          moverArchivoEnOrden(id, -1); break;
             case 'orden-bajar':          moverArchivoEnOrden(id, 1); break;
 

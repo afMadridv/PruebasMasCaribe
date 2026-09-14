@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2300A1B8'/%3E%3Cpath d='M7 10.5a1.5 1.5 0 0 1 1.5-1.5h4l2 2.5h9a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 23.5 23h-15A1.5 1.5 0 0 1 7 21.5z' fill='none' stroke='white' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M12 16.5h8M12 19.5h5' stroke='white' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E">
     <title>Portal Documental | Carpetas</title>
     <!-- Aplica el tema guardado ANTES de pintar, para que no parpadee -->
     <script>(function(){try{if(localStorage.getItem('portal_tema')==='oscuro')document.documentElement.dataset.tema='oscuro';}catch(e){}})();</script>
@@ -10,8 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://144.172.108.56.sslip.io" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Krub:wght@400;500;600;700&family=Lora:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/portal.css?v=53">
-    <link rel="stylesheet" href="css/diseno.css?v=53">
+    <link rel="stylesheet" href="css/portal.css?v=54">
+    <link rel="stylesheet" href="css/diseno.css?v=54">
 </head>
 <body class="pt-app">
 
@@ -316,11 +317,21 @@
                     <span class="pt-progreso__num" id="subida-progreso-num"></span>
                 </div>
                 <div class="pt-progreso__pista"><i id="subida-progreso-barra"></i></div>
-                <span class="pt-progreso__archivo" id="subida-progreso-archivo"></span>
-                <!-- Consejo para videos pesados. Va aquí y no como aviso
-                     flotante: los flotantes duran cuatro segundos y el de
-                     «subidos» lo taparía. -->
-                <p class="pt-progreso__aviso" id="subida-progreso-aviso" hidden></p>
+                <div class="pt-progreso__pie">
+                    <span class="pt-progreso__archivo" id="subida-progreso-archivo"></span>
+                    <button type="button" class="pt-boton pt-boton--fantasma pt-boton--mini"
+                            id="subida-cancelar" data-accion="cancelar-subida">Cancelar</button>
+                </div>
+            </div>
+
+            <!-- Consejo para videos pesados. Vive FUERA del panel de
+                 progreso: ahí desaparecía con la barra al terminar, justo
+                 cuando el consejo todavía sirve para la próxima vez. Se
+                 queda hasta que lo cierren. -->
+            <div class="pt-consejo" id="subida-consejo" hidden>
+                <p id="subida-consejo-texto"></p>
+                <button type="button" class="pt-consejo__cerrar" data-accion="cerrar-consejo"
+                        aria-label="Cerrar el aviso" title="Cerrar">&times;</button>
             </div>
 
             <div id="zona-subida" class="pt-zona-subida" hidden>
@@ -585,8 +596,8 @@
                 <label class="pt-campo">
                     <span>Tipo de proceso *</span>
                     <select id="carpeta-tipo">
-                        <option value="natural_no_comerciante">Persona natural no comerciante (Ley 1564 de 2012)</option>
-                        <option value="pequeno_comerciante">Pequeño comerciante (Ley 1116 de 2006)</option>
+                        <option value="natural_no_comerciante">Persona natural no comerciante</option>
+                        <option value="pequeno_comerciante">Pequeño comerciante</option>
                     </select>
                     <small class="pt-nota">Define el régimen bajo el que corre el trámite.</small>
                 </label>
@@ -987,13 +998,13 @@
     <div id="toast" class="pt-toast"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.1"></script>
-    <script src="js/diasHabiles.js?v=53"></script>
-    <script src="js/db.js?v=53"></script>
-    <script src="js/auth.js?v=53"></script>
-    <script src="js/config.js?v=53"></script>
-    <script src="js/iconos.js?v=53"></script>
-    <script src="js/tema.js?v=53"></script>
-    <script src="js/nube.js?v=53"></script>
-    <script src="js/app.js?v=53"></script>
+    <script src="js/diasHabiles.js?v=54"></script>
+    <script src="js/db.js?v=54"></script>
+    <script src="js/auth.js?v=54"></script>
+    <script src="js/config.js?v=54"></script>
+    <script src="js/iconos.js?v=54"></script>
+    <script src="js/tema.js?v=54"></script>
+    <script src="js/nube.js?v=54"></script>
+    <script src="js/app.js?v=54"></script>
 </body>
 </html>

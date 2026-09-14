@@ -2424,20 +2424,57 @@ body.pt-app .pt-campo .pt-notaria-casilla input,
     .pt-tabla .pt-col-autor{ max-width: 10rem; }
 }
 
-/* El consejo de comprimir el video, dentro del panel de subida */
-.pt-progreso__aviso{
-    margin: .8rem 0 0;
-    padding: .8rem 1rem;
-    border-radius: .7rem;
-    /* color-mix deriva el fondo del mismo ámbar del tema, así el aviso
-       cambia solo entre claro y oscuro sin definir dos paletas */
+/* ============================================================
+   CONSEJO DE LOS VIDEOS
+   ------------------------------------------------------------
+   Antes vivía dentro del panel de progreso y se iba con la barra
+   al terminar la subida, justo cuando el consejo todavía vale
+   para la próxima tanda. Ahora es una caja propia con su botón
+   de cerrar: se queda hasta que la quiten.
+   ============================================================ */
+.pt-consejo{
+    position: relative;
+    margin-bottom: 1.44rem;
+    padding: 1.1rem 4rem 1.1rem 1.4rem;
+    border-radius: .9rem;
     background: color-mix(in srgb, var(--pt-ambar-txt) 12%, var(--pt-superficie));
     border: 1px solid color-mix(in srgb, var(--pt-ambar-txt) 35%, transparent);
     color: var(--pt-tinta);
-    font-size: 1.2rem;
-    line-height: 1.45;
+    font-size: 1.25rem;
+    line-height: 1.5;
 }
-.pt-progreso__aviso[hidden]{ display: none; }
+.pt-consejo[hidden]{ display: none; }
+.pt-consejo p{ margin: 0; }
+.pt-consejo__cerrar{
+    position: absolute;
+    top: .6rem;
+    right: .8rem;
+    border: none;
+    background: none;
+    font-size: 2.2rem;
+    line-height: 1;
+    color: var(--pt-gris);
+    cursor: pointer;
+    padding: .2rem .6rem;
+    border-radius: .5rem;
+}
+.pt-consejo__cerrar:hover{
+    color: var(--pt-tinta);
+    background: color-mix(in srgb, var(--pt-ambar-txt) 18%, transparent);
+}
+
+/* El nombre del archivo en curso y el botón de parar, en la misma
+   fila. El botón iba flotando sobre la esquina y se montaba encima del
+   contador «19 de 21». */
+.pt-progreso__pie{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.2rem;
+    margin-top: .6rem;
+}
+.pt-progreso__pie .pt-progreso__archivo{ margin-top: 0; }
+#subida-cancelar[hidden]{ display: none; }
 
 /* ============================================================
    SECCIÓN: ALMACENAMIENTO (solo administrador)
