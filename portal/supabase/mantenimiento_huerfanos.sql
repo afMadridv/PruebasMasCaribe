@@ -106,10 +106,24 @@ select (select count(*) from public.archivos)                                  a
 --    BASE=/root/supabase/volumes/storage/stub/stub/documentos
 --    total=0; faltan=0
 --    while IFS= read -r r; do
---      if [ -f "$BASE/$r" ]; then total=$((total+$(stat -c%s "$BASE/$r")));
+--      if [ -d "$BASE/$r" ]; then total=$((total+$(du -sb "$BASE/$r" | cut -f1)));
 --      else echo "NO EXISTE: $r"; faltan=$((faltan+1)); fi
 --    done < /tmp/huerfanos.txt
 --    echo "faltan $faltan, total $((total/1048576)) MB"
+--
+--    OJO CON LA FORMA DE GUARDAR
+--      Cada objeto NO es un archivo: es un DIRECTORIO con el nombre de la
+--      ruta, y dentro un archivo por versión, con nombre UUID. Es decir
+--
+--        .../documentos/1/1789395989179_foto.jpg/        <- directorio
+--        .../documentos/1/1789395989179_foto.jpg/134d41ec-…   <- el binario
+--
+--      Por eso arriba se prueba con `-d` y no con `-f`, y por eso el
+--      borrado del paso 4 es `rm -rf` sobre el directorio entero. Con
+--      `-f` la comprobación dice que no existe ninguno, y el `rm -f`
+--      correspondiente no borraría nada mientras el paso 5 sí borraría
+--      las filas: el disco quedaría igual de lleno y sin la lista de qué
+--      había que borrar.
 --
 --    La ruta lleva `stub/stub` porque el backend de ficheros de Supabase
 --    guarda por inquilino y en autohospedado el inquilino se llama así.
@@ -118,10 +132,19 @@ select (select count(*) from public.archivos)                                  a
 --      find /root/supabase/volumes/storage -name '<un nombre de la lista>'
 --
 -- 4) Solo si el paso 3 encontró TODAS y no faltó ninguna, borrar los
---    binarios y después las filas:
+--    binarios y después las filas.
+--
+--    Las tres guardas del bucle no son adorno: `rm -rf` sobre una línea
+--    vacía sería `rm -rf "$BASE/"`, que se lleva el bucket entero.
 --
 --    BASE=/root/supabase/volumes/storage/stub/stub/documentos
---    while IFS= read -r r; do rm -f "$BASE/$r"; done < /tmp/huerfanos.txt
+--    n=0
+--    while IFS= read -r r; do
+--      [ -n "$r" ] || continue                       # línea vacía, no
+--      case "$r" in /*|*..*) echo "SOSPECHOSA: $r"; continue;; esac
+--      if [ -d "$BASE/$r" ]; then rm -rf "$BASE/$r"; n=$((n+1)); fi
+--    done < /tmp/huerfanos.txt
+--    echo "borrados $n"
 --
 --    docker exec -i supabase-db psql -U supabase_admin -d postgres <<'SQL'
 --    delete from storage.objects o
