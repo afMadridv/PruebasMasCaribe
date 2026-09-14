@@ -2,13 +2,20 @@
 # CADDY: sirve el portal y hace de puente con Supabase
 # ============================================================
 # Va en /etc/caddy/Caddyfile. Se baja con curl, NO se pega a mano:
-# un Caddyfile indentado con tabuladores, pegado en una terminal
-# interactiva, dispara el autocompletado de bash en cada tabulador y
-# el archivo queda destrozado. Por eso aquí la indentación es con
-# espacios, y aun así conviene bajarlo:
+# la indentación dispara el autocompletado de bash en una terminal
+# interactiva y el archivo queda con listados de directorio metidos
+# entre las líneas.
 #
 #   curl -sL https://raw.githubusercontent.com/afMadridv/PruebasMasCaribe/main/portal/supabase/servidor/Caddyfile -o /etc/caddy/Caddyfile
 #   caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy
+#
+# LOS BLOQUES VAN EN VARIAS LÍNEAS, SIEMPRE
+#   Caddyfile no admite `handle /x/* { directiva }` en un solo renglón.
+#   Después de `{` no puede ir nada más en esa línea. El error que sale
+#   si se intenta:
+#
+#     Error: adapting config using caddyfile:
+#     Unexpected next token after '{' on same line
 #
 # CUANDO HAYA DOMINIO
 #   Cambia la primera línea por el nombre real, por ejemplo
@@ -26,11 +33,21 @@
     #
     # Studio se sigue usando por el túnel SSH, que es su sitio:
     #   ssh -L 8000:localhost:8000 root@144.172.108.56
-    handle /rest/v1/*      { reverse_proxy localhost:8000 }
-    handle /auth/v1/*      { reverse_proxy localhost:8000 }
-    handle /storage/v1/*   { reverse_proxy localhost:8000 }
-    handle /realtime/v1/*  { reverse_proxy localhost:8000 }
-    handle /functions/v1/* { reverse_proxy localhost:8000 }
+    handle /rest/v1/* {
+        reverse_proxy localhost:8000
+    }
+    handle /auth/v1/* {
+        reverse_proxy localhost:8000
+    }
+    handle /storage/v1/* {
+        reverse_proxy localhost:8000
+    }
+    handle /realtime/v1/* {
+        reverse_proxy localhost:8000
+    }
+    handle /functions/v1/* {
+        reverse_proxy localhost:8000
+    }
 
     # ---- Lo que el repositorio trae y no es la web ----
     # Los SQL del esquema, la auditoría de seguridad y .git con todo el
@@ -42,7 +59,9 @@
         path /.git/*
         path /*.md
     }
-    handle @privado { respond 404 }
+    handle @privado {
+        respond 404
+    }
 
     # ---- El sitio público y el portal ----
     handle {
