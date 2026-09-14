@@ -93,6 +93,7 @@ async function enTandas(lista, n, tarea) {
    se nombra además el archivo en curso: con uno grande el contador se
    queda quieto un rato y hace falta algo que diga que sigue vivo. */
 let _progresoCerrarTemporizador = null;
+let _progresoFaena = 'subir';   // 'subir' | 'borrar'
 
 function _progresoElementos() {
     return {
@@ -105,15 +106,21 @@ function _progresoElementos() {
     };
 }
 
-/* Se llama al elegir los archivos, antes de subir el primer byte.
-   `consejo` es el aviso de videos pesados, si lo hay: se queda a la
-   vista toda la subida. */
-function progresoSubidaAbrir(total, consejo) {
+/* Se llama al empezar, antes del primer byte. `consejo` es el aviso de
+   videos pesados, si lo hay: se queda a la vista toda la operación.
+
+   `faena` distingue subir de borrar. Sin ella el panel decía «Subiendo
+   los documentos…» mientras los estaba eliminando, que es lo contrario
+   de lo que pasaba. */
+function progresoSubidaAbrir(total, consejo, faena) {
     const e = _progresoElementos();
     if (!e.caja) return;
+    _progresoFaena = faena || 'subir';
     clearTimeout(_progresoCerrarTemporizador);
     e.caja.classList.remove('pt-progreso--listo', 'pt-progreso--fallo');
-    e.eti.textContent = total === 1 ? 'Subiendo el documento…' : 'Subiendo los documentos…';
+    e.eti.textContent = _progresoFaena === 'borrar'
+        ? (total === 1 ? 'Eliminando el documento…' : 'Eliminando los documentos…')
+        : (total === 1 ? 'Subiendo el documento…' : 'Subiendo los documentos…');
     e.num.textContent = '0 de ' + total;
     e.barra.style.width = '0%';
     e.archivo.textContent = '';
@@ -146,11 +153,16 @@ function progresoSubidaCerrar(subidos, fallidos) {
     e.caja.classList.toggle('pt-progreso--fallo', fallidos > 0);
     e.caja.classList.toggle('pt-progreso--listo', fallidos === 0);
     e.eti.textContent = fallidos === 0
-        ? (subidos === 1 ? 'Documento subido' : 'Documentos subidos')
-        : 'Subida terminada con fallos';
+        ? (_progresoFaena === 'borrar'
+            ? (subidos === 1 ? 'Documento eliminado' : 'Documentos eliminados')
+            : (subidos === 1 ? 'Documento subido' : 'Documentos subidos'))
+        : (_progresoFaena === 'borrar'
+            ? 'Borrado terminado con fallos'
+            : 'Subida terminada con fallos');
     e.num.textContent = fallidos === 0
         ? subidos + ' de ' + hubo
-        : subidos + ' de ' + hubo + ' · ' + fallidos + ' sin subir';
+        : subidos + ' de ' + hubo + ' · ' + fallidos +
+          (_progresoFaena === 'borrar' ? ' sin borrar' : ' sin subir');
     clearTimeout(_progresoCerrarTemporizador);
     _progresoCerrarTemporizador = setTimeout(() => {
         e.caja.hidden = true;
@@ -4024,6 +4036,36 @@ async function eliminarNotificacion(id, elemento) {
     }
 }
 
+/* Vacía la campana entera. Con una notaría abierta borra solo las de
+   esa oficina, igual que se listan: si se borraran también las de las
+   otras, alguien perdería avisos que ni siquiera está viendo. */
+async function limpiarCampana() {
+    const cuantas = (_notifCache || []).length;
+    if (!cuantas) { avisar('No hay notificaciones que limpiar.'); return; }
+
+    const oficina = notariaActual();
+    const ok = await confirmarPortal(
+        'Se van a eliminar ' + cuantas +
+        (cuantas === 1 ? ' notificación' : ' notificaciones') +
+        (oficina ? ' de «' + oficina.nombre + '»' : '') +
+        '. No se puede deshacer, pero los trámites y los documentos no se tocan.',
+        'Limpiar notificaciones');
+    if (!ok) return;
+
+    const boton = document.getElementById('campana-limpiar');
+    if (boton) { boton.disabled = true; boton.textContent = 'Limpiando…'; }
+    try {
+        await notificacionesLimpiar(_notariaActiva);
+        _notifCache = [];
+        await refrescarCampana();
+        pintarCampanaLista();
+        avisar('Notificaciones eliminadas.');
+    } catch (e) {
+        avisar((e && e.message) || 'No se pudieron eliminar las notificaciones.', 'error');
+    }
+    if (boton) { boton.disabled = false; boton.textContent = 'Limpiar'; }
+}
+
 /* Marca todas las notificaciones como leídas. */
 async function marcarCampanaLeidas() {
     try {
@@ -6156,7 +6198,7 @@ async function subirArchivos(listaArchivos) {
     // La barra sale YA, antes del primer byte: elegir veinte archivos y
     // no ver nada hasta el aviso final parecía que el portal se había
     // colgado.
-    progresoSubidaAbrir(validos.length, consejoVideo);
+    progresoSubidaAbrir(validos.length, consejoVideo, 'subir');
 
     // Las subidas van en paralelo, pero de a pocas. Antes salían TODAS
     // a la vez con Promise.all: soltar trescientos archivos abría
@@ -6474,12 +6516,19 @@ async function vaciarCarpeta() {
     const boton = document.querySelector('[data-accion="vaciar-carpeta"]');
     if (boton) { boton.disabled = true; boton.textContent = 'Eliminando…'; }
 
+    // La misma barra que la subida: con mil quinientos documentos esto
+    // tarda, y sin nada en pantalla parece que el portal se colgó
+    progresoSubidaAbrir(total, '', 'borrar');
+    let borrados = 0;
     try {
-        const borrados = await dbEliminarArchivosDeCarpeta(carpetaAbierta.id);
+        borrados = await dbEliminarArchivosDeCarpeta(carpetaAbierta.id,
+            (hechos, cuantos) => progresoSubidaAvance(hechos, cuantos, ''));
+        progresoSubidaCerrar(borrados || total, 0);
         registrarActividad('vaciar-carpeta',
             (borrados || total) + ' documentos · ' + carpetaAbierta.nombre, carpetaAbierta.id);
         avisar('Se eliminaron ' + (borrados || total) + ' documento(s).');
     } catch (e) {
+        progresoSubidaCerrar(borrados, Math.max(0, total - borrados));
         avisar((e && e.message) || 'No se pudieron eliminar los documentos.', 'error');
     }
     await pintarArchivos();
@@ -7343,6 +7392,7 @@ function conectarEventos() {
 
             // Campana de notificaciones
             case 'campana-abrir':        alternarCampana(); break;
+            case 'campana-limpiar':      limpiarCampana(); break;
             case 'campana-leidas':       marcarCampanaLeidas(); break;
 
             // Usuarios: filtro por rol y exportar Excel

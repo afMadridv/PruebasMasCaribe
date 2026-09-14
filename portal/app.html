@@ -10,8 +10,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://144.172.108.56.sslip.io" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Krub:wght@400;500;600;700&family=Lora:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/portal.css?v=52">
-    <link rel="stylesheet" href="css/diseno.css?v=52">
+    <link rel="stylesheet" href="css/portal.css?v=53">
+    <link rel="stylesheet" href="css/diseno.css?v=53">
 </head>
 <body class="pt-app">
 
@@ -162,7 +162,10 @@
                 <div id="campana-dropdown" class="pt-campana-dropdown" hidden>
                     <div class="pt-campana-dropdown__cab">
                         <strong>Notificaciones</strong>
-                        <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="campana-leidas">Marcar todas leídas</button>
+                        <span class="pt-campana-dropdown__acciones">
+                            <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="campana-leidas">Marcar leídas</button>
+                            <button class="pt-boton pt-boton--fantasma pt-boton--mini" data-accion="campana-limpiar" id="campana-limpiar">Limpiar</button>
+                        </span>
                     </div>
                     <div id="campana-lista" class="pt-campana-lista"></div>
                 </div>
@@ -984,13 +987,13 @@
     <div id="toast" class="pt-toast"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.1"></script>
-    <script src="js/diasHabiles.js?v=52"></script>
-    <script src="js/db.js?v=52"></script>
-    <script src="js/auth.js?v=52"></script>
-    <script src="js/config.js?v=52"></script>
-    <script src="js/iconos.js?v=52"></script>
-    <script src="js/tema.js?v=52"></script>
-    <script src="js/nube.js?v=52"></script>
-    <script src="js/app.js?v=52"></script>
+    <script src="js/diasHabiles.js?v=53"></script>
+    <script src="js/db.js?v=53"></script>
+    <script src="js/auth.js?v=53"></script>
+    <script src="js/config.js?v=53"></script>
+    <script src="js/iconos.js?v=53"></script>
+    <script src="js/tema.js?v=53"></script>
+    <script src="js/nube.js?v=53"></script>
+    <script src="js/app.js?v=53"></script>
 </body>
 </html>

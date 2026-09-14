@@ -498,7 +498,7 @@
        documentos mandaba novecientas rutas en una sola petición, y esas
        peticiones enormes son justo las que el servidor corta a medias,
        dejando los binarios en disco y las filas ya borradas. */
-    window.dbEliminarArchivosDeCarpeta = async (carpetaId) => {
+    window.dbEliminarArchivosDeCarpeta = async (carpetaId, alProgresar) => {
         // De mil en mil: con el tope de PostgREST se borraban las filas de
         // TODOS (el delete no tiene ese límite) pero solo se pedían las mil
         // primeras rutas, así que los binarios de los demás quedaban
@@ -510,6 +510,10 @@
         const POR_TANDA = 100;
         for (let i = 0; i < rutas.length; i += POR_TANDA) {
             await nube.storage.from('documentos').remove(rutas.slice(i, i + POR_TANDA));
+            // Se avisa por tandas de cien, que es como viaja: con mil
+            // quinientos documentos el borrado tarda y sin esto el portal
+            // parece congelado
+            if (alProgresar) alProgresar(Math.min(i + POR_TANDA, rutas.length), rutas.length);
         }
         const { error: errorFilas } = await nube.from('archivos')
             .delete().eq('carpeta_id', carpetaId);
@@ -1192,6 +1196,20 @@
     /* Elimina UNA notificación propia (RLS: destinatario_id = auth.uid()) */
     window.notificacionEliminar = async (id) => {
         const { error } = await nube.from('notificaciones').delete().eq('id', id);
+        if (error) fallar(error);
+    };
+
+    /* Vacía la campana: borra TODAS las notificaciones propias. Con una
+       notaría abierta borra solo las de esa oficina, igual que se listan;
+       con «todas», las de todas.
+
+       La RLS solo deja borrar las del propio destinatario, así que este
+       filtro es de vista, no de seguridad: nadie puede limpiarle la
+       campana a otro por más que cambie la consulta. */
+    window.notificacionesLimpiar = async (notaria) => {
+        let q = nube.from('notificaciones').delete().eq('destinatario_id', sesionNube()._id);
+        if (notaria) q = q.eq('notaria_id', notaria);
+        const { error } = await q;
         if (error) fallar(error);
     };
     /* Solo el admin: genera (una vez por proceso) los avisos de vencidos */

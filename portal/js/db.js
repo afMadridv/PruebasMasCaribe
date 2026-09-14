@@ -94,10 +94,13 @@ async function fijarDescargaPartes(archivoId, permitir) {
 /* Borra todos los documentos de una carpeta. Se usa al eliminar la
    carpeta entera y al vaciarla desde el expediente. Devuelve cuántos
    había, igual que la version de nube. */
-async function dbEliminarArchivosDeCarpeta(carpetaId) {
+async function dbEliminarArchivosDeCarpeta(carpetaId, alProgresar) {
     const archivos = await dbArchivosDeCarpeta(carpetaId);
+    let n = 0;
     for (const a of archivos) {
         await dbEliminar('archivos', a.id);
+        n++;
+        if (alProgresar) alProgresar(n, archivos.length);
     }
     return archivos.length;
 }
@@ -551,6 +554,8 @@ async function notificacionesListar(notaria) { return []; }
 async function notificacionesMarcarLeidas() {}
 /* Borra una notificación. */
 async function notificacionEliminar() {}
+/* Vacía la campana. En modo practica no hay notificaciones que borrar. */
+async function notificacionesLimpiar(notaria) {}
 /* ============ SUBCARPETAS (modo de práctica) ============
    Mismas operaciones que en la nube, contra IndexedDB. */
 async function subcarpetasListar(carpetaId) {

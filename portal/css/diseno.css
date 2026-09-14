@@ -2551,3 +2551,6 @@ body.pt-app .pt-campo .pt-notaria-casilla input,
 @media (prefers-reduced-motion: reduce){
     .pt-disco__barra i{ transition: none; }
 }
+
+/* Los dos botones de la campana, uno al lado del otro */
+.pt-campana-dropdown__acciones{ display: flex; gap: .5rem; }
