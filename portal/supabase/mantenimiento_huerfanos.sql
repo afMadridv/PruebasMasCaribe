@@ -147,10 +147,30 @@ select (select count(*) from public.archivos)                                  a
 --    echo "borrados $n"
 --
 --    docker exec -i supabase-db psql -U supabase_admin -d postgres <<'SQL'
+--    begin;
+--    set local storage.allow_delete_query = 'true';
 --    delete from storage.objects o
 --     where o.bucket_id = 'documentos'
 --       and not exists (select 1 from public.archivos a where a.ruta_storage = o.name);
+--    commit;
 --    SQL
+--
+--    LA VARIABLE DE SESIÓN NO ES UN TRUCO
+--      Un disparador de Supabase, `storage.protect_delete()`, prohíbe
+--      borrar filas de `storage.objects` por SQL:
+--
+--        ERROR:  Direct deletion from storage tables is not allowed.
+--                Use the Storage API instead.
+--
+--      Existe para impedir exactamente lo que aquí se hace a propósito:
+--      dejar filas sin binario. La propia función trae la salida:
+--
+--        IF COALESCE(current_setting('storage.allow_delete_query', true),
+--                    'false') != 'true' THEN ... RAISE
+--
+--      Se usa `set local` y no `set` a secas para que la protección
+--      vuelva a estar en pie al terminar la transacción, sin depender de
+--      que alguien se acuerde de apagarla.
 --
 --    El orden importa: primero el archivo y luego la fila. Al revés, si
 --    algo falla en medio, se pierde la lista de qué había que borrar y
