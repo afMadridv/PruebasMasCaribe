@@ -4056,14 +4056,22 @@ function confirmarPortal(mensaje, titulo) {
 let _textoResolver = null;
 
 /* Pide un texto al usuario con el diseño del portal, en vez de
-   prompt(). Devuelve el texto o null si se cancela. */
-function pedirTextoPortal(titulo, ayuda, valorInicial) {
+   prompt(). Devuelve el texto o null si se cancela.
+
+   `etiqueta` y `boton` son opcionales y vuelven a su valor de siempre
+   cuando no se pasan. Hacen falta porque el modal se escribió para
+   renombrar subcarpetas y traía «Nombre» y «Guardar» fijos en el HTML:
+   al reutilizarlo para confirmar el vaciado de un expediente, pedía
+   escribir ELIMINAR debajo de una etiqueta que decía «Nombre». */
+function pedirTextoPortal(titulo, ayuda, valorInicial, etiqueta, boton) {
     return new Promise((resolver) => {
         _textoResolver = resolver;
         document.getElementById('texto-titulo').textContent = titulo || 'Escribe un nombre';
         const cajaAyuda = document.getElementById('texto-ayuda');
         cajaAyuda.textContent = ayuda || '';
         cajaAyuda.hidden = !ayuda;
+        document.getElementById('texto-etiqueta').textContent = etiqueta || 'Nombre';
+        document.getElementById('texto-aceptar').textContent = boton || 'Guardar';
         const campo = document.getElementById('texto-valor');
         campo.value = valorInicial || '';
         document.getElementById('modal-texto').hidden = false;
@@ -6454,7 +6462,7 @@ async function vaciarCarpeta() {
     const escrito = await pedirTextoPortal(
         'Escribe ELIMINAR para confirmar',
         'Se perderán ' + total + ' documentos de «' + carpetaAbierta.nombre + '». No se puede deshacer.',
-        '');
+        '', 'Confirmación', 'Eliminar los documentos');
     if (escrito === null) return;
     if (escrito.trim().toUpperCase() !== 'ELIMINAR') {
         avisar('No se eliminó nada: había que escribir ELIMINAR.', 'error');
