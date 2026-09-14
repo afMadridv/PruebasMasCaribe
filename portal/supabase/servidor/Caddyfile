@@ -1,0 +1,52 @@
+# ============================================================
+# CADDY: sirve el portal y hace de puente con Supabase
+# ============================================================
+# Va en /etc/caddy/Caddyfile. Se baja con curl, NO se pega a mano:
+# un Caddyfile indentado con tabuladores, pegado en una terminal
+# interactiva, dispara el autocompletado de bash en cada tabulador y
+# el archivo queda destrozado. Por eso aquí la indentación es con
+# espacios, y aun así conviene bajarlo:
+#
+#   curl -sL https://raw.githubusercontent.com/afMadridv/PruebasMasCaribe/main/portal/supabase/servidor/Caddyfile -o /etc/caddy/Caddyfile
+#   caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy
+#
+# CUANDO HAYA DOMINIO
+#   Cambia la primera línea por el nombre real, por ejemplo
+#   `portal.tudominio.com {`, y recarga. Caddy pide el certificado
+#   solo. Nada más cambia aquí.
+# ============================================================
+
+144.172.108.56.sslip.io {
+
+    # ---- La API de Supabase ----
+    # SOLO estas rutas. Si se manda la raíz también, Supabase Studio
+    # queda abierto a internet detrás de una sola contraseña, y Studio
+    # trabaja con service_role, que salta toda la seguridad RLS: quien
+    # entre ve y modifica todos los expedientes.
+    #
+    # Studio se sigue usando por el túnel SSH, que es su sitio:
+    #   ssh -L 8000:localhost:8000 root@144.172.108.56
+    handle /rest/v1/*      { reverse_proxy localhost:8000 }
+    handle /auth/v1/*      { reverse_proxy localhost:8000 }
+    handle /storage/v1/*   { reverse_proxy localhost:8000 }
+    handle /realtime/v1/*  { reverse_proxy localhost:8000 }
+    handle /functions/v1/* { reverse_proxy localhost:8000 }
+
+    # ---- Lo que el repositorio trae y no es la web ----
+    # Los SQL del esquema, la auditoría de seguridad y .git con todo el
+    # historial. No llevan secretos, pero le regalan a cualquiera el
+    # mapa de la base: qué tablas hay, qué políticas las protegen y
+    # dónde están las costuras.
+    @privado {
+        path /portal/supabase/*
+        path /.git/*
+        path /*.md
+    }
+    handle @privado { respond 404 }
+
+    # ---- El sitio público y el portal ----
+    handle {
+        root * /srv/portal
+        file_server
+    }
+}

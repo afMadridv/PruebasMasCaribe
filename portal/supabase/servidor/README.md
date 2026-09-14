@@ -9,6 +9,25 @@ nueva nacía sin ella. Aquí están para que eso no vuelva a pasar.
 |---|---|---|
 | `medir-disco.sh` | `/usr/local/bin/medir-disco` | cada 2 min |
 | `respaldo.sh` | `/usr/local/bin/respaldo` | 3:30 a. m. |
+| `Caddyfile` | `/etc/caddy/Caddyfile` | al cambiarlo |
+
+## El Caddyfile se baja, no se pega
+
+Un Caddyfile pegado a mano en la terminal se destroza: la indentación
+con tabuladores dispara el autocompletado de bash en cada tabulador y
+el archivo queda con listados de directorio metidos entre líneas. El
+error que sale es engañoso:
+
+    Error: adapting config using caddyfile: Unexpected next token
+    after '{' on same line, at /etc/caddy/Caddyfile:2
+
+```bash
+curl -sL https://raw.githubusercontent.com/afMadridv/PruebasMasCaribe/main/portal/supabase/servidor/Caddyfile -o /etc/caddy/Caddyfile
+caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy
+```
+
+`caddy validate` comprueba antes de recargar: si el archivo llegara
+mal, no se aplica y el sitio sigue en pie con la configuración vieja.
 
 ## Instalar los dos
 
