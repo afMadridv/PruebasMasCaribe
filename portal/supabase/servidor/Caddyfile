@@ -25,6 +25,18 @@
 
 144.172.108.56.sslip.io {
 
+    # ---- Cabeceras ----
+    # HSTS sin `includeSubDomains`: este nombre es de sslip.io, un
+    # dominio compartido, y marcar sus subdominios afectaría a sitios
+    # ajenos en el navegador de quien entre aquí.
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
     # ---- La API de Supabase ----
     # SOLO estas rutas. Si se manda la raíz también, Supabase Studio
     # queda abierto a internet detrás de una sola contraseña, y Studio
@@ -67,5 +79,21 @@
     handle {
         root * /srv/portal
         file_server
+    }
+
+    # ---- Página de error propia ----
+    # Una dirección mal escrita daba el 404 gris de Caddy, que no se
+    # parece en nada al portal y no ofrece salida.
+    #
+    # Esto NO alcanza a las rutas de @privado: ahí `respond 404` es una
+    # respuesta normal, no un error, así que sigue saliendo vacío. Es lo
+    # que se quiere: a quien anda probando rutas no se le regala una
+    # página bonita que confirme que el sitio existe.
+    handle_errors {
+        root * /srv/portal
+        rewrite * /404.html
+        file_server {
+            status {err.status_code}
+        }
     }
 }
